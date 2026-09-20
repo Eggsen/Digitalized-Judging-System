@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="css/output.css">
+    <script src="../scripts/ui/authUI.js" defer></script>
+    <title>BukSU Digitalized Judging System</title>
+</head>
+<body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased selection:bg-buksu-navy selection:text-buksu-gold relative overflow-x-hidden">
+
+    <!-- Decorative Background Accents -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-linear-to-b from-buksu-navy/5 to-transparent pointer-events-none -z-10 blur-3xl"></div>
+    <div class="fixed -bottom-20 -right-20 w-80 h-80 rounded-full bg-buksu-gold/10 pointer-events-none -z-10 blur-3xl"></div>
+
+    <!-- Header Navigation -->
+    <header class="w-full bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-buksu-navy flex items-center justify-center text-buksu-gold shadow-md shadow-buksu-navy/20 border border-buksu-gold/30">
+                    <i class="fa-solid fa-scale-balanced text-lg"></i>
+                </div>
+                <div>
+                    <span class="font-extrabold text-buksu-navy text-lg tracking-tight">BukSU</span>
+                    <span class="font-medium text-slate-500 text-sm hidden sm:inline-block ms-1.5 border-l border-slate-300 ps-2">Digitalized Judging System</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Center Container -->
+    <main class="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        
+        <!-- ROLE SELECTION CARD -->
+        <div id="role-selection-card" class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-10 transition-all duration-300 animate-fade-in">
+            <div class="w-16 h-1.5 bg-buksu-gold rounded-full mx-auto mb-6"></div>
+            
+            <div class="text-center">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-buksu-navy/5 text-buksu-navy text-xs font-semibold tracking-wide uppercase mb-3 border border-buksu-navy/10">
+                    <i class="fa-solid fa-graduation-cap text-buksu-gold"></i> Bukidnon State University
+                </span>
+                <h1 class="text-2xl sm:text-4xl font-extrabold text-buksu-navy tracking-tight">Digitalized Judging System</h1>
+                <p class="mt-2 text-slate-500 text-xs sm:text-sm max-w-xl mx-auto font-normal">Select your user role below to access your dedicated portal and proceed with authentication.</p>
+            </div>
+
+            <!-- Role Options Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+                
+                <!-- Admin Role Card -->
+                <div data-role="admin" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
+                                <i class="fa-solid fa-user-shield"></i>
+                            </div>
+                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 01</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Administrator</h3>
+                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Manage event settings, criteria setup, account allocations, and system controls.</p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
+                        <span>Access Admin</span>
+                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                </div>
+
+                <!-- Judge Role Card -->
+                <div data-role="judge" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
+                                <i class="fa-solid fa-gavel"></i>
+                            </div>
+                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 02</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Official Judge</h3>
+                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Conduct live contestant scoring, evaluate criteria, add notes, and submit final ballots.</p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
+                        <span>Access Judge</span>
+                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                </div>
+
+                <!-- Tabulator Role Card -->
+                <div data-role="tabulator" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
+                                <i class="fa-solid fa-calculator"></i>
+                            </div>
+                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 03</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Tabulator</h3>
+                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Verify score tallies in real-time, audit results, and generate official competition outputs.</p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
+                        <span>Access Tabulator</span>
+                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- LOGIN CARD (DYNAMIC ROLE LOGIN) -->
+        <div id="login-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
+            
+            <div class="flex items-center justify-between mb-6">
+                <button type="button" id="back-to-roles-btn" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-buksu-navy transition-colors bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-xl cursor-pointer group">
+                    <i class="fa-solid fa-arrow-left group-hover:-translate-x-0.5 transition-transform text-buksu-navy"></i> Change Role
+                </button>
+
+                <span id="login-role-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-buksu-navy text-buksu-gold shadow-xs">
+                    <i id="login-role-badge-icon" class="fa-solid fa-user-shield"></i>
+                    <span id="login-role-badge-text">Admin Portal</span>
+                </span>
+            </div>
+
+            <div>
+                <h2 id="login-title" class="text-2xl font-extrabold text-buksu-navy tracking-tight">Admin Sign In</h2>
+                <p id="login-subtitle" class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your administrator credentials to access system settings.</p>
+            </div>
+
+            <form onsubmit="return false;" class="mt-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Username / ID</label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i id="login-user-icon" class="fa-solid fa-user"></i>
+                        </div>
+                        <input type="text" id="username-input" placeholder="Enter your username" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Password</label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="password-input" placeholder="••••••••••••" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <button type="button" id="toggle-password-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
+                            <i id="toggle-password-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-600">
+                        <input type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-buksu-navy focus:ring-buksu-navy accent-buksu-navy">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="font-semibold text-buksu-navy hover:text-buksu-gold transition-colors">Forgot password?</a>
+                </div>
+
+                <button type="button" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl hover:shadow-buksu-navy/30 transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
+                    <span id="login-btn-text">Sign In to Portal</span>
+                    <i class="fa-solid fa-right-to-bracket text-buksu-gold group-hover:translate-x-0.5 transition-transform"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+                <i class="fa-solid fa-shield-halved text-buksu-gold"></i>
+                <span>Protected by Kobi Cabunoc, The Network Administrator</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-4 text-center text-xs text-slate-400 border-t border-slate-200/50 bg-white/50 backdrop-blur-xs">
+        <p>&copy; 2026 intFour. All rights reserved. | <span class="font-medium text-slate-500">Digitalized Judging System</span></p>
+    </footer>
+
+</body>
+</html>
