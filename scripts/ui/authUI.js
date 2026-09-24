@@ -1,3 +1,5 @@
+let currentSelectedRole = 'admin';
+
 document.addEventListener('DOMContentLoaded', () => {
     initLandingPage();
 });
@@ -29,6 +31,12 @@ const ROLE_DATA = {
     }
 };
 
+export function getSelectedRole() {
+    return currentSelectedRole;
+}
+
+window.getSelectedRole = getSelectedRole;
+
 function initLandingPage() {
     const roleSelectionCard = document.getElementById('role-selection-card');
     const loginCard = document.getElementById('login-card');
@@ -54,9 +62,33 @@ function initLandingPage() {
     }
 }
 
+function clearLoginForm() {
+    const usernameInput = document.getElementById('username-input');
+    const passwordInput = document.getElementById('password-input');
+    const noticeText = document.getElementById('notice-text');
+    const icon = document.getElementById('toggle-password-icon');
+
+    if (usernameInput) usernameInput.value = '';
+    if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.type = 'password';
+    }
+    if (icon) {
+        icon.setAttribute('class', 'fa-solid fa-eye');
+    }
+    if (noticeText && noticeText.parentElement) {
+        noticeText.parentElement.classList.add('hidden');
+        noticeText.parentElement.classList.remove('block');
+    }
+}
+
 function selectRole(role) {
     const data = ROLE_DATA[role];
     if (!data) return;
+
+    currentSelectedRole = role;
+
+    clearLoginForm();
 
     const badgeText = document.getElementById('login-role-badge-text');
     const badgeIcon = document.getElementById('login-role-badge-icon');
@@ -66,7 +98,7 @@ function selectRole(role) {
     const usernameInput = document.getElementById('username-input');
 
     if (badgeText) badgeText.innerText = data.badgeText;
-    if (badgeIcon) badgeIcon.className = data.badgeIcon;
+    if (badgeIcon) badgeIcon.setAttribute('class', data.badgeIcon);
     if (title) title.innerText = data.title;
     if (subtitle) subtitle.innerText = data.subtitle;
     if (btnText) btnText.innerText = data.btnText;
@@ -83,6 +115,8 @@ function selectRole(role) {
 }
 
 function showRoleSelection() {
+    clearLoginForm();
+
     const roleCard = document.getElementById('role-selection-card');
     const loginCard = document.getElementById('login-card');
 
@@ -100,9 +134,9 @@ function togglePasswordVisibility() {
 
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        icon.className = 'fa-solid fa-eye-slash';
+        icon.setAttribute('class', 'fa-solid fa-eye-slash');
     } else {
         passwordInput.type = 'password';
-        icon.className = 'fa-solid fa-eye';
+        icon.setAttribute('class', 'fa-solid fa-eye');
     }
 }
