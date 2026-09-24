@@ -1,0 +1,14 @@
+{
+  "name": "digitalized-judging-system",
+  "version": "1.0.0",
+  "description": "BukSU Digitalized Judging System",
+  "main": "index.php",
+  "scripts": {
+    "dev": "npx @tailwindcss/cli -i ./frontend/src/input.css -o ./frontend/css/output.css --watch",
+    "build": "npx @tailwindcss/cli -i ./frontend/src/input.css -o ./frontend/css/output.css --minify"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}
