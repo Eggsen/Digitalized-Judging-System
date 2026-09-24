@@ -65,6 +65,15 @@ try {
         exit;
     }
 
+    // Check if the account is active (role-based access control)
+    if (isset($user['is_active']) && $user['is_active'] === false) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Your account has been disabled. Please contact the administrator."
+        ]);
+        exit;
+    }
+
     // Verify password (check password_verify first, fallback to string equality)
     $storedPassword = $user['password'] ?? $user['password_hash'] ?? null;
     $passwordValid = false;

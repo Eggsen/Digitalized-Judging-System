@@ -1,5 +1,5 @@
 import { loginUser } from "./auth/authAPI.js";
-import { showNotice } from "./utils/index.js";
+import { showNotice, togglePasswordVisibility } from "./utils/index.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("loginForm");
@@ -41,4 +41,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    document.getElementById('toggle-password-btn')?.addEventListener('click', () => {
+        togglePasswordVisibility('password-input', 'toggle-password-icon');
+    });
 });

@@ -46,3 +46,18 @@ export async function checkSession() {
         return { authenticated: false };
     }
 }
+
+export async function resetPassword(payload) {
+    try {
+        const response = await fetch("/backend/auth/reset_password.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Reset password API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}

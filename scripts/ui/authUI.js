@@ -2,9 +2,8 @@ import { clearLoginForm, togglePasswordVisibility } from "../utils/index.js";
 
 let currentSelectedRole = 'admin';
 
-document.addEventListener('DOMContentLoaded', () => {
-    initLandingPage();
-});
+// Module scripts are deferred — DOM is ready by the time this runs
+initLandingPage();
 
 const ROLE_DATA = {
     admin: {
@@ -85,6 +84,16 @@ function selectRole(role) {
     if (subtitle) subtitle.innerText = data.subtitle;
     if (btnText) btnText.innerText = data.btnText;
     if (usernameInput) usernameInput.placeholder = data.userPlaceholder;
+
+    // Show forgot password link only for judge and tabulator (not admin)
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    if (forgotPasswordLink) {
+        if (role === 'judge' || role === 'tabulator') {
+            forgotPasswordLink.classList.remove('hidden');
+        } else {
+            forgotPasswordLink.classList.add('hidden');
+        }
+    }
 
     const roleCard = document.getElementById('role-selection-card');
     const loginCard = document.getElementById('login-card');
