@@ -1,3 +1,5 @@
+import { clearLoginForm, togglePasswordVisibility } from "../utils/index.js";
+
 let currentSelectedRole = 'admin';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -58,27 +60,7 @@ function initLandingPage() {
 
     const togglePasswordBtn = document.getElementById('toggle-password-btn');
     if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
-    }
-}
-
-function clearLoginForm() {
-    const usernameInput = document.getElementById('username-input');
-    const passwordInput = document.getElementById('password-input');
-    const noticeText = document.getElementById('notice-text');
-    const icon = document.getElementById('toggle-password-icon');
-
-    if (usernameInput) usernameInput.value = '';
-    if (passwordInput) {
-        passwordInput.value = '';
-        passwordInput.type = 'password';
-    }
-    if (icon) {
-        icon.setAttribute('class', 'fa-solid fa-eye');
-    }
-    if (noticeText && noticeText.parentElement) {
-        noticeText.parentElement.classList.add('hidden');
-        noticeText.parentElement.classList.remove('block');
+        togglePasswordBtn.addEventListener('click', () => togglePasswordVisibility());
     }
 }
 
@@ -124,19 +106,5 @@ function showRoleSelection() {
         loginCard.classList.add('hidden');
         roleCard.classList.remove('hidden');
         roleCard.classList.add('animate-fade-in');
-    }
-}
-
-function togglePasswordVisibility() {
-    const passwordInput = document.getElementById('password-input');
-    const icon = document.getElementById('toggle-password-icon');
-    if (!passwordInput || !icon) return;
-
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.setAttribute('class', 'fa-solid fa-eye-slash');
-    } else {
-        passwordInput.type = 'password';
-        icon.setAttribute('class', 'fa-solid fa-eye');
     }
 }
