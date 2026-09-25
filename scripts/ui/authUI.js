@@ -61,6 +61,36 @@ function initLandingPage() {
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', () => togglePasswordVisibility());
     }
+
+    const openRegisterBtn = document.getElementById('open-register-admin-btn');
+    if (openRegisterBtn) {
+        openRegisterBtn.addEventListener('click', showRegisterAdminCard);
+    }
+
+    const backFromRegisterBtn = document.getElementById('back-from-register-btn');
+    if (backFromRegisterBtn) {
+        backFromRegisterBtn.addEventListener('click', hideRegisterAdminCard);
+    }
+}
+
+function showRegisterAdminCard() {
+    const loginCard = document.getElementById('login-card');
+    const registerCard = document.getElementById('register-admin-card');
+    if (loginCard && registerCard) {
+        loginCard.classList.add('hidden');
+        registerCard.classList.remove('hidden');
+        registerCard.classList.add('animate-fade-in');
+    }
+}
+
+function hideRegisterAdminCard() {
+    const loginCard = document.getElementById('login-card');
+    const registerCard = document.getElementById('register-admin-card');
+    if (loginCard && registerCard) {
+        registerCard.classList.add('hidden');
+        loginCard.classList.remove('hidden');
+        loginCard.classList.add('animate-fade-in');
+    }
 }
 
 function selectRole(role) {
@@ -95,8 +125,21 @@ function selectRole(role) {
         }
     }
 
+    // Show register admin prompt only for admin portal
+    const registerAdminWrap = document.getElementById('register-admin-wrap');
+    if (registerAdminWrap) {
+        if (role === 'admin') {
+            registerAdminWrap.classList.remove('hidden');
+        } else {
+            registerAdminWrap.classList.add('hidden');
+        }
+    }
+
     const roleCard = document.getElementById('role-selection-card');
     const loginCard = document.getElementById('login-card');
+    const registerCard = document.getElementById('register-admin-card');
+
+    if (registerCard) registerCard.classList.add('hidden');
 
     if (roleCard && loginCard) {
         roleCard.classList.add('hidden');
@@ -110,9 +153,11 @@ function showRoleSelection() {
 
     const roleCard = document.getElementById('role-selection-card');
     const loginCard = document.getElementById('login-card');
+    const registerCard = document.getElementById('register-admin-card');
 
-    if (roleCard && loginCard) {
-        loginCard.classList.add('hidden');
+    if (registerCard) registerCard.classList.add('hidden');
+    if (loginCard) loginCard.classList.add('hidden');
+    if (roleCard) {
         roleCard.classList.remove('hidden');
         roleCard.classList.add('animate-fade-in');
     }

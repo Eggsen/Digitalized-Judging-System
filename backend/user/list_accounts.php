@@ -35,20 +35,20 @@ try {
     $accounts = [];
     foreach ($cursor as $user) {
         $accounts[] = [
-            'id'         => (string)$user['_id'],
-            'username'   => $user['username'] ?? '',
-            'email'      => $user['email'] ?? '',
-            'role'       => $user['role'] ?? '',
-            'is_active'  => $user['is_active'] ?? true,
+            'id' => (string) $user['_id'],
+            'username' => $user['username'] ?? '',
+            'email' => $user['email'] ?? '',
+            'role' => $user['role'] ?? '',
+            'is_active' => $user['is_active'] ?? true,
             'created_by' => $user['created_by'] ?? 'system',
             'created_at' => isset($user['created_at'])
-                            ? $user['created_at']->toDateTime()->format('Y-m-d H:i:s')
-                            : ''
+                ? $user['created_at']->toDateTime()->format('Y-m-d H:i:s')
+                : ''
         ];
     }
 
     echo json_encode([
-        "success"  => true,
+        "success" => true,
         "accounts" => $accounts
     ]);
 

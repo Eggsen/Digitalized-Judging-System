@@ -6,14 +6,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!isset($_SESSION['user_id']) || strtolower($_SESSION['role'] ?? '') !== 'admin') {
-    echo json_encode([
-        "success" => false,
-        "message" => "Access denied. Only administrators can create accounts."
-    ]);
-    exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== "POST") {
     echo json_encode([
         "success" => false,
@@ -35,23 +27,15 @@ if (!$data) {
     exit;
 }
 
-$username = trim($data['username'] ?? "");
-$email = trim($data['email'] ?? "");
-$password = trim($data['password'] ?? "");
-$role = strtolower(trim($data['role'] ?? ""));
+$username        = trim($data['username'] ?? "");
+$email           = trim($data['email'] ?? "");
+$password        = trim($data['password'] ?? "");
+$confirmPassword = trim($data['confirm_password'] ?? $data['password'] ?? "");
 
-if ($username === "" || $password === "" || $role === "") {
+if ($username === "" || $password === "") {
     echo json_encode([
         "success" => false,
-        "message" => "Username, password, and role are required."
-    ]);
-    exit;
-}
-
-if (!in_array($role, ['judge', 'tabulator'])) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid role. You can only create Judge or Tabulator accounts."
+        "message" => "Username and password are required."
     ]);
     exit;
 }
@@ -72,6 +56,14 @@ if (strlen($password) < 6) {
     exit;
 }
 
+if ($confirmPassword !== "" && $password !== $confirmPassword) {
+    echo json_encode([
+        "success" => false,
+        "message" => "Passwords do not match."
+    ]);
+    exit;
+}
+
 if ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode([
         "success" => false,
@@ -81,6 +73,7 @@ if ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
+    // Check for existing username
     $existingUser = $usersCollection->findOne(['username' => $username]);
     if ($existingUser) {
         echo json_encode([
@@ -90,12 +83,13 @@ try {
         exit;
     }
 
+    // Check for existing email if provided
     if ($email !== "") {
         $existingEmail = $usersCollection->findOne(['email' => $email]);
         if ($existingEmail) {
             echo json_encode([
                 "success" => false,
-                "message" => "Email address is already in use."
+                "message" => "Email address is already registered."
             ]);
             exit;
         }
@@ -103,28 +97,27 @@ try {
 
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    // Build the new user document
-    $newUser = [
-        'username' => $username,
-        'email' => $email,
-        'password' => $hashedPassword,
-        'role' => $role,
-        'is_active' => true,
-        'created_by' => $_SESSION['username'],
+    $newAdmin = [
+        'username'   => $username,
+        'email'      => $email,
+        'password'   => $hashedPassword,
+        'role'       => 'admin',
+        'is_active'  => true,
         'created_at' => new MongoDB\BSON\UTCDateTime()
     ];
 
-    $result = $usersCollection->insertOne($newUser);
+    $result = $usersCollection->insertOne($newAdmin);
 
     if ($result->getInsertedCount() > 0) {
         echo json_encode([
-            "success" => true,
-            "message" => ucfirst($role) . " account for \"" . $username . "\" created successfully."
+            "success"  => true,
+            "message"  => "Admin account for \"" . $username . "\" registered successfully! You can now log in.",
+            "username" => $username
         ]);
     } else {
         echo json_encode([
             "success" => false,
-            "message" => "Failed to create account. Please try again."
+            "message" => "Failed to create Admin account. Please try again."
         ]);
     }
 

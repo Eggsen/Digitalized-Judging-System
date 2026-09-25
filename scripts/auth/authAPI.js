@@ -61,3 +61,18 @@ export async function resetPassword(payload) {
         return { success: false, message: "Unable to connect to server." };
     }
 }
+
+export async function registerAdmin(payload) {
+    try {
+        const response = await fetch("/backend/auth/register_admin.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Register Admin API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
