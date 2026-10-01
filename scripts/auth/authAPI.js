@@ -76,3 +76,31 @@ export async function registerAdmin(payload) {
         return { success: false, message: "Unable to connect to server." };
     }
 }
+
+export async function verifyInviteToken(token) {
+    try {
+        const response = await fetch(`/backend/auth/accept_invitation.php?token=${encodeURIComponent(token)}`, {
+            method: "GET",
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Verify Invitation API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+
+export async function acceptInvitation(payload) {
+    try {
+        const response = await fetch("/backend/auth/accept_invitation.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Accept Invitation API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}

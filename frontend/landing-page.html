@@ -32,95 +32,23 @@
     <!-- Main Content Center Container -->
     <main class="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         
-        <!-- ROLE SELECTION CARD -->
-        <div id="role-selection-card" class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-10 transition-all duration-300 animate-fade-in">
-            <div class="w-16 h-1.5 bg-buksu-gold rounded-full mx-auto mb-6"></div>
-            
-            <div class="text-center">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-buksu-navy/5 text-buksu-navy text-xs font-semibold tracking-wide uppercase mb-3 border border-buksu-navy/10">
-                    <i class="fa-solid fa-graduation-cap text-buksu-gold"></i> Bukidnon State University
-                </span>
-                <h1 class="text-2xl sm:text-4xl font-extrabold text-buksu-navy tracking-tight">Digitalized Judging System</h1>
-                <p class="mt-2 text-slate-500 text-xs sm:text-sm max-w-xl mx-auto font-normal">Select your user role below to access your dedicated portal and proceed with authentication.</p>
-            </div>
-
-            <!-- Role Options Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
-                
-                <!-- Admin Role Card -->
-                <div data-role="admin" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
-                                <i class="fa-solid fa-user-shield"></i>
-                            </div>
-                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 01</span>
-                        </div>
-                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Administrator</h3>
-                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Manage event settings, criteria setup, account allocations, and system controls.</p>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
-                        <span>Access Admin</span>
-                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                </div>
-
-                <!-- Judge Role Card -->
-                <div data-role="judge" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
-                                <i class="fa-solid fa-gavel"></i>
-                            </div>
-                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 02</span>
-                        </div>
-                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Official Judge</h3>
-                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Conduct live contestant scoring, evaluate criteria, add notes, and submit final ballots.</p>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
-                        <span>Access Judge</span>
-                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                </div>
-
-                <!-- Tabulator Role Card -->
-                <div data-role="tabulator" class="group relative bg-slate-50 hover:bg-buksu-navy rounded-2xl p-6 border-2 border-slate-100 hover:border-buksu-navy shadow-xs hover:shadow-xl hover:shadow-buksu-navy/20 transition-all duration-300 cursor-pointer flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <div class="w-14 h-14 rounded-2xl bg-buksu-navy group-hover:bg-buksu-gold text-buksu-gold group-hover:text-buksu-navy flex items-center justify-center text-2xl transition-all duration-300 shadow-md group-hover:shadow-lg group-hover:shadow-buksu-gold/30">
-                                <i class="fa-solid fa-calculator"></i>
-                            </div>
-                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-buksu-navy/10 group-hover:bg-white/10 text-buksu-navy group-hover:text-buksu-gold transition-colors">Portal 03</span>
-                        </div>
-                        <h3 class="text-lg font-bold text-buksu-navy group-hover:text-white mt-5 transition-colors">Tabulator</h3>
-                        <p class="text-xs text-slate-500 group-hover:text-slate-300 mt-2 font-normal leading-relaxed transition-colors">Verify score tallies in real-time, audit results, and generate official competition outputs.</p>
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-slate-200/80 group-hover:border-white/10 flex items-center justify-between text-xs font-semibold text-buksu-navy group-hover:text-buksu-gold transition-colors">
-                        <span>Access Tabulator</span>
-                        <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- LOGIN CARD (DYNAMIC ROLE LOGIN) -->
-        <div id="login-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
+        <!-- UNIFIED LOGIN CARD -->
+        <div id="login-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300">
             
             <div class="flex items-center justify-between mb-6">
-                <button type="button" id="back-to-roles-btn" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-buksu-navy transition-colors bg-slate-100 hover:bg-slate-200/70 px-3 py-1.5 rounded-xl cursor-pointer group">
-                    <i class="fa-solid fa-arrow-left group-hover:-translate-x-0.5 transition-transform text-buksu-navy"></i> Change Role
-                </button>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-buksu-navy/5 text-buksu-navy text-xs font-semibold tracking-wide uppercase border border-buksu-navy/10">
+                    <i class="fa-solid fa-graduation-cap text-buksu-gold"></i> BukSU DJS
+                </span>
 
                 <span id="login-role-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-buksu-navy text-buksu-gold shadow-xs">
-                    <i id="login-role-badge-icon" class="fa-solid fa-user-shield"></i>
-                    <span id="login-role-badge-text">Admin Portal</span>
+                    <i id="login-role-badge-icon" class="fa-solid fa-scale-balanced"></i>
+                    <span id="login-role-badge-text">Official Portal</span>
                 </span>
             </div>
 
             <div>
-                <h2 id="login-title" class="text-2xl font-extrabold text-buksu-navy tracking-tight">Admin Sign In</h2>
-                <p id="login-subtitle" class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your administrator credentials to access system settings.</p>
+                <h2 id="login-title" class="text-2xl font-extrabold text-buksu-navy tracking-tight">System Sign In</h2>
+                <p id="login-subtitle" class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your credentials to access your designated portal (Admin, Judge, or Tabulator).</p>
             </div>
 
             <form id="loginForm" onsubmit="return false;" class="mt-6 space-y-4">
@@ -129,12 +57,12 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Username / ID</label>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Username / Email</label>
                     <div class="relative rounded-xl">
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i id="login-user-icon" class="fa-solid fa-user"></i>
                         </div>
-                        <input type="text" id="username-input" placeholder="Enter your username" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <input type="text" id="username-input" placeholder="Enter your username or email" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
                     </div>
                 </div>
 
@@ -156,22 +84,148 @@
                         <input type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-buksu-navy focus:ring-buksu-navy accent-buksu-navy">
                         <span>Remember me</span>
                     </label>
-                    <!-- Forgot password link: hidden for admin, visible for judge/tabulator -->
-                    <a href="#" id="forgot-password-link" class="font-semibold text-buksu-navy hover:text-buksu-gold transition-colors hidden">Forgot password?</a>
+                    <a href="#" id="forgot-password-link" class="font-semibold text-buksu-navy hover:text-buksu-gold transition-colors">Forgot password?</a>
                 </div>
 
                 <button type="submit" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl hover:shadow-buksu-navy/30 transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
-                    <span id="login-btn-text">Sign In to Portal</span>
+                    <span id="login-btn-text">Sign In</span>
                     <i class="fa-solid fa-right-to-bracket text-buksu-gold group-hover:translate-x-0.5 transition-transform"></i>
                 </button>
             </form>
 
             <div id="register-admin-wrap" class="mt-4 mx-3 pt-3 border-t border-slate-100 text-center text-xs text-slate-500">
-                <span>Need an admin account? </span>
+                <span>First time setup? </span>
                 <button type="button" id="open-register-admin-btn" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer underline inline-block">Register Admin Account</button>
             </div>
 
             <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+                <i class="fa-solid fa-shield-halved text-buksu-gold"></i>
+                <span>Protected by Kobi Cabunoc, The Network Administrator</span>
+            </div>
+        </div>
+
+        <!-- ACCEPT INVITATION CARD -->
+        <div id="accept-invitation-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
+            <div class="flex items-center justify-between mb-6">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-white shadow-xs">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>Account Setup</span>
+                </span>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Set Your Password</h2>
+                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Welcome! Complete your account setup by creating your password below.</p>
+            </div>
+
+            <div id="invite-notice-wrap" class="hidden my-4">
+                <span id="invite-notice"></span>
+            </div>
+
+            <div id="invite-account-info" class="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                <div class="font-bold text-buksu-navy mb-0.5" id="invite-username-display">Loading invitation...</div>
+                <div class="text-slate-500 text-[11px]" id="invite-role-display">Please wait while we verify your invitation.</div>
+            </div>
+
+            <form id="acceptInviteForm" onsubmit="return false;" class="space-y-4">
+                <input type="hidden" id="invite-token-input" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password <span class="text-rose-500">*</span></label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="invite-password-input" placeholder="Min. 6 characters" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <button type="button" id="toggle-invite-password-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
+                            <i id="toggle-invite-password-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm Password <span class="text-rose-500">*</span></label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="invite-confirm-password-input" placeholder="Re-enter password" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <button type="button" id="toggle-invite-confirm-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
+                            <i id="toggle-invite-confirm-pw-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="acceptInviteBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
+                    <span id="invite-btn-text">Save Password &amp; Activate</span>
+                    <i class="fa-solid fa-check text-buksu-gold group-hover:scale-110 transition-transform"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+                <i class="fa-solid fa-shield-halved text-buksu-gold"></i>
+                <span>Protected by Kobi Cabunoc, The Network Administrator</span>
+            </div>
+        </div>
+
+        <!-- RESET PASSWORD VIA TOKEN CARD -->
+        <div id="reset-token-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
+            <div class="flex items-center justify-between mb-6">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Reset Password</span>
+                </span>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Create New Password</h2>
+                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your new desired password to recover access to your account.</p>
+            </div>
+
+            <div id="reset-token-notice-wrap" class="hidden my-4">
+                <span id="reset-token-notice"></span>
+            </div>
+
+            <div id="reset-token-account-info" class="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                <div class="font-bold text-buksu-navy mb-0.5" id="reset-token-username-display">Verifying reset link...</div>
+            </div>
+
+            <form id="completeResetForm" onsubmit="return false;" class="space-y-4">
+                <input type="hidden" id="reset-token-input" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password <span class="text-rose-500">*</span></label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="reset-token-password-input" placeholder="Min. 6 characters" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <button type="button" id="toggle-reset-token-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
+                            <i id="toggle-reset-token-pw-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm New Password <span class="text-rose-500">*</span></label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="reset-token-confirm-pw-input" placeholder="Re-enter password" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <button type="button" id="toggle-reset-token-confirm-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
+                            <i id="toggle-reset-token-confirm-pw-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="completeResetBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
+                    <span id="complete-reset-btn-text">Save New Password</span>
+                    <i class="fa-solid fa-key text-buksu-gold group-hover:rotate-12 transition-transform"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
                 <i class="fa-solid fa-shield-halved text-buksu-gold"></i>
                 <span>Protected by Kobi Cabunoc, The Network Administrator</span>
             </div>
@@ -259,7 +313,7 @@
             </div>
         </div>
 
-        <!-- FORGOT PASSWORD CARD -->
+        <!-- FORGOT PASSWORD CARD (EMAIL REQUEST LINK) -->
         <div id="forgot-password-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
 
             <div class="flex items-center justify-between mb-6">
@@ -268,14 +322,14 @@
                 </button>
 
                 <span id="reset-role-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-buksu-navy text-buksu-gold shadow-xs">
-                    <i id="reset-role-badge-icon" class="fa-solid fa-gavel"></i>
-                    <span id="reset-role-badge-text">Judge Portal</span>
+                    <i id="reset-role-badge-icon" class="fa-solid fa-envelope"></i>
+                    <span id="reset-role-badge-text">Account Recovery</span>
                 </span>
             </div>
 
             <div class="mb-6">
-                <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Reset Password</h2>
-                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your username to verify your account, then set a new password.</p>
+                <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Forgot Password</h2>
+                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your registered email address or username to receive a password reset link.</p>
             </div>
 
             <!-- Notice area -->
@@ -283,66 +337,22 @@
                 <span id="reset-notice"></span>
             </div>
 
-            <!-- STEP 1: Verify Username -->
-            <div id="reset-step-1">
-                <form id="resetVerifyForm" onsubmit="return false;" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Your Username</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <input type="text" id="reset-username" placeholder="Enter your username" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+            <form id="resetRequestForm" onsubmit="return false;" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Registered Email or Username <span class="text-rose-500">*</span></label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                            <i class="fa-solid fa-envelope"></i>
                         </div>
+                        <input type="text" id="reset-identifier-input" placeholder="email@buksu.edu.ph or username" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
                     </div>
-
-                    <button type="submit" id="resetVerifyBtn" class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
-                        <span id="reset-verify-btn-text">Verify Account</span>
-                        <i class="fa-solid fa-magnifying-glass text-buksu-gold group-hover:scale-110 transition-transform"></i>
-                    </button>
-                </form>
-            </div>
-
-            <!-- STEP 2: Set New Password -->
-            <div id="reset-step-2" class="hidden">
-                <div class="mb-4 px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-semibold flex items-center gap-2">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span id="reset-verified-username-display">Account verified!</span>
                 </div>
 
-                <form id="resetPasswordForm" onsubmit="return false;" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                                <i class="fa-solid fa-lock"></i>
-                            </div>
-                            <input type="password" id="reset-new-password" placeholder="Min. 6 characters" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
-                            <button type="button" id="toggle-reset-new-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
-                                <i id="toggle-reset-new-pw-icon" class="fa-solid fa-eye text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm New Password</label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                                <i class="fa-solid fa-lock"></i>
-                            </div>
-                            <input type="password" id="reset-confirm-password" placeholder="Re-enter new password" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
-                            <button type="button" id="toggle-reset-confirm-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
-                                <i id="toggle-reset-confirm-pw-icon" class="fa-solid fa-eye text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="resetSubmitBtn" class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
-                        <span id="reset-submit-btn-text">Reset Password</span>
-                        <i class="fa-solid fa-key text-buksu-gold group-hover:rotate-12 transition-transform"></i>
-                    </button>
-                </form>
-            </div>
+                <button type="submit" id="resetRequestBtn" class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
+                    <span id="reset-request-btn-text">Send Reset Link</span>
+                    <i class="fa-solid fa-paper-plane text-buksu-gold group-hover:translate-x-0.5 transition-transform"></i>
+                </button>
+            </form>
 
             <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
                 <i class="fa-solid fa-shield-halved text-buksu-gold"></i>

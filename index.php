@@ -4,9 +4,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$hasActionToken = !empty($_GET['invite_token']) || !empty($_GET['token']) || !empty($_GET['reset_token']);
 $isAuthenticated = isset($_SESSION['user_id']) && !empty($_SESSION['username']);
 
-if (!$isAuthenticated) {
+if (!$isAuthenticated || $hasActionToken) {
     include __DIR__ . '/frontend/landing-page.html';
     exit;
 }
@@ -133,10 +134,10 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
-                    <!-- Create Account Form -->
+                    <!-- Create Account / Invite Form -->
                     <div class="lg:col-span-2">
                         <h3 class="text-sm font-bold text-buksu-navy mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-user-plus text-indigo-500"></i> Create New Account
+                            <i class="fa-solid fa-paper-plane text-indigo-500"></i> Send Account Invitation
                         </h3>
 
                         <!-- Form notice -->
@@ -144,7 +145,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                             <span id="admin-create-notice"></span>
                         </div>
 
-                        <form id="createAccountForm" onsubmit="return false;" class="space-y-5">
+                        <form id="createAccountForm" onsubmit="return false;" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Role <span
                                         class="text-rose-500">*</span></label>
@@ -170,7 +171,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">Email <span
-                                        class="text-slate-400 font-normal">(optional)</span></label>
+                                        class="text-rose-500">*</span></label>
                                 <div class="relative">
                                     <div
                                         class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
@@ -181,27 +182,15 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password <span
-                                        class="text-rose-500">*</span></label>
-                                <div class="relative">
-                                    <div
-                                        class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-                                        <i class="fa-solid fa-lock"></i>
-                                    </div>
-                                    <input type="password" id="create-password" placeholder="Min. 6 characters"
-                                        class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
-                                    <button type="button" id="toggle-create-password-btn"
-                                        class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
-                                        <i id="toggle-create-password-icon" class="fa-solid fa-eye text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
+                            <p class="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                <i class="fa-solid fa-circle-info text-indigo-500 me-1"></i>
+                                Password will be created by the invited Tabulator or Judge when they accept their invitation.
+                            </p>
 
                             <button type="submit" id="createAccountBtn"
-                                class="w-full mt-5 py-2.5 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">
-                                <i class="fa-solid fa-user-plus text-buksu-gold"></i>
-                                <span id="create-btn-text">Create Account</span>
+                                class="w-full mt-4 py-2.5 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">
+                                <i class="fa-solid fa-paper-plane text-buksu-gold"></i>
+                                <span id="create-btn-text">Send Invitation</span>
                             </button>
                         </form>
                     </div>

@@ -1,5 +1,18 @@
+# Environment variables (Sensitive secrets)
 .env
 .env.local
+.env.*
 
 # Dependencies
 node_modules/
+vendor/
+
+# Logs & temporary files
+backend/logs/
+*.log
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

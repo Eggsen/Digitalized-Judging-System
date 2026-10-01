@@ -25,6 +25,26 @@ if ($_SERVER['REQUEST_METHOD'] !== "GET") {
 
 require_once __DIR__ . "/../database/config.php";
 
+function formatMongoDate($val) {
+    if (empty($val)) return '';
+    try {
+        if ($val instanceof MongoDB\BSON\UTCDateTime) {
+            $dt = $val->toDateTime();
+            $dt->setTimezone(new DateTimeZone(date_default_timezone_get() ?: 'Asia/Manila'));
+            return $dt->format('Y-m-d h:i A');
+        }
+        if (is_numeric($val)) {
+            return date('Y-m-d h:i A', (int)$val);
+        }
+        if (is_string($val)) {
+            return date('Y-m-d h:i A', strtotime($val));
+        }
+    } catch (Throwable $e) {
+        return (string)$val;
+    }
+    return '';
+}
+
 try {
     // Get all non-admin accounts (judges and tabulators)
     $cursor = $usersCollection->find(
@@ -32,18 +52,27 @@ try {
         ['projection' => ['password' => 0]] // Exclude password from response
     );
 
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+
     $accounts = [];
     foreach ($cursor as $user) {
+        $status = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
+        $token = $user['invite_token'] ?? null;
+        $inviteLink = $token ? "{$protocol}://{$host}/index.php?invite_token={$token}" : null;
+
         $accounts[] = [
             'id' => (string) $user['_id'],
             'username' => $user['username'] ?? '',
             'email' => $user['email'] ?? '',
             'role' => $user['role'] ?? '',
+            'status' => $status,
+            'invite_token' => $token,
+            'invite_link' => $inviteLink,
             'is_active' => $user['is_active'] ?? true,
             'created_by' => $user['created_by'] ?? 'system',
-            'created_at' => isset($user['created_at'])
-                ? $user['created_at']->toDateTime()->format('Y-m-d H:i:s')
-                : ''
+            'created_at' => formatMongoDate($user['created_at'] ?? null),
+            'activated_at' => formatMongoDate($user['activated_at'] ?? null)
         ];
     }
 

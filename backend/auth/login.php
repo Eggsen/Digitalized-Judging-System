@@ -74,6 +74,16 @@ try {
         exit;
     }
 
+    // Check if account status is pending password setup
+    $status = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
+    if ($status === 'pending' || empty($user['password'])) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Account setup pending. Please use your invitation link to set your password before logging in."
+        ]);
+        exit;
+    }
+
     // Verify password (check password_verify first, fallback to string equality)
     $storedPassword = $user['password'] ?? $user['password_hash'] ?? null;
     $passwordValid = false;

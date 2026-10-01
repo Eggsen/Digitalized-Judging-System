@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const identifier = usernameInput ? usernameInput.value.trim() : "";
             const password = passwordInput ? passwordInput.value : "";
-            const role = window.getSelectedRole ? window.getSelectedRole() : "admin";
 
             if (!identifier || !password) {
                 showNotice(noticeText, "Please enter your username/email and password.", "warning");
@@ -27,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showNotice(noticeText, "Signing in...", "info");
 
-            const response = await loginUser({ identifier, password, role });
+            const response = await loginUser({ identifier, password });
 
             if (submitBtn) submitBtn.disabled = false;
 
