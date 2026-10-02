@@ -100,19 +100,19 @@ export async function loadAdminEvents() {
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-regular fa-clock text-indigo-500 w-4"></i>
+                        <i class="fa-regular fa-clock text-buksu-navy w-4"></i>
                         <span>${e.date || 'TBA'}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-location-dot text-rose-500 w-4"></i>
+                        <i class="fa-solid fa-location-dot text-buksu-navy w-4"></i>
                         <span>${escapeHtml(e.venue || 'TBA')}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-gavel text-amber-500 w-4"></i>
+                        <i class="fa-solid fa-gavel text-buksu-navy w-4"></i>
                         <span>Judges: ${e.assignedjudges && e.assignedjudges.length > 0 ? e.assignedjudges.map(j => escapeHtml(j.username)).join(', ') : '<span class="text-slate-400">None assigned</span>'}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-calculator text-emerald-500 w-4"></i>
+                        <i class="fa-solid fa-calculator text-buksu-navy w-4"></i>
                         <span>Tabulators: ${e.tabulators && e.tabulators.length > 0 ? e.tabulators.map(t => escapeHtml(t.username)).join(', ') : '<span class="text-slate-400">None assigned</span>'}</span>
                     </div>
                 </div>
@@ -132,7 +132,7 @@ export async function loadAdminEvents() {
                         data-rawdate="${e.rawDate}" 
                         data-status="${e.status}" 
                         data-judging="${e.judgingStatus}">
-                        <i class="fa-solid fa-pen me-1"></i> Edit
+                        <i class="fa-solid fa-pen text-buksu-navy me-1"></i> Edit
                     </button>
                     ${e.status !== 'Archived' ? `
                         <button class="archive-btn px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-[11px] cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
@@ -174,10 +174,10 @@ async function loadJudgeAssignments() {
                 <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${e.date || 'TBA'} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
                 <div class="flex items-center gap-4 mt-2 text-xs">
                     <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                        <i class="fa-solid fa-gavel me-1"></i> ${e.assignedjudges ? e.assignedjudges.length : 0} Judges Assigned
+                        <i class="fa-solid fa-gavel text-buksu-navy me-1"></i> ${e.assignedjudges ? e.assignedjudges.length : 0} Judges Assigned
                     </span>
                     <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        <i class="fa-solid fa-calculator me-1"></i> ${e.tabulators ? e.tabulators.length : 0} Tabulators Assigned
+                        <i class="fa-solid fa-calculator text-buksu-navy me-1"></i> ${e.tabulators ? e.tabulators.length : 0} Tabulators Assigned
                     </span>
                 </div>
             </div>
@@ -270,15 +270,15 @@ async function loadUserAssignedEvents() {
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-regular fa-clock text-indigo-500 w-4"></i>
+                        <i class="fa-regular fa-clock text-buksu-navy w-4"></i>
                         <span>${e.date || 'TBA'}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-location-dot text-rose-500 w-4"></i>
+                        <i class="fa-solid fa-location-dot text-buksu-navy w-4"></i>
                         <span>${escapeHtml(e.venue || 'TBA')}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-tasks text-amber-500 w-4"></i>
+                        <i class="fa-solid fa-tasks text-buksu-navy w-4"></i>
                         <span>Judging State: <strong class="text-slate-800">${escapeHtml(e.judgingStatus || 'Not Yet Started')}</strong></span>
                     </div>
                 </div>
@@ -286,10 +286,11 @@ async function loadUserAssignedEvents() {
 
             <div class="mt-5 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
                 <span class="font-medium">Assigned to Portal</span>
-                <span class="font-bold text-emerald-600 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Active</span>
+                <span class="font-bold text-buksu-navy flex items-center gap-1"><i class="fa-solid fa-circle-check text-buksu-navy"></i> Active</span>
             </div>
         </div>
     `).join('');
+
 }
 
 /* -------------------------------------------------------------
