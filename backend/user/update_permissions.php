@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== "POST") {
 }
 
 require_once __DIR__ . "/../database/config.php";
+require_once __DIR__ . "/../utils/logger.php";
 
 $rawJson = file_get_contents("php://input");
 $data = json_decode($rawJson, true);
@@ -74,6 +75,15 @@ try {
 
     if ($result->getModifiedCount() > 0) {
         $statusText = $isActive ? "enabled" : "disabled";
+        $actionName = $isActive ? "ENABLE_USER" : "DISABLE_USER";
+        logSystemAction(
+            $_SESSION['user_id'],
+            $_SESSION['username'],
+            $_SESSION['role'],
+            $actionName,
+            "Changed access for account '{$targetUser['username']}' ({$targetUser['role']}) to {$statusText}."
+        );
+
         echo json_encode([
             "success" => true,
             "message" => "Account access has been " . $statusText . " for \"" . ($targetUser['username'] ?? $userId) . "\"."
