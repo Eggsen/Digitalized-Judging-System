@@ -23,8 +23,10 @@ try {
     // Select database
     $db = $client->selectDatabase($databaseName);
 
-    // Access users collection
+    // Access collections
     $usersCollection = $db->users;
+    $eventsCollection = $db->events;
+    $logsCollection = $db->logs;
 
 } catch (Exception $e) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {
