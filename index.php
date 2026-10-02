@@ -35,8 +35,10 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <title><?= $badgeInfo['title'] ?> | BukSU DJS</title>
 </head>
 
-<body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased"
+<body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased relative overflow-x-hidden"
     data-role="<?= $role ?>">
+
+    <div class="dashboard-bg"></div>
 
     <!-- Header Navigation -->
     <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
@@ -72,44 +74,57 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         <!-- Welcome Card -->
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
-            <div class="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-6 mb-6">
-                <div>
-                    <span
-                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white <?= $badgeInfo['color'] ?> mb-2">
-                        <i class="fa-solid <?= $badgeInfo['icon'] ?>"></i> <?= strtoupper($role) ?>
-                    </span>
-                    <h1 class="text-3xl font-extrabold text-buksu-navy">Welcome back, <?= $username ?>!</h1>
-                    <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                        <?= $email ? $email : 'Authenticated user session active.' ?></p>
+        <div class="rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden bg-white">
+            <!-- Top 60% Section: BukSU Dark Blue Header -->
+            <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-6 sm:p-8 text-white relative">
+                <!-- Decorative ambient background glow & watermark -->
+                <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
+                    <i class="fa-solid fa-scale-balanced text-9xl"></i>
                 </div>
 
-                <?php if ($role === 'admin'): ?>
-                    <button id="open-create-event-modal-btn"
-                        class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
-                        <i class="fa-solid fa-plus text-buksu-gold"></i> Create Competition
-                    </button>
-                <?php endif; ?>
+                <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
+                            <i class="fa-solid <?= $badgeInfo['icon'] ?>"></i> <?= strtoupper($role) ?> PORTAL
+                        </span>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Welcome back, <?= $username ?>!</h1>
+                        <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-400 text-[10px]"></i>
+                            <span><?= $email ? $email : 'Authenticated user session active.' ?></span>
+                        </p>
+                    </div>
+
+                    <?php if ($role === 'admin'): ?>
+                        <button id="open-create-event-modal-btn"
+                            class="px-5 py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300">
+                            <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <?php if ($role === 'admin'): ?>
-                <!-- Admin Navigation Tabs -->
-                <div class="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1" id="admin-tabs">
-                    <button data-tab="events-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white transition-all cursor-pointer">
-                        <i class="fa-solid fa-trophy me-1.5"></i> Events &amp; Competitions
-                    </button>
-                    <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 transition-all cursor-pointer">
-                        <i class="fa-solid fa-user-check me-1.5"></i> Judge Assignments
-                    </button>
-                    <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 transition-all cursor-pointer">
-                        <i class="fa-solid fa-users-gear me-1.5"></i> User Invitations
-                    </button>
-                    <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 transition-all cursor-pointer">
-                        <i class="fa-solid fa-clock-rotate-left me-1.5"></i> Audit Logs
-                    </button>
+                <!-- Bottom 40% Section: Admin Navigation Tabs -->
+                <div class="bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
+                    <div class="flex items-center gap-2 overflow-x-auto" id="admin-tabs">
+                        <button data-tab="events-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
+                            <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
+                        </button>
+                        <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                            <i class="fa-solid fa-user-check me-1.5"></i> Judge Assignments
+                        </button>
+                        <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                            <i class="fa-solid fa-users-gear me-1.5"></i> User Invitations
+                        </button>
+                        <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                            <i class="fa-solid fa-clock-rotate-left me-1.5"></i> Audit Logs
+                        </button>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
+
 
         <?php if ($role === 'admin'): ?>
             <!-- TAB 1: EVENTS & COMPETITIONS -->
