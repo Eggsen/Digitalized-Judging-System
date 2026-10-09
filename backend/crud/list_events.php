@@ -68,21 +68,32 @@ try {
     $events = [];
     foreach ($cursor as $doc) {
         $assignedJudgesDetails = [];
+        $tabulatorDetails = [];
+
         if (!empty($doc['assignedjudges']) && is_iterable($doc['assignedjudges'])) {
             foreach ($doc['assignedjudges'] as $jId) {
                 $strId = (string)$jId;
                 if (isset($userMap[$strId])) {
-                    $assignedJudgesDetails[] = $userMap[$strId];
+                    $userInfo = $userMap[$strId];
+                    if ($userInfo['role'] === 'tabulator') {
+                        $tabulatorDetails[] = $userInfo;
+                    } else {
+                        $assignedJudgesDetails[] = $userInfo;
+                    }
                 }
             }
         }
 
-        $tabulatorDetails = [];
         if (!empty($doc['tabulators']) && is_iterable($doc['tabulators'])) {
             foreach ($doc['tabulators'] as $tId) {
                 $strId = (string)$tId;
                 if (isset($userMap[$strId])) {
-                    $tabulatorDetails[] = $userMap[$strId];
+                    $userInfo = $userMap[$strId];
+                    if ($userInfo['role'] === 'judge') {
+                        $assignedJudgesDetails[] = $userInfo;
+                    } else {
+                        $tabulatorDetails[] = $userInfo;
+                    }
                 }
             }
         }

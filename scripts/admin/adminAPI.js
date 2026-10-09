@@ -42,3 +42,19 @@ export async function updatePermissions(userId, isActive) {
         return { success: false, message: "Unable to connect to server." };
     }
 }
+
+export async function updateRole(userId, role) {
+    try {
+        const response = await fetch("/backend/user/update_role.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, role }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Update role API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+

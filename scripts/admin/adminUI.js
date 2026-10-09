@@ -1,6 +1,8 @@
-import { createAccount, listAccounts, updatePermissions } from "/scripts/admin/adminAPI.js";
+import { createAccount, listAccounts, updatePermissions, updateRole } from "/scripts/admin/adminAPI.js";
 import { showNotice } from "/scripts/utils/index.js";
+import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
+import { loadAdminEvents } from "/scripts/admin/eventsUI.js";
 
 const userRole = document.body.dataset.role;
 if (userRole === 'admin') {
@@ -33,7 +35,18 @@ async function loadAccounts() {
                 ${account.created_at ? `<div class="text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
                 ${account.activated_at ? `<div class="text-emerald-600 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
             </td>
-            <td class="px-4 py-3 text-center align-middle">${getRoleBadge(account.role)}</td>
+            <td class="px-4 py-3 text-center align-middle">
+                ${account.role === 'admin' 
+                    ? getRoleBadge('admin')
+                    : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200">
+                        <i class="fa-solid ${account.role === 'judge' ? 'fa-gavel' : 'fa-calculator'} text-buksu-navy text-xs"></i>
+                        <select class="role-select bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer" data-id="${account.id}" data-current="${account.role}">
+                            <option value="judge" ${account.role === 'judge' ? 'selected' : ''}>Judge</option>
+                            <option value="tabulator" ${account.role === 'tabulator' ? 'selected' : ''}>Tabulator</option>
+                        </select>
+                       </div>`
+                }
+            </td>
             <td class="px-4 py-3 text-center align-middle">${getStatusBadge(account.is_active, account.status)}</td>
             <td class="px-4 py-3 text-center align-middle">
                 <div class="flex items-center justify-center gap-1.5">
@@ -59,6 +72,29 @@ async function loadAccounts() {
                 setTimeout(() => {
                     btn.innerHTML = '<i class="fa-solid fa-copy me-1"></i>Copy Link';
                 }, 2000);
+            }
+        });
+    });
+
+    document.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', async () => {
+            const userId = select.dataset.id;
+            const newRole = select.value;
+            const currentRole = select.dataset.current;
+
+            if (newRole === currentRole) return;
+
+            select.disabled = true;
+            const res = await updateRole(userId, newRole);
+
+            if (res.success) {
+                showToast("Role Configured!", res.message, "edit");
+                await loadAccounts();
+                await loadAdminEvents();
+            } else {
+                showToast("Update Failed", res.message, "error");
+                select.value = currentRole;
+                select.disabled = false;
             }
         });
     });
