@@ -57,7 +57,32 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Topbar Notifications -->
+                <div class="relative" id="notification-wrapper">
+                    <button id="notifBtn" class="relative p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span id="notifBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white font-extrabold text-[10px] rounded-full flex items-center justify-center border-2 border-white hidden">0</span>
+                    </button>
+
+                    <!-- Notifications Dropdown Drawer -->
+                    <div id="notifDropdown" class="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200/90 z-50 hidden overflow-hidden animate-fade-in">
+                        <div class="p-4 bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy text-white flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-buksu-gold"></i>
+                                <h3 class="font-extrabold text-sm tracking-tight">Notifications</h3>
+                            </div>
+                            <button id="markAllReadBtn" class="text-[11px] font-semibold text-slate-300 hover:text-buksu-gold transition-colors cursor-pointer">Mark all read</button>
+                        </div>
+
+                        <div id="notifList" class="max-h-80 overflow-y-auto divide-y divide-slate-100 text-xs">
+                            <div class="p-6 text-center text-slate-400">
+                                <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading notifications...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span class="text-xs font-bold text-slate-700 uppercase tracking-wider"><?= ucfirst($role) ?></span>
@@ -583,6 +608,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <script type="module" src="/scripts/ui/dashboardUI.js"></script>
     <script type="module" src="/scripts/admin/adminUI.js"></script>
     <script type="module" src="/scripts/admin/eventsUI.js"></script>
+    <script type="module" src="/scripts/ui/notificationUI.js"></script>
 
 </body>
 

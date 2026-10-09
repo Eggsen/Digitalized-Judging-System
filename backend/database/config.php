@@ -27,6 +27,8 @@ try {
     $usersCollection = $db->users;
     $eventsCollection = $db->events;
     $logsCollection = $db->logs;
+    $notificationsCollection = $db->notifications;
+
 
 } catch (Exception $e) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {

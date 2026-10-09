@@ -68,12 +68,60 @@ try {
         ]
     );
 
+    $eventNameStr = $existing['eventName'] ?? ("Event #" . $eventId);
+
+    // Create event invitation notifications for assigned judges
+    foreach ($assignedJudgesObj as $jObjId) {
+        $existingNotif = $notificationsCollection->findOne([
+            'user_id' => $jObjId,
+            'event_id' => $eventId,
+            'type' => 'event_invitation'
+        ]);
+
+        if (!$existingNotif) {
+            $notificationsCollection->insertOne([
+                'user_id' => $jObjId,
+                'type' => 'event_invitation',
+                'title' => 'Event Invitation',
+                'message' => "You have been invited to participate as a Judge in event '{$eventNameStr}'. Please accept to confirm your participation.",
+                'event_id' => $eventId,
+                'role' => 'judge',
+                'status' => 'pending',
+                'is_read' => false,
+                'created_at' => new MongoDB\BSON\UTCDateTime()
+            ]);
+        }
+    }
+
+    // Create event invitation notifications for assigned tabulators
+    foreach ($tabulatorsObj as $tObjId) {
+        $existingNotif = $notificationsCollection->findOne([
+            'user_id' => $tObjId,
+            'event_id' => $eventId,
+            'type' => 'event_invitation'
+        ]);
+
+        if (!$existingNotif) {
+            $notificationsCollection->insertOne([
+                'user_id' => $tObjId,
+                'type' => 'event_invitation',
+                'title' => 'Event Invitation',
+                'message' => "You have been invited to participate as a Tabulator in event '{$eventNameStr}'. Please accept to confirm your participation.",
+                'event_id' => $eventId,
+                'role' => 'tabulator',
+                'status' => 'pending',
+                'is_read' => false,
+                'created_at' => new MongoDB\BSON\UTCDateTime()
+            ]);
+        }
+    }
+
     logSystemAction(
         $_SESSION['user_id'],
         $_SESSION['username'],
         $_SESSION['role'],
         'ASSIGN_JUDGES',
-        "Updated judge (" . count($assignedJudgesObj) . ") and tabulator (" . count($tabulatorsObj) . ") assignments for event '" . ($existing['eventName'] ?? $eventId) . "'."
+        "Updated judge (" . count($assignedJudgesObj) . ") and tabulator (" . count($tabulatorsObj) . ") assignments for event '{$eventNameStr}'."
     );
 
     echo json_encode([

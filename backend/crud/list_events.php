@@ -41,19 +41,37 @@ try {
     $userId = $_SESSION['user_id'];
     $userObjId = new MongoDB\BSON\ObjectId($userId);
 
-    $filter = [];
-
-    // Filter events based on role
-    if ($role === 'judge') {
-        $filter = ['assignedjudges' => $userObjId];
-    } elseif ($role === 'tabulator') {
-        $filter = ['tabulators' => $userObjId];
+    // Fetch accepted event IDs for judges and tabulators
+    $acceptedEventIds = [];
+    if ($role === 'judge' || $role === 'tabulator') {
+        $acceptedNotifs = $notificationsCollection->find([
+            'user_id' => $userObjId,
+            'type' => 'event_invitation',
+            'status' => 'accepted'
+        ]);
+        foreach ($acceptedNotifs as $an) {
+            if (!empty($an['event_id'])) {
+                $acceptedEventIds[] = (int)$an['event_id'];
+            }
+        }
     }
-    // Admin sees all events by default
+
+    $filter = [];
+    if ($role === 'judge') {
+        $filter = [
+            'assignedjudges' => $userObjId,
+            '_id' => ['$in' => $acceptedEventIds]
+        ];
+    } elseif ($role === 'tabulator') {
+        $filter = [
+            'tabulators' => $userObjId,
+            '_id' => ['$in' => $acceptedEventIds]
+        ];
+    }
 
     $cursor = $eventsCollection->find($filter, ['sort' => ['createdAt' => -1]]);
 
-    // Pre-fetch all user info to populate judge and tabulator names cleanly
+    // Fetch all user info
     $usersCursor = $usersCollection->find([], ['projection' => ['password' => 0]]);
     $userMap = [];
     foreach ($usersCursor as $u) {
@@ -65,8 +83,20 @@ try {
         ];
     }
 
+    // Map invitation statuses for each event assignment
+    $invitationNotifs = $notificationsCollection->find(['type' => 'event_invitation']);
+    $invitationStatusMap = [];
+    foreach ($invitationNotifs as $inDoc) {
+        $eId = (int)($inDoc['event_id'] ?? 0);
+        $uId = (string)($inDoc['user_id'] ?? '');
+        if ($eId > 0 && $uId !== '') {
+            $invitationStatusMap["{$eId}_{$uId}"] = $inDoc['status'] ?? 'pending';
+        }
+    }
+
     $events = [];
     foreach ($cursor as $doc) {
+        $docId = (int)$doc['_id'];
         $assignedJudgesDetails = [];
         $tabulatorDetails = [];
 
@@ -75,6 +105,7 @@ try {
                 $strId = (string)$jId;
                 if (isset($userMap[$strId])) {
                     $userInfo = $userMap[$strId];
+                    $userInfo['invitation_status'] = $invitationStatusMap["{$docId}_{$strId}"] ?? 'accepted';
                     if ($userInfo['role'] === 'tabulator') {
                         $tabulatorDetails[] = $userInfo;
                     } else {
@@ -89,6 +120,7 @@ try {
                 $strId = (string)$tId;
                 if (isset($userMap[$strId])) {
                     $userInfo = $userMap[$strId];
+                    $userInfo['invitation_status'] = $invitationStatusMap["{$docId}_{$strId}"] ?? 'accepted';
                     if ($userInfo['role'] === 'judge') {
                         $assignedJudgesDetails[] = $userInfo;
                     } else {

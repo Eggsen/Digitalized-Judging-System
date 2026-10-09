@@ -473,17 +473,27 @@ export function openViewEventModal(eventId) {
     // Populate Judges List
     const judgesBox = document.getElementById('view-ev-judges-list');
     if (event.assignedjudges && event.assignedjudges.length > 0) {
-        judgesBox.innerHTML = event.assignedjudges.map(j => `
-            <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5 text-xs">
-                <div class="w-6 h-6 rounded-lg bg-indigo-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
-                    <i class="fa-solid fa-gavel"></i>
+        judgesBox.innerHTML = event.assignedjudges.map(j => {
+            const st = j.invitation_status || 'accepted';
+            let stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-100 text-emerald-700 uppercase shrink-0">Accepted</span>';
+            if (st === 'pending') stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-100 text-amber-700 uppercase shrink-0 animate-pulse">Pending</span>';
+            if (st === 'declined') stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-rose-100 text-rose-700 uppercase shrink-0">Declined</span>';
+
+            return `
+                <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <div class="w-6 h-6 rounded-lg bg-indigo-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
+                            <i class="fa-solid fa-gavel"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(j.username)}</span>
+                            <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(j.email || 'No email')}</span>
+                        </div>
+                    </div>
+                    ${stBadge}
                 </div>
-                <div class="overflow-hidden">
-                    <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(j.username)}</span>
-                    <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(j.email || 'No email')}</span>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } else {
         judgesBox.innerHTML = '<span class="text-slate-400 text-xs italic">No judges assigned yet.</span>';
     }
@@ -491,17 +501,27 @@ export function openViewEventModal(eventId) {
     // Populate Tabulators List
     const tabBox = document.getElementById('view-ev-tabulators-list');
     if (event.tabulators && event.tabulators.length > 0) {
-        tabBox.innerHTML = event.tabulators.map(t => `
-            <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5 text-xs">
-                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
-                    <i class="fa-solid fa-calculator"></i>
+        tabBox.innerHTML = event.tabulators.map(t => {
+            const st = t.invitation_status || 'accepted';
+            let stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-emerald-100 text-emerald-700 uppercase shrink-0">Accepted</span>';
+            if (st === 'pending') stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-amber-100 text-amber-700 uppercase shrink-0 animate-pulse">Pending</span>';
+            if (st === 'declined') stBadge = '<span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-rose-100 text-rose-700 uppercase shrink-0">Declined</span>';
+
+            return `
+                <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <div class="w-6 h-6 rounded-lg bg-emerald-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(t.username)}</span>
+                            <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(t.email || 'No email')}</span>
+                        </div>
+                    </div>
+                    ${stBadge}
                 </div>
-                <div class="overflow-hidden">
-                    <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(t.username)}</span>
-                    <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(t.email || 'No email')}</span>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } else {
         tabBox.innerHTML = '<span class="text-slate-400 text-xs italic">No tabulators assigned yet.</span>';
     }
