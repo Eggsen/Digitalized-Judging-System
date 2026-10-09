@@ -108,7 +108,7 @@ if ($action === "request_reset") {
 
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
-        $resetLink = "{$protocol}://{$host}/index.php?reset_token={$resetToken}";
+        $resetLink = "{$protocol}://{$host}/auth/reset-password.php?reset_token={$resetToken}";
 
         $subject = "Reset Your Password | BukSU Digitalized Judging System";
         $htmlBody = "

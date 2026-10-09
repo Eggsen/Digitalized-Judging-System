@@ -45,21 +45,23 @@ function initLandingPage() {
     const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
 
-    if (inviteToken && acceptInviteCard && loginCard) {
-        loginCard.classList.add('hidden');
+    if (inviteToken && acceptInviteCard) {
+        if (loginCard) loginCard.classList.add('hidden');
         if (registerCard) registerCard.classList.add('hidden');
         acceptInviteCard.classList.remove('hidden');
         acceptInviteCard.classList.add('animate-fade-in');
 
-        document.getElementById('invite-token-input').value = inviteToken;
+        const tokenInput = document.getElementById('invite-token-input');
+        if (tokenInput) tokenInput.value = inviteToken;
         checkInviteToken(inviteToken);
-    } else if (resetToken && resetTokenCard && loginCard) {
-        loginCard.classList.add('hidden');
+    } else if (resetToken && resetTokenCard) {
+        if (loginCard) loginCard.classList.add('hidden');
         if (registerCard) registerCard.classList.add('hidden');
         resetTokenCard.classList.remove('hidden');
         resetTokenCard.classList.add('animate-fade-in');
 
-        document.getElementById('reset-token-input').value = resetToken;
+        const tokenInput = document.getElementById('reset-token-input');
+        if (tokenInput) tokenInput.value = resetToken;
         checkResetToken(resetToken);
     }
 
@@ -154,6 +156,8 @@ async function handleAcceptInvite() {
                 acceptInviteCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+            } else {
+                window.location.href = '/auth/login.php';
             }
         }, 1500);
     } else {
@@ -242,6 +246,8 @@ async function handleCompleteReset() {
                 resetTokenCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+            } else {
+                window.location.href = '/auth/login.php';
             }
         }, 1500);
     } else {

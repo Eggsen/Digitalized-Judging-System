@@ -118,7 +118,7 @@ try {
             "email" => $_SESSION['email'],
             "role" => $_SESSION['role']
         ],
-        "redirect" => "index.php"
+        "redirect" => "/dashboard.php"
     ]);
 
 } catch (Throwable $e) {

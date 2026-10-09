@@ -110,7 +110,7 @@ try {
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
-    $inviteLink = "{$protocol}://{$host}/index.php?invite_token={$inviteToken}";
+    $inviteLink = "{$protocol}://{$host}/auth/accept-invitation.php?invite_token={$inviteToken}";
 
     // Send invitation email
     $subject = "You're Invited! Set Up Your " . ucfirst($role) . " Account | BukSU Judging System";

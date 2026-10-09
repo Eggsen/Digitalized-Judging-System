@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response && response.success) {
                 showNotice(noticeText, response.message || "Login successful! Redirecting...", "success");
                 setTimeout(() => {
-                    window.location.href = response.redirect || "index.php";
+                    window.location.href = response.redirect || "/dashboard.php";
                 }, 700);
             } else {
                 showNotice(noticeText, response ? response.message : "Authentication failed.", "error");
