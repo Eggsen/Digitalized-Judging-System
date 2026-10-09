@@ -80,22 +80,26 @@ export async function loadAdminEvents() {
         events = events.filter(e => e.status === filterVal);
     }
 
+    // Prioritize Ongoing events first
+    events = sortEventsByPriority(events);
+
     if (events.length === 0) {
         grid.innerHTML = `
             <div class="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
                 <i class="fa-solid fa-trophy text-3xl text-slate-300 mb-2"></i>
                 <p class="text-xs font-bold text-slate-600">No competitions found</p>
-                <p class="text-[11px] text-slate-400 mt-1">Create a new competition to get started.</p>
+                <p class="text-[11px] text-slate-400 mt-1">Create a new competition or adjust your status filter.</p>
             </div>
         `;
         return;
     }
 
     grid.innerHTML = events.map(e => `
-        <div class="event-card bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300 rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group" data-id="${e.id}">
+        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
+            ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(e.status)}">${e.status}</span>
+                    ${getStatusBadgeHtml(e.status)}
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
                 <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
@@ -170,10 +174,15 @@ async function loadJudgeAssignments() {
         return;
     }
 
-    container.innerHTML = res.events.map(e => `
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between flex-wrap gap-4">
+    const events = sortEventsByPriority(res.events);
+
+    container.innerHTML = events.map(e => `
+        <div class="p-4 rounded-2xl ${e.status === 'Ongoing' ? 'bg-emerald-50/40 border-2 border-emerald-300' : 'bg-slate-50 border border-slate-200'} flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(e.eventName)}</h4>
+                <div class="flex items-center gap-2 mb-1">
+                    ${getStatusBadgeHtml(e.status)}
+                    <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(e.eventName)}</h4>
+                </div>
                 <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${e.date || 'TBA'} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
                 <div class="flex items-center gap-4 mt-2 text-xs">
                     <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
@@ -263,11 +272,14 @@ async function loadUserAssignedEvents() {
         return;
     }
 
-    grid.innerHTML = res.events.map(e => `
-        <div class="event-card bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group" data-id="${e.id}">
+    const events = sortEventsByPriority(res.events);
+
+    grid.innerHTML = events.map(e => `
+        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-300'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
+            ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(e.status)}">${e.status}</span>
+                    ${getStatusBadgeHtml(e.status)}
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
                 <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
@@ -615,6 +627,41 @@ function getStatusStyle(status) {
     if (status === 'Completed') return 'bg-indigo-100 text-indigo-800';
     if (status === 'Archived') return 'bg-slate-200 text-slate-700';
     return 'bg-slate-100 text-slate-700';
+}
+
+function getStatusBadgeHtml(status) {
+    if (status === 'Ongoing') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-emerald-600 text-white inline-flex items-center gap-1.5 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Ongoing</span>`;
+    }
+    if (status === 'Upcoming') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-amber-100 text-amber-800">Upcoming</span>`;
+    }
+    if (status === 'Completed') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-indigo-100 text-indigo-800">Completed</span>`;
+    }
+    if (status === 'Archived') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-200 text-slate-700">Archived</span>`;
+    }
+    return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 text-slate-700">${status}</span>`;
+}
+
+function sortEventsByPriority(events) {
+    if (!Array.isArray(events)) return [];
+    const statusPriority = {
+        'Ongoing': 1,
+        'Upcoming': 2,
+        'Completed': 3,
+        'Archived': 4
+    };
+
+    return [...events].sort((a, b) => {
+        const prioA = statusPriority[a.status] || 99;
+        const prioB = statusPriority[b.status] || 99;
+        if (prioA !== prioB) {
+            return prioA - prioB;
+        }
+        return (b.id || 0) - (a.id || 0);
+    });
 }
 
 function escapeHtml(str) {

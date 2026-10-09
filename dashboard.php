@@ -161,10 +161,10 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <select id="event-status-filter" class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none">
-                            <option value="ALL">All Statuses</option>
+                        <select id="event-status-filter" class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
+                            <option value="ALL">All Statuses (Ongoing Priority)</option>
+                            <option value="Ongoing">Ongoing Only</option>
                             <option value="Upcoming">Upcoming</option>
-                            <option value="Ongoing">Ongoing</option>
                             <option value="Completed">Completed</option>
                             <option value="Archived">Archived</option>
                         </select>
