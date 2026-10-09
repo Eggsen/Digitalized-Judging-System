@@ -46,14 +46,40 @@ try {
     $assignedJudgesObj = [];
     foreach ($judgeIds as $jId) {
         if (is_string($jId) && strlen($jId) === 24) {
-            $assignedJudgesObj[] = new MongoDB\BSON\ObjectId($jId);
+            $objId = new MongoDB\BSON\ObjectId($jId);
+            $user = $usersCollection->findOne(['_id' => $objId]);
+            if ($user) {
+                $st = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
+                $isActive = $user['is_active'] ?? true;
+                if ($st !== 'active' || $isActive === false) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Account \"{$user['username']}\" cannot be assigned because it is not activated yet. Only activated users can be assigned to competitions."
+                    ]);
+                    exit;
+                }
+                $assignedJudgesObj[] = $objId;
+            }
         }
     }
 
     $tabulatorsObj = [];
     foreach ($tabulatorIds as $tId) {
         if (is_string($tId) && strlen($tId) === 24) {
-            $tabulatorsObj[] = new MongoDB\BSON\ObjectId($tId);
+            $objId = new MongoDB\BSON\ObjectId($tId);
+            $user = $usersCollection->findOne(['_id' => $objId]);
+            if ($user) {
+                $st = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
+                $isActive = $user['is_active'] ?? true;
+                if ($st !== 'active' || $isActive === false) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "Account \"{$user['username']}\" cannot be assigned because it is not activated yet. Only activated users can be assigned to competitions."
+                    ]);
+                    exit;
+                }
+                $tabulatorsObj[] = $objId;
+            }
         }
     }
 

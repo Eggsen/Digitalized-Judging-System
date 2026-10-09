@@ -557,23 +557,55 @@ async function openAssignModal(eventId, eventName) {
     if (judges.length === 0) {
         judgeBox.innerHTML = '<span class="text-slate-400 italic">No judges found. Invite a judge first.</span>';
     } else {
-        judgeBox.innerHTML = judges.map(j => `
-            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                <input type="checkbox" value="${j.id}" class="judge-checkbox accent-indigo-600 rounded" ${currentJudgeIds.includes(String(j.id)) ? 'checked' : ''}>
-                <span>${escapeHtml(j.username)} (${escapeHtml(j.email || 'No email')})</span>
-            </label>
-        `).join('');
+        judgeBox.innerHTML = judges.map(j => {
+            const isActivated = j.status === 'active' && j.is_active !== false;
+            const isChecked = currentJudgeIds.includes(String(j.id));
+            let badge = '';
+            if (j.is_active === false) {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 ms-auto shrink-0">Disabled</span>';
+            } else if (j.status === 'pending') {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 ms-auto shrink-0"><i class="fa-solid fa-clock me-1"></i>Pending Activation</span>';
+            } else {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 ms-auto shrink-0"><i class="fa-solid fa-circle-check me-1"></i>Activated</span>';
+            }
+
+            return `
+                <label class="flex items-center justify-between gap-2 p-2 rounded-xl border border-slate-100 transition-colors ${!isActivated ? 'opacity-60 cursor-not-allowed bg-slate-100/60' : 'hover:bg-slate-50 cursor-pointer font-medium text-slate-700'}">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <input type="checkbox" value="${j.id}" class="judge-checkbox accent-indigo-600 rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
+                        <span class="truncate text-xs">${escapeHtml(j.username)} <span class="text-slate-400 font-normal">(${escapeHtml(j.email || 'No email')})</span></span>
+                    </div>
+                    ${badge}
+                </label>
+            `;
+        }).join('');
     }
 
     if (tabulators.length === 0) {
         tabBox.innerHTML = '<span class="text-slate-400 italic">No tabulators found. Invite a tabulator first.</span>';
     } else {
-        tabBox.innerHTML = tabulators.map(t => `
-            <label class="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                <input type="checkbox" value="${t.id}" class="tabulator-checkbox accent-indigo-600 rounded" ${currentTabIds.includes(String(t.id)) ? 'checked' : ''}>
-                <span>${escapeHtml(t.username)} (${escapeHtml(t.email || 'No email')})</span>
-            </label>
-        `).join('');
+        tabBox.innerHTML = tabulators.map(t => {
+            const isActivated = t.status === 'active' && t.is_active !== false;
+            const isChecked = currentTabIds.includes(String(t.id));
+            let badge = '';
+            if (t.is_active === false) {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 ms-auto shrink-0">Disabled</span>';
+            } else if (t.status === 'pending') {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 ms-auto shrink-0"><i class="fa-solid fa-clock me-1"></i>Pending Activation</span>';
+            } else {
+                badge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 ms-auto shrink-0"><i class="fa-solid fa-circle-check me-1"></i>Activated</span>';
+            }
+
+            return `
+                <label class="flex items-center justify-between gap-2 p-2 rounded-xl border border-slate-100 transition-colors ${!isActivated ? 'opacity-60 cursor-not-allowed bg-slate-100/60' : 'hover:bg-slate-50 cursor-pointer font-medium text-slate-700'}">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <input type="checkbox" value="${t.id}" class="tabulator-checkbox accent-indigo-600 rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
+                        <span class="truncate text-xs">${escapeHtml(t.username)} <span class="text-slate-400 font-normal">(${escapeHtml(t.email || 'No email')})</span></span>
+                    </div>
+                    ${badge}
+                </label>
+            `;
+        }).join('');
     }
 }
 
