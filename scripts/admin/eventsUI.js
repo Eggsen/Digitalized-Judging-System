@@ -3,6 +3,7 @@ import { listAccounts } from "./adminAPI.js";
 import { showToast } from "../utils/uiUtils.js";
 
 const userRole = document.body.dataset.role;
+let cachedEventsList = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     if (userRole === 'admin') {
@@ -11,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAdminEvents();
         loadAuditLogs();
     } else if (userRole === 'judge' || userRole === 'tabulator') {
+        initCommonModalEvents();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     }
@@ -72,6 +74,7 @@ export async function loadAdminEvents() {
         return;
     }
 
+    cachedEventsList = res.events;
     let events = res.events;
     if (filterVal !== 'ALL') {
         events = events.filter(e => e.status === filterVal);
@@ -89,13 +92,13 @@ export async function loadAdminEvents() {
     }
 
     grid.innerHTML = events.map(e => `
-        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 hover:shadow-md transition-all flex flex-col justify-between">
+        <div class="event-card bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300 rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group" data-id="${e.id}">
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(e.status)}">${e.status}</span>
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
-                <h3 class="font-extrabold text-buksu-navy text-sm mb-1">${escapeHtml(e.eventName)}</h3>
+                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
                 <p class="text-xs text-slate-500 font-normal line-clamp-2 mb-3">${escapeHtml(e.description || 'No description provided.')}</p>
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
@@ -247,6 +250,8 @@ async function loadUserAssignedEvents() {
         return;
     }
 
+    cachedEventsList = res.events;
+
     if (res.events.length === 0) {
         grid.innerHTML = `
             <div class="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
@@ -259,13 +264,13 @@ async function loadUserAssignedEvents() {
     }
 
     grid.innerHTML = res.events.map(e => `
-        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        <div class="event-card bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group" data-id="${e.id}">
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(e.status)}">${e.status}</span>
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
-                <h3 class="font-extrabold text-buksu-navy text-sm mb-1">${escapeHtml(e.eventName)}</h3>
+                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
                 <p class="text-xs text-slate-500 font-normal line-clamp-2 mb-3">${escapeHtml(e.description || 'No description provided.')}</p>
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
@@ -291,22 +296,19 @@ async function loadUserAssignedEvents() {
         </div>
     `).join('');
 
+    bindUserEventCardActions();
+
 }
 
 /* -------------------------------------------------------------
  * ACTION BINDINGS & MODALS
  * ------------------------------------------------------------- */
 function initAdminEventActions() {
+    initCommonModalEvents();
+
     // Open Create Modal
     document.getElementById('open-create-event-modal-btn')?.addEventListener('click', () => {
         document.getElementById('create-event-modal')?.classList.remove('hidden');
-    });
-
-    // Close Modals
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#create-event-modal, #edit-event-modal, #assign-event-modal').forEach(m => m.classList.add('hidden'));
-        });
     });
 
     // Submit Create Event
@@ -376,15 +378,40 @@ function initAdminEventActions() {
     });
 }
 
+function initCommonModalEvents() {
+    // Close Modals
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#create-event-modal, #edit-event-modal, #assign-event-modal, #view-event-modal').forEach(m => m.classList.add('hidden'));
+        });
+    });
+
+    // Close on backdrop click
+    document.querySelectorAll('#create-event-modal, #edit-event-modal, #assign-event-modal, #view-event-modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+        });
+    });
+}
+
 function bindEventCardActions() {
+    // Card Click -> View Details Modal
+    document.querySelectorAll('#admin-events-grid .event-card').forEach(card => {
+        card.addEventListener('click', () => openViewEventModal(card.dataset.id));
+    });
+
     // Open Assign Modal
     document.querySelectorAll('.open-assign-btn').forEach(btn => {
-        btn.addEventListener('click', () => openAssignModal(btn.dataset.id, btn.dataset.name));
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAssignModal(btn.dataset.id, btn.dataset.name);
+        });
     });
 
     // Open Edit Modal
     document.querySelectorAll('.open-edit-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             document.getElementById('edit-ev-id').value = btn.dataset.id;
             document.getElementById('edit-ev-name').value = btn.dataset.name;
             document.getElementById('edit-ev-type').value = btn.dataset.type;
@@ -400,7 +427,8 @@ function bindEventCardActions() {
 
     // Archive Event
     document.querySelectorAll('.archive-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             const eventName = btn.dataset.name;
             if (confirm(`Are you sure you want to archive competition "${eventName}"?`)) {
                 const res = await archiveEvent({ id: btn.dataset.id });
@@ -413,6 +441,73 @@ function bindEventCardActions() {
             }
         });
     });
+}
+
+function bindUserEventCardActions() {
+    document.querySelectorAll('#user-assigned-events-grid .event-card').forEach(card => {
+        card.addEventListener('click', () => openViewEventModal(card.dataset.id));
+    });
+}
+
+export function openViewEventModal(eventId) {
+    const modal = document.getElementById('view-event-modal');
+    if (!modal) return;
+
+    const event = cachedEventsList.find(e => String(e.id) === String(eventId));
+    if (!event) return;
+
+    // Set Title, Type, Status Badges
+    document.getElementById('view-ev-title').textContent = event.eventName || 'Unnamed Event';
+    document.getElementById('view-ev-type-badge').textContent = event.type || 'General';
+    
+    const statusBadge = document.getElementById('view-ev-status-badge');
+    statusBadge.textContent = event.status || 'Upcoming';
+    statusBadge.className = `px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(event.status)}`;
+
+    // Set Details
+    document.getElementById('view-ev-date').textContent = event.date || 'TBA';
+    document.getElementById('view-ev-venue').textContent = event.venue || 'TBA';
+    document.getElementById('view-ev-judging-status').textContent = event.judgingStatus || 'Not Yet Started';
+    document.getElementById('view-ev-desc').textContent = event.description && event.description.trim() ? event.description : 'No description provided.';
+
+    // Populate Judges List
+    const judgesBox = document.getElementById('view-ev-judges-list');
+    if (event.assignedjudges && event.assignedjudges.length > 0) {
+        judgesBox.innerHTML = event.assignedjudges.map(j => `
+            <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-indigo-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(j.username)}</span>
+                    <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(j.email || 'No email')}</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        judgesBox.innerHTML = '<span class="text-slate-400 text-xs italic">No judges assigned yet.</span>';
+    }
+
+    // Populate Tabulators List
+    const tabBox = document.getElementById('view-ev-tabulators-list');
+    if (event.tabulators && event.tabulators.length > 0) {
+        tabBox.innerHTML = event.tabulators.map(t => `
+            <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5 text-xs">
+                <div class="w-6 h-6 rounded-lg bg-emerald-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <span class="font-extrabold text-slate-800 block leading-tight truncate">${escapeHtml(t.username)}</span>
+                    <span class="text-[10px] text-slate-500 font-normal block truncate">${escapeHtml(t.email || 'No email')}</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        tabBox.innerHTML = '<span class="text-slate-400 text-xs italic">No tabulators assigned yet.</span>';
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
 }
 
 async function openAssignModal(eventId, eventName) {

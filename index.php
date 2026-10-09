@@ -484,6 +484,97 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     </div>
     <?php endif; ?>
 
+    <!-- MODAL: VIEW EVENT DETAILS (ACCESSIBLE TO ALL ROLES) -->
+    <div id="view-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in">
+            <!-- Header Banner with BukSU Dark Blue gradient -->
+            <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-6 rounded-2xl text-white relative overflow-hidden -mx-2 -mt-2">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-buksu-gold/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-start justify-between gap-3 relative z-10">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 flex-wrap" id="view-modal-badges">
+                            <span id="view-ev-status-badge" class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-amber-400 text-buksu-navy">Upcoming</span>
+                            <span id="view-ev-type-badge" class="px-2.5 py-1 text-[10px] font-bold bg-white/20 text-white rounded-lg">Dance_Competition</span>
+                        </div>
+                        <h2 id="view-ev-title" class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Event Name</h2>
+                    </div>
+                    <button type="button" class="close-modal-btn text-white/70 hover:text-white text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                        <i class="fa-regular fa-clock"></i>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date &amp; Time</span>
+                        <span id="view-ev-date" class="font-bold text-slate-800 text-xs">TBA</span>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Venue / Location</span>
+                        <span id="view-ev-venue" class="font-bold text-slate-800 text-xs">TBA</span>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3 sm:col-span-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                        <i class="fa-solid fa-tasks"></i>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Judging State</span>
+                        <span id="view-ev-judging-status" class="font-bold text-slate-800 text-xs">Not Yet Started</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description Section -->
+            <div class="space-y-1.5 border-t border-slate-100 pt-4">
+                <h4 class="text-xs font-bold text-buksu-navy uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-align-left text-buksu-navy"></i> Event Description
+                </h4>
+                <p id="view-ev-desc" class="text-xs text-slate-600 font-normal leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 min-h-14">
+                    No description provided.
+                </p>
+            </div>
+
+            <!-- Assigned Personnel Section -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-buksu-navy uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-gavel text-buksu-navy"></i> Assigned Judges
+                    </h4>
+                    <div id="view-ev-judges-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        <span class="text-slate-400 text-xs italic">None assigned</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-buksu-navy uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-calculator text-buksu-navy"></i> Assigned Tabulators
+                    </h4>
+                    <div id="view-ev-tabulators-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        <span class="text-slate-400 text-xs italic">None assigned</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
+                <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="w-full py-4 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
         <p>&copy; 2026 intFour. All rights reserved. | <span class="font-medium text-slate-500">Digitalized Judging System</span></p>
