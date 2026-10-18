@@ -363,13 +363,13 @@ function renderScoringSheet() {
                     const weightedScore = (critState.score / cr.max_points) * cr.percentage;
 
                     return `
-                        <div class="criterion-deck-card p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between ${
+                        <div class="criterion-deck-card p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between h-full ${
                             isActive 
                                 ? 'bg-amber-50/90 border-2 border-buksu-gold shadow-md ring-2 ring-buksu-gold/30 text-slate-800' 
                                 : 'bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 shadow-2xs hover:border-slate-300'
                         }" data-crit-id="${cr.id}">
-                            <div>
-                                <div class="flex items-center justify-between gap-1.5 mb-1.5">
+                            <div class="space-y-1">
+                                <div class="flex items-center justify-between gap-1.5 mb-1">
                                     <span class="px-2 py-0.5 rounded-md text-[10px] font-black ${
                                         isActive 
                                             ? 'bg-buksu-navy text-buksu-gold font-black shadow-2xs' 
@@ -378,11 +378,11 @@ function renderScoringSheet() {
                                         ${cr.percentage}% Weight
                                     </span>
                                     ${isComplete ? `
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
                                             <i class="fa-solid fa-circle-check text-xs text-emerald-600"></i> Completed
                                         </span>
                                     ` : `
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1 shrink-0">
                                             <i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> ${ratedCount}/${totalCount} Rated
                                         </span>
                                     `}
@@ -390,20 +390,22 @@ function renderScoringSheet() {
                                 <h4 class="font-extrabold text-sm truncate ${isActive ? 'text-buksu-navy' : 'text-slate-800'}">
                                     ${escapeHtml(cr.title)}
                                 </h4>
-                                <p class="text-[11px] truncate mt-0.5 ${isActive ? 'text-slate-600' : 'text-slate-400'}">
+                                <p class="text-[11px] truncate ${isActive ? 'text-slate-600' : 'text-slate-400'}">
                                     ${escapeHtml(cr.description || 'Evaluation rubrics')}
                                 </p>
                             </div>
 
-                            <div class="mt-3 pt-2.5 border-t ${isActive ? 'border-amber-200/80' : 'border-slate-100'} flex items-center justify-between">
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-sm font-black text-buksu-navy">
+                            <div class="mt-3 pt-2.5 border-t ${isActive ? 'border-amber-200/80' : 'border-slate-100'} flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="deck-crit-score text-sm font-black text-buksu-navy leading-none">
                                         ${critState.score > 0 ? critState.score.toFixed(1) : '0.0'}
                                     </span>
-                                    <span class="text-[10px] font-bold text-slate-400">/ ${cr.max_points} pts</span>
-                                    <span class="text-[10px] font-extrabold text-indigo-600 ms-0.5">(${weightedScore.toFixed(2)}%)</span>
+                                    <span class="text-[11px] font-bold text-slate-400 leading-none">/ ${cr.max_points} pts</span>
+                                    <span class="deck-weighted-pill text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200/60 leading-none">
+                                        (${weightedScore.toFixed(2)}%)
+                                    </span>
                                 </div>
-                                <span class="text-[10px] font-bold flex items-center gap-1 ${isActive ? 'text-amber-800 font-extrabold' : 'text-slate-400'}">
+                                <span class="text-[10px] font-bold flex items-center gap-1 shrink-0 ${isActive ? 'text-amber-800 font-extrabold' : 'text-slate-400'}">
                                     ${isActive ? '<i class="fa-solid fa-eye text-amber-600"></i> Active Rubric' : 'Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>'}
                                 </span>
                             </div>
@@ -623,7 +625,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
 
                                     return `
                                         <button type="button" 
-                                            class="gc-level-card p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between h-full group ${
+                                            class="gc-level-card p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[140px] group ${
                                                 isSelected 
                                                     ? 'bg-amber-50/90 border-2 border-buksu-gold ring-2 ring-buksu-gold/30 shadow-sm text-slate-800 active' 
                                                     : 'bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 text-slate-700 shadow-2xs'
@@ -649,7 +651,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                                 <h6 class="font-extrabold text-xs uppercase tracking-tight mt-2 ${isSelected ? 'text-buksu-navy font-black' : 'text-slate-800'}">
                                                     ${tier.label}
                                                 </h6>
-                                                <p class="text-xs leading-relaxed mt-1.5 line-clamp-4 ${isSelected ? 'text-slate-800 font-medium' : 'text-slate-500 font-normal'}">
+                                                <p class="text-xs leading-relaxed mt-1.5 ${isSelected ? 'text-slate-800 font-medium' : 'text-slate-600 font-normal'}">
                                                     ${escapeHtml(desc)}
                                                 </p>
                                             </div>
@@ -805,10 +807,10 @@ function updateLiveDisplays() {
             const critState = contestantScores[activeCriterionId] || { score: 0, sub_scores: {} };
             const weightedScore = (critState.score / activeCrit.max_points) * activeCrit.percentage;
 
-            const scoreDisplay = deckCard.querySelector('.text-sm.font-black');
+            const scoreDisplay = deckCard.querySelector('.deck-crit-score') || deckCard.querySelector('.text-sm.font-black');
             if (scoreDisplay) scoreDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : '0.0';
 
-            const weightedPill = deckCard.querySelector('.text-\\[10px\\].font-extrabold');
+            const weightedPill = deckCard.querySelector('.deck-weighted-pill') || deckCard.querySelector('.text-\\[10px\\].font-extrabold');
             if (weightedPill) weightedPill.textContent = `(${weightedScore.toFixed(2)}%)`;
         }
     }

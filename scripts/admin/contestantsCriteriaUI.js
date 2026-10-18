@@ -224,25 +224,25 @@ async function loadContestantsList() {
                 <div class="w-10 h-10 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-extrabold text-sm shrink-0 border border-buksu-gold/30 shadow-xs mt-0.5">
                     #${c.contestant_number}
                 </div>
-                <div class="overflow-hidden space-y-1">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <h5 class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(c.name)}</h5>
+                <div class="overflow-hidden space-y-1 flex-1 min-w-[180px]">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h5 class="font-extrabold text-slate-800 text-sm leading-tight">${escapeHtml(c.name)}</h5>
                         ${isTeam 
-                            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80"><i class="fa-solid fa-users-line me-1"></i> Team</span>` 
-                            : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80"><i class="fa-solid fa-user me-1"></i> Individual</span>`
+                            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shrink-0"><i class="fa-solid fa-users-line me-1"></i> Team</span>` 
+                            : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80 shrink-0"><i class="fa-solid fa-user me-1"></i> Individual</span>`
                         }
                         ${comments.length > 0 
-                            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1"><i class="fa-solid fa-award text-amber-500"></i> ${comments.length} Citation${comments.length > 1 ? 's' : ''}</span>` 
+                            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1 shrink-0"><i class="fa-solid fa-award text-amber-500"></i> ${comments.length} Citation${comments.length > 1 ? 's' : ''}</span>` 
                             : ''
                         }
                     </div>
-                    <p class="text-[11px] text-slate-500 font-medium truncate">${escapeHtml(c.department_or_org || 'Independent / General')}</p>
+                    <p class="text-xs text-slate-500 font-medium">${escapeHtml(c.department_or_org || 'Independent / General')}</p>
                     ${isTeam && members.length > 0 ? `
-                        <p class="text-[10px] text-indigo-900/80 font-medium flex items-center gap-1 line-clamp-1">
+                        <p class="text-[11px] text-indigo-900/90 font-medium flex items-center gap-1 line-clamp-1">
                             <i class="fa-solid fa-people-group text-indigo-500"></i> Members: ${escapeHtml(members.join(', '))}
                         </p>
                     ` : ''}
-                    ${c.description ? `<p class="text-[10px] text-slate-400 line-clamp-1 italic">${escapeHtml(c.description)}</p>` : ''}
+                    ${c.description ? `<p class="text-[11px] text-slate-400 line-clamp-2 italic leading-relaxed">${escapeHtml(c.description)}</p>` : ''}
                 </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
@@ -584,15 +584,15 @@ async function loadCriteriaList() {
                         <span>${cr.percentage}%</span>
                         <span class="text-[8px] font-bold text-slate-200 uppercase">weight</span>
                     </div>
-                    <div class="overflow-hidden">
-                        <h5 class="font-extrabold text-slate-800 text-xs truncate flex items-center gap-2">
-                            ${escapeHtml(cr.title)}
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200/60 text-slate-600">Max: ${cr.max_points} pts</span>
+                    <div class="overflow-hidden space-y-1 flex-1 min-w-[200px]">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h5 class="font-extrabold text-slate-800 text-sm leading-tight">${escapeHtml(cr.title)}</h5>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/70 text-slate-700 shrink-0">Max: ${cr.max_points} pts</span>
                             ${subCount > 0 
-                                ? `<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200"><i class="fa-solid fa-layer-group me-1"></i>${subCount} Indicators</span>` 
-                                : '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">No Indicators</span>'}
-                        </h5>
-                        ${cr.description ? `<p class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">${escapeHtml(cr.description)}</p>` : ''}
+                                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0"><i class="fa-solid fa-layer-group me-1"></i>${subCount} Indicators</span>` 
+                                : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">No Indicators</span>'}
+                        </div>
+                        ${cr.description ? `<p class="text-xs text-slate-500 font-normal leading-relaxed line-clamp-2">${escapeHtml(cr.description)}</p>` : ''}
                     </div>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">

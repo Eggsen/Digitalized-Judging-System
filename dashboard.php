@@ -514,7 +514,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
     <!-- MODAL: MANAGE EVENT SETUP (CONTESTANTS & CRITERIA) -->
     <div id="manage-event-setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-5 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div class="flex items-center gap-3">
@@ -631,9 +631,6 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="openNewCriterionRubricBtn" class="px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-buksu-gold font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
-                            <i class="fa-solid fa-plus text-buksu-gold"></i> Create Criterion with Rubric
-                        </button>
                         <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-sliders"></i> Adjust All Weights
                         </button>
@@ -722,7 +719,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
     <!-- MODAL: EDIT CRITERION & 5-1 RUBRIC BUILDER -->
     <div id="criterion-rubric-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold text-sm shadow-xs border border-buksu-gold/30">
@@ -851,7 +848,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
     <!-- MODAL: JUDGE SCORING SHEET (ACCESSIBLE TO JUDGE & ADMIN) -->
     <div id="judge-scoring-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-7xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <!-- Header -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div class="flex items-center gap-3">
@@ -869,10 +866,10 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
             </div>
 
-            <!-- Body Grid: Left Contestants list (4 cols), Right Scoring Form (8 cols) -->
+            <!-- Body Grid: Left Contestants list (3 cols), Right Scoring Form (9 cols) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[420px]">
                 <!-- Contestants List -->
-                <div class="lg:col-span-4 space-y-2.5 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-5">
+                <div class="lg:col-span-3 space-y-2.5 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-5">
                     <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
                         <span>Contestants</span>
                         <span>Status</span>
@@ -885,7 +882,7 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                 </div>
 
                 <!-- Scoring Sheet Form -->
-                <div class="lg:col-span-8 flex flex-col justify-between space-y-4">
+                <div class="lg:col-span-9 flex flex-col justify-between space-y-4">
                     <div id="judge-scoring-form-body" class="space-y-4 flex-1">
                         <div class="py-16 text-center text-slate-400 text-xs">
                             <i class="fa-solid fa-user-check text-3xl text-slate-300 mb-2"></i>
