@@ -506,10 +506,20 @@ function initCommonModalEvents() {
         'tabulation-board-modal'
     ];
 
-    // Close Modals on close button click
+    // Close Modals on close button click - only closes the enclosing modal
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            modalIds.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const enclosingModal = btn.closest('.fixed');
+            if (enclosingModal) {
+                enclosingModal.classList.add('hidden');
+                // If closing parent manage-event-setup-modal, also close child sub-modals
+                if (enclosingModal.id === 'manage-event-setup-modal') {
+                    document.getElementById('adjust-weights-modal')?.classList.add('hidden');
+                    document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
+                    document.getElementById('contestant-comments-modal')?.classList.add('hidden');
+                }
+            }
         });
     });
 

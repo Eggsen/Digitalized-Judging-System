@@ -79,9 +79,35 @@ export function initContestantsCriteriaUI() {
     // Form: Save Criterion & Rubrics
     document.getElementById('criterionRubricForm')?.addEventListener('submit', handleSaveRubricCriterion);
 
-    // Close buttons for modals
-    document.querySelectorAll('#manage-event-setup-modal .close-modal-btn, #adjust-weights-modal .close-modal-btn, #criterion-rubric-modal .close-modal-btn, #contestant-comments-modal .close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+    // Close button for child modals: close ONLY that child modal
+    document.querySelectorAll('#adjust-weights-modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('adjust-weights-modal')?.classList.add('hidden');
+        });
+    });
+
+    document.querySelectorAll('#criterion-rubric-modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
+        });
+    });
+
+    document.querySelectorAll('#contestant-comments-modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('contestant-comments-modal')?.classList.add('hidden');
+        });
+    });
+
+    // Close button for main manage setup modal: closes setup modal and child modals
+    document.querySelectorAll('#manage-event-setup-modal .close-modal-btn').forEach(btn => {
+        if (btn.closest('#adjust-weights-modal') || btn.closest('#criterion-rubric-modal') || btn.closest('#contestant-comments-modal')) {
+            return;
+        }
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             modal.classList.add('hidden');
             document.getElementById('adjust-weights-modal')?.classList.add('hidden');
             document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
@@ -936,7 +962,6 @@ async function handleSaveRubricCriterion(e) {
     if (res.success) {
         showToast(critId ? 'Criterion Updated!' : 'Criterion Created!', res.message || 'Judging criterion and rubrics saved.', 'create');
         document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
-        document.getElementById('manage-event-setup-modal')?.classList.add('hidden');
         loadCriteriaList();
         document.getElementById('refreshEventsBtn')?.click();
     } else {
@@ -1009,7 +1034,6 @@ async function handleSaveWeights() {
     if (res.success) {
         showToast('Weights Configured!', res.message || 'Criteria weights updated successfully.', 'edit');
         document.getElementById('adjust-weights-modal')?.classList.add('hidden');
-        document.getElementById('manage-event-setup-modal')?.classList.add('hidden');
         loadCriteriaList();
         document.getElementById('refreshEventsBtn')?.click();
     } else {
