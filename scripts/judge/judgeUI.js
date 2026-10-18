@@ -216,6 +216,10 @@ function renderJudgeContestants() {
 
 function selectContestant(contestantId) {
     selectedContestantId = contestantId;
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    if (scoringBody) {
+        delete scoringBody.dataset.unlocked;
+    }
     renderJudgeContestants();
 
     const contestant = contestantsList.find(c => c.id === contestantId);
@@ -945,18 +949,77 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
     const container = document.getElementById('judge-special-awards-container');
     if (!container || !contestant) return;
 
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+    const scoreEntry = judgeScoresMap[selectedContestantId];
+    const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+    const isUnlocked = scoringBody?.dataset.unlocked === "true";
+
+    if (typeof isInputsDisabled === 'undefined') {
+        isInputsDisabled = (!isPeriodActive || (isSubmitted && !isUnlocked));
+    }
+
     const isTeam = contestant.entry_type === 'team';
     const members = Array.isArray(contestant.team_members) ? contestant.team_members : [];
 
-    container.innerHTML = `
-        <div id="judge-awards-card" class="p-5 sm:p-6 rounded-3xl bg-amber-50/50 border border-amber-200/90 shadow-sm space-y-4">
-            <div class="flex items-start justify-between gap-3 flex-wrap border-b border-amber-200/70 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                        <i class="fa-solid fa-award"></i>
+    let lockBannerHtml = '';
+    if (isInputsDisabled) {
+        if (!isPeriodActive) {
+            lockBannerHtml = `
+                <div class="p-3.5 rounded-2xl bg-amber-100/90 border border-amber-300 text-amber-900 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
+                        <i class="fa-solid fa-lock"></i>
                     </div>
                     <div>
-                        <h4 class="font-black text-slate-800 text-sm">Special Awards &amp; Member Citations</h4>
+                        <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked</p>
+                        <p class="text-[11px] text-amber-800 mt-0.5">Judging period is currently <strong>${escapeHtml(currentEventData?.judgingStatus || 'Not Active')}</strong>. Awards and scoring cannot be modified until an administrator starts the session.</p>
+                    </div>
+                </div>
+            `;
+        } else if (isSubmitted && !isUnlocked) {
+            lockBannerHtml = `
+                <div class="p-3.5 rounded-2xl bg-amber-100/90 border border-amber-300 text-amber-900 text-xs flex items-center justify-between gap-3 flex-wrap shadow-2xs animate-fade-in">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div>
+                            <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked (Read-Only)</p>
+                            <p class="text-[11px] text-amber-800 mt-0.5">Score has been submitted. Click <strong>"Edit Score"</strong> to assign new awards or modify citations.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="unlock-score-awards-btn px-3.5 py-2 bg-white border border-amber-400 hover:bg-amber-50 text-amber-950 font-black rounded-xl text-xs cursor-pointer shadow-xs flex items-center gap-1.5 transition-all hover:scale-[1.02]">
+                        <i class="fa-solid fa-pen text-amber-600"></i> Edit Score to Modify
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    container.innerHTML = `
+        <div id="judge-awards-card" class="p-5 sm:p-6 rounded-3xl ${
+            isInputsDisabled 
+                ? 'bg-slate-50/70 border-slate-200/90' 
+                : 'bg-amber-50/50 border-amber-200/90'
+        } border shadow-sm space-y-4 transition-all">
+            <div class="flex items-start justify-between gap-3 flex-wrap border-b ${isInputsDisabled ? 'border-slate-200' : 'border-amber-200/70'} pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl ${isInputsDisabled ? 'bg-slate-400' : 'bg-amber-500'} text-white flex items-center justify-center font-bold text-sm shadow-xs transition-colors">
+                        <i class="fa-solid ${isInputsDisabled ? 'fa-lock' : 'fa-award'}"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h4 class="font-black text-slate-800 text-sm">Special Awards &amp; Member Citations</h4>
+                            ${isInputsDisabled ? `
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-lock text-[9px]"></i> Read-Only (Inactive)
+                                </span>
+                            ` : `
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                    <i class="fa-solid fa-pen text-[9px]"></i> Editing Active
+                                </span>
+                            `}
+                        </div>
                         <p class="text-[11px] text-slate-600">
                             ${isTeam 
                                 ? 'Recognize standout individual performers within this team (e.g. "Best Keyboardist", "Best Lead Vocalist")' 
@@ -971,47 +1034,77 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                 ` : ''}
             </div>
 
+            ${lockBannerHtml}
+
             <!-- Form to Assign New Award -->
-            <form id="judgeAssignAwardForm" onsubmit="return false;" class="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-2xs space-y-3">
+            <form id="judgeAssignAwardForm" onsubmit="return false;" class="p-4 rounded-2xl border transition-all space-y-3 ${
+                isInputsDisabled 
+                    ? 'bg-slate-100/80 border-slate-200/90 select-none' 
+                    : 'bg-white border-amber-200/80 shadow-2xs'
+            }">
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
                     ${isTeam ? `
                     <div class="sm:col-span-5">
-                        <label class="block font-bold text-slate-700 mb-1">
+                        <label class="block font-bold ${isInputsDisabled ? 'text-slate-500' : 'text-slate-700'} mb-1">
                             Target Member <span class="text-slate-400 font-normal">(on this team)</span>
                         </label>
                         ${members.length > 0 ? `
-                            <select id="judge-award-member-select" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <select id="judge-award-member-select" ${isInputsDisabled ? 'disabled' : ''} class="w-full px-3 py-2 ${
+                                isInputsDisabled 
+                                    ? 'bg-slate-200/70 border-slate-300 text-slate-400 cursor-not-allowed' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500'
+                            } rounded-xl text-xs font-bold">
                                 <option value="">-- Choose Member or Entire Team --</option>
                                 <option value="Entire Team">Entire Team / Group</option>
                                 ${members.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')}
                             </select>
                         ` : `
-                            <input type="text" id="judge-award-member-input" placeholder="e.g. Keyboardist or Member Name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <input type="text" id="judge-award-member-input" ${isInputsDisabled ? 'disabled' : ''} placeholder="${isInputsDisabled ? 'Editing locked' : 'e.g. Keyboardist or Member Name'}" class="w-full px-3 py-2 ${
+                                isInputsDisabled 
+                                    ? 'bg-slate-200/70 border-slate-300 text-slate-400 cursor-not-allowed placeholder-slate-400' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500'
+                            } rounded-xl text-xs font-bold">
                         `}
                     </div>
                     ` : ''}
 
                     <div class="${isTeam ? 'sm:col-span-5' : 'sm:col-span-8'}">
-                        <label class="block font-bold text-slate-700 mb-1">Award / Citation Title</label>
-                        <input type="text" id="judge-award-title-input" required placeholder="e.g. Best Keyboardist, Best Soloist, Exceptional Execution" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <label class="block font-bold ${isInputsDisabled ? 'text-slate-500' : 'text-slate-700'} mb-1">Award / Citation Title</label>
+                        <input type="text" id="judge-award-title-input" ${isInputsDisabled ? 'disabled' : 'required'} placeholder="${
+                            isInputsDisabled 
+                                ? 'Editing locked — click \'Edit Score\' above to assign awards' 
+                                : 'e.g. Best Keyboardist, Best Soloist, Exceptional Execution'
+                        }" class="w-full px-3 py-2 ${
+                            isInputsDisabled 
+                                ? 'bg-slate-200/70 border-slate-300 text-slate-400 cursor-not-allowed placeholder-slate-400' 
+                                : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500'
+                        } rounded-xl text-xs font-bold">
                     </div>
 
                     <div class="${isTeam ? 'sm:col-span-2' : 'sm:col-span-4'} flex items-end">
-                        <button type="submit" id="judgeAssignAwardBtn" class="w-full py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5" ${isInputsDisabled ? 'disabled' : ''}>
-                            <i class="fa-solid fa-award"></i> Assign
+                        <button type="${isInputsDisabled ? 'button' : 'submit'}" id="judgeAssignAwardBtn" ${isInputsDisabled ? 'disabled' : ''} class="w-full py-2 px-3 ${
+                            isInputsDisabled 
+                                ? 'bg-slate-200 text-slate-400 border border-slate-300/80 cursor-not-allowed shadow-none' 
+                                : 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-xs transition-colors'
+                        } font-black text-xs rounded-xl flex items-center justify-center gap-1.5">
+                            <i class="fa-solid ${isInputsDisabled ? 'fa-lock' : 'fa-award'}"></i> ${isInputsDisabled ? 'Locked' : 'Assign'}
                         </button>
                     </div>
                 </div>
 
                 <!-- Quick suggestion pills for rapid selection -->
                 <div class="flex items-center gap-1.5 flex-wrap pt-1">
-                    <span class="text-[10px] font-bold text-slate-400">Quick Suggestions:</span>
+                    <span class="text-[10px] font-bold ${isInputsDisabled ? 'text-slate-400' : 'text-slate-500'}">Quick Suggestions:</span>
                     ${(isTeam ? [
                         'Best Keyboardist', 'Best Drummer', 'Best Lead Guitarist', 'Best Vocalist', 'Best Bassist', 'Outstanding Soloist', 'Crowd Favorite'
                     ] : [
                         'Best Costume', 'Outstanding Technique', 'Judges\' Choice Award', 'Best Stage Presence', 'Most Creative Concept'
                     ]).map(sug => `
-                        <button type="button" class="judge-quick-sug-btn px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-800 transition-colors cursor-pointer" data-text="${sug}">
+                        <button type="button" class="judge-quick-sug-btn px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors ${
+                            isInputsDisabled 
+                                ? 'bg-slate-200/80 text-slate-400 border border-slate-300/60 cursor-not-allowed opacity-60 pointer-events-none' 
+                                : 'bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-800 cursor-pointer'
+                        }" ${isInputsDisabled ? 'disabled' : ''} data-text="${sug}">
                             + ${sug}
                         </button>
                     `).join('')}
@@ -1027,14 +1120,25 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
     `;
 
     // Render list of awards
-    renderJudgeAssignedAwards(contestant);
+    renderJudgeAssignedAwards(contestant, isInputsDisabled);
 
     // Bind form submit
     document.getElementById('judgeAssignAwardForm')?.addEventListener('submit', handleAssignJudgeAward);
 
+    // Bind unlock button inside awards card if present
+    container.querySelectorAll('.unlock-score-awards-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (scoringBody) {
+                scoringBody.dataset.unlocked = "true";
+                renderScoringSheet();
+            }
+        });
+    });
+
     // Bind quick suggestions
     document.querySelectorAll('.judge-quick-sug-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            if (isInputsDisabled) return;
             const titleInput = document.getElementById('judge-award-title-input');
             if (titleInput) {
                 titleInput.value = btn.dataset.text;
@@ -1044,9 +1148,18 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
     });
 }
 
-function renderJudgeAssignedAwards(contestant) {
+function renderJudgeAssignedAwards(contestant, isInputsDisabled) {
     const container = document.getElementById('judge-assigned-awards-container');
     if (!container) return;
+
+    if (typeof isInputsDisabled === 'undefined') {
+        const scoringBody = document.getElementById('judge-scoring-form-body');
+        const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+        const scoreEntry = judgeScoresMap[selectedContestantId];
+        const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+        const isUnlocked = scoringBody?.dataset.unlocked === "true";
+        isInputsDisabled = (!isPeriodActive || (isSubmitted && !isUnlocked));
+    }
 
     const comments = Array.isArray(contestant.comments) ? contestant.comments : [];
 
@@ -1100,29 +1213,49 @@ function renderJudgeAssignedAwards(contestant) {
                         <span class="text-[10px] text-slate-400 block">${c.created_at ? escapeHtml(c.created_at) : ''}</span>
                     </div>
                 </div>
-                ${isMine ? `
-                    <button type="button" class="delete-judge-award-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer shrink-0 text-xs" 
-                        data-id="${c.id}" 
-                        title="Remove this award">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                ` : ''}
+                ${isMine ? (
+                    isInputsDisabled ? `
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-400 text-[10px] font-extrabold border border-slate-200 flex items-center gap-1 cursor-not-allowed shrink-0 select-none" title="Unlock score above to remove this award">
+                            <i class="fa-solid fa-lock text-[9px]"></i> Locked
+                        </span>
+                    ` : `
+                        <button type="button" class="delete-judge-award-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer shrink-0 text-xs" 
+                            data-id="${c.id}" 
+                            title="Remove this award">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `
+                ) : ''}
             </div>
         `;
     }).join('');
 
-    container.querySelectorAll('.delete-judge-award-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const commentId = btn.dataset.id;
-            handleDeleteJudgeAward(commentId);
+    if (!isInputsDisabled) {
+        container.querySelectorAll('.delete-judge-award-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const commentId = btn.dataset.id;
+                handleDeleteJudgeAward(commentId);
+            });
         });
-    });
+    }
 }
 
 async function handleAssignJudgeAward(e) {
     e.preventDefault();
     const contestant = contestantsList.find(c => c.id === selectedContestantId);
     if (!contestant) return;
+
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+    const scoreEntry = judgeScoresMap[selectedContestantId];
+    const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+    const isUnlocked = scoringBody?.dataset.unlocked === "true";
+    const isInputsDisabled = (!isPeriodActive || (isSubmitted && !isUnlocked));
+
+    if (isInputsDisabled) {
+        showToast('Action Locked', 'Special awards and citations are locked while not editing. Click "Edit Score" first.', 'warning');
+        return;
+    }
 
     const memberSelect = document.getElementById('judge-award-member-select');
     const memberInput = document.getElementById('judge-award-member-input');
@@ -1155,7 +1288,7 @@ async function handleAssignJudgeAward(e) {
         if (memberInput) memberInput.value = '';
 
         // Re-render awards container & header
-        renderJudgeAssignedAwards(contestant);
+        renderJudgeAssignedAwards(contestant, false);
         updateHeaderAwardsDisplay(contestant);
         renderJudgeContestants();
     } else {
@@ -1167,13 +1300,25 @@ async function handleDeleteJudgeAward(commentId) {
     const contestant = contestantsList.find(c => c.id === selectedContestantId);
     if (!contestant) return;
 
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+    const scoreEntry = judgeScoresMap[selectedContestantId];
+    const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+    const isUnlocked = scoringBody?.dataset.unlocked === "true";
+    const isInputsDisabled = (!isPeriodActive || (isSubmitted && !isUnlocked));
+
+    if (isInputsDisabled) {
+        showToast('Action Locked', 'Special awards are locked while viewing submitted score. Click "Edit Score" first.', 'warning');
+        return;
+    }
+
     if (!confirm('Are you sure you want to remove this special award/citation?')) return;
 
     const res = await deleteContestantComment(selectedContestantId, commentId);
     if (res.success) {
         contestant.comments = (contestant.comments || []).filter(c => c.id !== commentId);
         showToast('Award Removed', 'Special award citation removed.', 'archive');
-        renderJudgeAssignedAwards(contestant);
+        renderJudgeAssignedAwards(contestant, false);
         updateHeaderAwardsDisplay(contestant);
         renderJudgeContestants();
     } else {
