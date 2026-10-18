@@ -28,6 +28,9 @@ try {
     $eventsCollection = $db->events;
     $logsCollection = $db->logs;
     $notificationsCollection = $db->notifications;
+    $contestantsCollection = $db->contestants;
+    $criteriaCollection = $db->criteria;
+    $scoresCollection = $db->scores;
 
 
 } catch (Exception $e) {

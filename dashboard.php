@@ -504,7 +504,303 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
             </form>
         </div>
     </div>
+
+    <!-- MODAL: MANAGE EVENT SETUP (CONTESTANTS & CRITERIA) -->
+    <div id="manage-event-setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-5 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold shadow-md border border-buksu-gold/30">
+                        <i class="fa-solid fa-sliders text-base"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="setup-modal-event-id-badge" class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-600 uppercase">Event #1</span>
+                            <span class="text-xs font-semibold text-slate-400">Competition Management</span>
+                        </div>
+                        <h3 id="setup-modal-event-title" class="font-extrabold text-slate-800 text-lg leading-tight">Manage Contestants &amp; Judging Criteria</h3>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <button type="button" class="setup-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer" data-tab="setup-contestants-tab">
+                    <i class="fa-solid fa-users me-1.5"></i> Contestant Records
+                </button>
+                <button type="button" class="setup-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 hover:text-buksu-navy transition-all cursor-pointer" data-tab="setup-criteria-tab">
+                    <i class="fa-solid fa-list-check me-1.5"></i> Judging Criteria &amp; Weights
+                </button>
+            </div>
+
+            <!-- TAB 1: CONTESTANTS -->
+            <div id="setup-contestants-tab" class="setup-tab-content space-y-6 flex-1">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    <!-- Contestants List (3 cols) -->
+                    <div class="lg:col-span-3 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-address-book text-buksu-navy"></i> Registered Contestants
+                            </h4>
+                            <span class="text-[11px] text-slate-400 font-medium">Auto-ordered by number</span>
+                        </div>
+                        <div id="setup-contestants-list" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                            <div class="py-6 text-center text-slate-400 text-xs">
+                                <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading contestants...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Create Contestant Form (2 cols) -->
+                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus text-buksu-navy text-sm"></i>
+                            <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Register Contestant</h4>
+                        </div>
+                        <form id="createContestantForm" onsubmit="return false;" class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Contestant Number</label>
+                                <input type="number" id="new-contestant-num" min="1" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Full Name / Entry Title</label>
+                                <input type="text" id="new-contestant-name" required placeholder="e.g. John Doe or Team Alpha" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Department / Organization</label>
+                                <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Description / Entry Info</label>
+                                <textarea id="new-contestant-desc" rows="2" placeholder="Brief notes or piece title..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            </div>
+                            <button type="submit" id="addContestantBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-plus text-buksu-gold"></i> Add Contestant
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: CRITERIA & WEIGHTS -->
+            <div id="setup-criteria-tab" class="setup-tab-content space-y-6 flex-1 hidden">
+                <!-- Weight Allocation Bar & Action -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between flex-wrap gap-4">
+                    <div class="space-y-1.5 flex-1 min-w-[240px]">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-chart-pie text-buksu-navy"></i> Overall Criteria Weight
+                            </span>
+                            <span id="setup-criteria-weight-badge" class="px-3 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">0% / 100% Total</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div id="setup-criteria-weight-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-sliders"></i> Adjust All Weights
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    <!-- Criteria List (3 cols) -->
+                    <div class="lg:col-span-3 space-y-3">
+                        <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-ol text-buksu-navy"></i> Active Judging Criteria
+                        </h4>
+                        <div id="setup-criteria-list" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+                            <div class="py-6 text-center text-slate-400 text-xs">
+                                <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading criteria...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Create Criterion Form (2 cols) -->
+                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-folder-plus text-buksu-navy text-sm"></i>
+                            <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Add Judging Criterion</h4>
+                        </div>
+                        <form id="createCriterionForm" onsubmit="return false;" class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
+                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Weight (%)</label>
+                                    <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Max Points</label>
+                                    <input type="number" id="new-criterion-max" min="1" value="100" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Description / Guidelines</label>
+                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging rubrics and guidelines..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            </div>
+                            <button type="submit" id="addCriterionBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-plus text-buksu-gold"></i> Add Criterion
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
+                <button type="button" class="close-modal-btn px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Done &amp; Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADJUST CRITERIA WEIGHTS -->
+    <div id="adjust-weights-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-scale-balanced text-indigo-600"></i> Configure Criteria Weights
+                </h3>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-xl cursor-pointer leading-none">&times;</button>
+            </div>
+            <p class="text-xs text-slate-500">Assign percentage weights for each criterion. The total should ideally equal 100%.</p>
+            <div id="weights-adjust-container" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                <div class="py-4 text-center text-slate-400 text-xs">Loading criteria...</div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">Cancel</button>
+                <button type="button" id="saveWeightsBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> Save Weights
+                </button>
+            </div>
+        </div>
+    </div>
     <?php endif; ?>
+
+    <!-- MODAL: JUDGE SCORING SHEET (ACCESSIBLE TO JUDGE & ADMIN) -->
+    <div id="judge-scoring-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-black shadow-md border border-buksu-gold/30">
+                        <i class="fa-solid fa-gavel text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Official Judge Scoring</span>
+                            <span id="judge-event-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">Not Yet Started</span>
+                        </div>
+                        <h3 id="judge-modal-title" class="font-extrabold text-slate-800 text-lg sm:text-xl leading-tight">Competition Scoring Portal</h3>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+            </div>
+
+            <!-- Body Grid: Left Contestants list (4 cols), Right Scoring Form (8 cols) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[420px]">
+                <!-- Contestants List -->
+                <div class="lg:col-span-4 space-y-2.5 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-5">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
+                        <span>Contestants</span>
+                        <span>Status</span>
+                    </div>
+                    <div id="judge-contestants-list" class="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                        <div class="py-8 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading contestants...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scoring Sheet Form -->
+                <div class="lg:col-span-8 flex flex-col justify-between space-y-4">
+                    <div id="judge-scoring-form-body" class="space-y-4 flex-1">
+                        <div class="py-16 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-user-check text-3xl text-slate-300 mb-2"></i>
+                            <p class="font-bold text-slate-600">Select a contestant to begin scoring</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                        <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">
+                            Close
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="saveDraftScoreBtn" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5" disabled>
+                                <i class="fa-solid fa-pen-ruler"></i> Save as Draft
+                            </button>
+                            <button type="button" id="submitFinalScoreBtn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5" disabled>
+                                <i class="fa-solid fa-paper-plane"></i> Submit Final Score
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: LIVE TABULATION BOARD (ACCESSIBLE TO TABULATOR & ADMIN) -->
+    <div id="tabulation-board-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md">
+                        <i class="fa-solid fa-calculator text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Live Tabulation Board</span>
+                            <span id="tab-event-judging-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">Not Yet Started</span>
+                        </div>
+                        <h3 id="tabulation-event-title" class="font-extrabold text-slate-800 text-lg sm:text-xl leading-tight">Official Scoring Matrix</h3>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="refreshTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh
+                    </button>
+                    <button type="button" id="printTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Print Matrix
+                    </button>
+                    <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div id="tab-stats-container" class="w-full"></div>
+
+            <!-- Real-time Scoring Matrix Table -->
+            <div class="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-xs flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead id="tab-table-head"></thead>
+                    <tbody id="tab-table-body" class="divide-y divide-slate-100 text-xs">
+                        <tr>
+                            <td class="py-12 text-center text-slate-400 text-xs">
+                                <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading live matrix...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live auto-syncing every 3 seconds
+                </span>
+                <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Close Board
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL: VIEW EVENT DETAILS (ACCESSIBLE TO ALL ROLES) -->
     <div id="view-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
@@ -589,8 +885,9 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
             </div>
 
             <!-- Modal Footer -->
-            <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
-                <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer">
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                <div id="view-modal-action-buttons" class="flex items-center gap-2"></div>
+                <button type="button" class="close-modal-btn px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
                     Close
                 </button>
             </div>
@@ -605,6 +902,9 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <script type="module" src="/scripts/ui/dashboardUI.js"></script>
     <script type="module" src="/scripts/admin/adminUI.js"></script>
     <script type="module" src="/scripts/admin/eventsUI.js"></script>
+    <script type="module" src="/scripts/admin/contestantsCriteriaUI.js"></script>
+    <script type="module" src="/scripts/judge/judgeUI.js"></script>
+    <script type="module" src="/scripts/tabulator/tabulatorUI.js"></script>
     <script type="module" src="/scripts/ui/notificationUI.js"></script>
 
 </body>

@@ -1,18 +1,31 @@
 import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
 import { showToast } from "../utils/uiUtils.js";
+import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
+import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
+import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
+import { toggleJudgingPeriod } from "./judgingAPI.js";
 
 const userRole = document.body.dataset.role;
 let cachedEventsList = [];
 
 document.addEventListener("DOMContentLoaded", () => {
+    initCommonModalEvents();
+
     if (userRole === 'admin') {
         initAdminTabs();
         initAdminEventActions();
+        initContestantsCriteriaUI();
+        initJudgeUI();
+        initTabulatorUI();
         loadAdminEvents();
         loadAuditLogs();
-    } else if (userRole === 'judge' || userRole === 'tabulator') {
-        initCommonModalEvents();
+    } else if (userRole === 'judge') {
+        initJudgeUI();
+        loadUserAssignedEvents();
+        document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
+    } else if (userRole === 'tabulator') {
+        initTabulatorUI();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     }
@@ -94,12 +107,25 @@ export async function loadAdminEvents() {
         return;
     }
 
-    grid.innerHTML = events.map(e => `
+    grid.innerHTML = events.map(e => {
+        let judgingBadge = '';
+        if (e.judgingStatus === 'In Progress') {
+            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 animate-pulse"><i class="fa-solid fa-play text-[8px]"></i> Judging Active</span>';
+        } else if (e.judgingStatus === 'Finished') {
+            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">Judging Finished</span>';
+        } else {
+            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Judging Inactive</span>';
+        }
+
+        return `
         <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
-                <div class="flex items-center justify-between gap-2 mb-2">
-                    ${getStatusBadgeHtml(e.status)}
+                <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        ${getStatusBadgeHtml(e.status)}
+                        ${judgingBadge}
+                    </div>
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
                 <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
@@ -125,12 +151,29 @@ export async function loadAdminEvents() {
                 </div>
             </div>
 
-            <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-1.5">
-                <button class="open-assign-btn px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-xl text-[11px] cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                    <i class="fa-solid fa-user-plus me-1"></i> Assign
-                </button>
+            <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-1.5 flex-wrap">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <button class="open-setup-btn px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                        <i class="fa-solid fa-sliders text-buksu-gold"></i> Setup
+                    </button>
+                    ${e.judgingStatus === 'In Progress' ? `
+                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="stop" data-name="${escapeHtml(e.eventName)}">
+                            <i class="fa-solid fa-stop"></i> Stop
+                        </button>
+                    ` : `
+                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="start" data-name="${escapeHtml(e.eventName)}">
+                            <i class="fa-solid fa-play"></i> Start
+                        </button>
+                    `}
+                    <button class="open-tab-board-btn px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors border border-amber-200 flex items-center gap-1" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                        <i class="fa-solid fa-calculator"></i> Board
+                    </button>
+                </div>
                 <div class="flex items-center gap-1">
-                    <button class="open-edit-btn px-2.5 py-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors" 
+                    <button class="open-assign-btn p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </button>
+                    <button class="open-edit-btn p-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" 
                         data-id="${e.id}" 
                         data-name="${escapeHtml(e.eventName)}" 
                         data-type="${escapeHtml(e.type)}" 
@@ -138,18 +181,20 @@ export async function loadAdminEvents() {
                         data-venue="${escapeHtml(e.venue)}" 
                         data-rawdate="${e.rawDate}" 
                         data-status="${e.status}" 
-                        data-judging="${e.judgingStatus}">
-                        <i class="fa-solid fa-pen text-buksu-navy me-1"></i> Edit
+                        data-judging="${e.judgingStatus}"
+                        title="Edit Competition">
+                        <i class="fa-solid fa-pen text-buksu-navy"></i>
                     </button>
                     ${e.status !== 'Archived' ? `
-                        <button class="archive-btn px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-[11px] cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                            <i class="fa-solid fa-box-archive me-1"></i> Archive
+                        <button class="archive-btn p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Archive Competition">
+                            <i class="fa-solid fa-box-archive"></i>
                         </button>
                     ` : ''}
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     bindEventCardActions();
 }
@@ -301,9 +346,19 @@ async function loadUserAssignedEvents() {
                 </div>
             </div>
 
-            <div class="mt-5 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                <span class="font-medium">Assigned to Portal</span>
-                <span class="font-bold text-buksu-navy flex items-center gap-1"><i class="fa-solid fa-circle-check text-buksu-navy"></i> Active</span>
+            <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-2 flex-wrap">
+                ${userRole === 'judge' ? `
+                    <button class="open-judge-scoring-btn px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                        <i class="fa-solid fa-gavel text-buksu-gold"></i> Open Judging Sheet
+                    </button>
+                ` : `
+                    <button class="open-tab-board-btn px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                        <i class="fa-solid fa-calculator"></i> Live Tabulation Board
+                    </button>
+                `}
+                <span class="text-[11px] font-bold ${e.judgingStatus === 'In Progress' ? 'text-emerald-600 animate-pulse' : 'text-slate-500'}">
+                    <i class="fa-solid ${e.judgingStatus === 'In Progress' ? 'fa-play' : 'fa-hourglass-start'} me-1"></i> ${escapeHtml(e.judgingStatus || 'Not Yet Started')}
+                </span>
             </div>
         </div>
     `).join('');
@@ -391,16 +446,28 @@ function initAdminEventActions() {
 }
 
 function initCommonModalEvents() {
-    // Close Modals
+    const modalIds = [
+        'create-event-modal', 
+        'edit-event-modal', 
+        'assign-event-modal', 
+        'view-event-modal',
+        'manage-event-setup-modal',
+        'adjust-weights-modal',
+        'judge-scoring-modal',
+        'tabulation-board-modal'
+    ];
+
+    // Close Modals on close button click
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#create-event-modal, #edit-event-modal, #assign-event-modal, #view-event-modal').forEach(m => m.classList.add('hidden'));
+            modalIds.forEach(id => document.getElementById(id)?.classList.add('hidden'));
         });
     });
 
     // Close on backdrop click
-    document.querySelectorAll('#create-event-modal, #edit-event-modal, #assign-event-modal, #view-event-modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
+    modalIds.forEach(id => {
+        const modal = document.getElementById(id);
+        modal?.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.add('hidden');
         });
     });
@@ -410,6 +477,47 @@ function bindEventCardActions() {
     // Card Click -> View Details Modal
     document.querySelectorAll('#admin-events-grid .event-card').forEach(card => {
         card.addEventListener('click', () => openViewEventModal(card.dataset.id));
+    });
+
+    // Setup Contestants & Criteria Modal
+    document.querySelectorAll('.open-setup-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openManageSetupModal(btn.dataset.id, btn.dataset.name);
+        });
+    });
+
+    // Toggle Judging Period (Start / Stop)
+    document.querySelectorAll('.toggle-judging-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const eventName = btn.dataset.name;
+            const id = btn.dataset.id;
+            const confirmMsg = action === 'start' 
+                ? `Are you sure you want to START the judging period for "${eventName}"? Assigned judges will immediately be permitted to enter scores.`
+                : `Are you sure you want to STOP the judging period for "${eventName}"? Judging will be finalized and scoring submissions locked.`;
+
+            if (confirm(confirmMsg)) {
+                btn.disabled = true;
+                const res = await toggleJudgingPeriod(id, action);
+                btn.disabled = false;
+                if (res.success) {
+                    showToast("Judging Period Updated!", res.message, "create");
+                    await loadAdminEvents();
+                } else {
+                    showToast("Action Failed", res.message || "Failed to update judging period.", "error");
+                }
+            }
+        });
+    });
+
+    // Open Live Tabulation Board
+    document.querySelectorAll('.open-tab-board-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTabulationBoardModal(btn.dataset.id, btn.dataset.name);
+        });
     });
 
     // Open Assign Modal
@@ -459,13 +567,36 @@ function bindUserEventCardActions() {
     document.querySelectorAll('#user-assigned-events-grid .event-card').forEach(card => {
         card.addEventListener('click', () => openViewEventModal(card.dataset.id));
     });
+
+    // Open Judge Scoring Modal
+    document.querySelectorAll('.open-judge-scoring-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openJudgeScoringModal(btn.dataset.id, btn.dataset.name);
+        });
+    });
+
+    // Open Tabulator Board Modal
+    document.querySelectorAll('.open-tab-board-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTabulationBoardModal(btn.dataset.id, btn.dataset.name);
+        });
+    });
 }
 
-export function openViewEventModal(eventId) {
+export async function openViewEventModal(eventId) {
     const modal = document.getElementById('view-event-modal');
     if (!modal) return;
 
-    const event = cachedEventsList.find(e => String(e.id) === String(eventId));
+    let event = cachedEventsList.find(e => String(e.id) === String(eventId));
+    if (!event) {
+        const res = await listEvents();
+        if (res.success && res.events) {
+            cachedEventsList = res.events;
+            event = cachedEventsList.find(e => String(e.id) === String(eventId));
+        }
+    }
     if (!event) return;
 
     // Set Title, Type, Status Badges
@@ -536,6 +667,51 @@ export function openViewEventModal(eventId) {
         }).join('');
     } else {
         tabBox.innerHTML = '<span class="text-slate-400 text-xs italic">No tabulators assigned yet.</span>';
+    }
+
+    // Action buttons in modal footer
+    const actionsBox = document.getElementById('view-modal-action-buttons');
+    if (actionsBox) {
+        if (userRole === 'admin') {
+            actionsBox.innerHTML = `
+                <button type="button" class="view-modal-setup-btn px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
+                    <i class="fa-solid fa-sliders text-buksu-gold"></i> Setup
+                </button>
+                <button type="button" class="view-modal-board-btn px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
+                    <i class="fa-solid fa-calculator"></i> Live Board
+                </button>
+            `;
+            actionsBox.querySelector('.view-modal-setup-btn')?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                openManageSetupModal(event.id, event.eventName);
+            });
+            actionsBox.querySelector('.view-modal-board-btn')?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                openTabulationBoardModal(event.id, event.eventName);
+            });
+        } else if (userRole === 'judge') {
+            actionsBox.innerHTML = `
+                <button type="button" class="view-modal-judge-btn px-4 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
+                    <i class="fa-solid fa-gavel text-buksu-gold"></i> Enter / View Scores
+                </button>
+            `;
+            actionsBox.querySelector('.view-modal-judge-btn')?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                openJudgeScoringModal(event.id, event.eventName);
+            });
+        } else if (userRole === 'tabulator') {
+            actionsBox.innerHTML = `
+                <button type="button" class="view-modal-tab-btn px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
+                    <i class="fa-solid fa-calculator"></i> Live Tabulation Board
+                </button>
+            `;
+            actionsBox.querySelector('.view-modal-tab-btn')?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                openTabulationBoardModal(event.id, event.eventName);
+            });
+        } else {
+            actionsBox.innerHTML = '';
+        }
     }
 
     // Show modal
