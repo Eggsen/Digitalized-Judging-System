@@ -68,6 +68,21 @@ export async function archiveEvent(data) {
     }
 }
 
+export async function deleteArchivedEvent(data) {
+    try {
+        const res = await fetch("/backend/crud/delete_event.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("deleteArchivedEvent API error: ", e);
+        return { success: false, message: "Network error deleting archived event." };
+    }
+}
+
 export async function listLogs() {
     try {
         const res = await fetch("/backend/crud/list_logs.php", { credentials: "include" });

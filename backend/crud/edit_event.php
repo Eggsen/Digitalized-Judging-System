@@ -62,6 +62,20 @@ try {
     }
 
     if ($status !== "") {
+        if (strtolower($status) === 'archived') {
+            $effectiveJudging = strtolower($judgingStatus ?: ($existing['judgingStatus'] ?? ''));
+            $currStatus = strtolower($existing['status'] ?? '');
+            $isOngoing = ($currStatus === 'ongoing' || $effectiveJudging === 'in progress');
+            $isStopped = ($effectiveJudging === 'finished' || $currStatus === 'completed');
+
+            if ($isOngoing && !$isStopped) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Cannot archive competition while judging is in progress. Please stop the judging period first."
+                ]);
+                exit;
+            }
+        }
         $updateFields['status'] = $status;
     }
 

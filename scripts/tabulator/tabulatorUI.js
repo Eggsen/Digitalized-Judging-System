@@ -190,8 +190,13 @@ function renderTabulationBoard(data) {
                             #${row.contestant_number}
                         </div>
                         <div>
-                            <h4 class="font-extrabold text-slate-800 text-xs">${escapeHtml(row.name)}</h4>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <h4 class="font-extrabold text-slate-800 text-xs">${escapeHtml(row.name)}</h4>
+                                ${row.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Team</span>` : ''}
+                            </div>
                             <p class="text-[11px] text-slate-500 font-normal">${escapeHtml(row.department_or_org || 'Independent')}</p>
+                            ${row.team_members && row.team_members.length > 0 ? `<p class="text-[10px] text-indigo-900/80 font-medium line-clamp-1"><i class="fa-solid fa-users text-indigo-500 me-1"></i>${escapeHtml(row.team_members.join(', '))}</p>` : ''}
+                            ${row.comments && row.comments.length > 0 ? `<div class="flex items-center gap-1 mt-0.5 flex-wrap">${row.comments.map(c => `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-300"><i class="fa-solid fa-award text-amber-600 me-0.5"></i>${escapeHtml(c.text)}</span>`).join('')}</div>` : ''}
                         </div>
                     </div>
                 </td>

@@ -25,7 +25,7 @@ if ($method === "GET") {
     }
 
     try {
-        $cursor = $criteriaCollection->find(['event_id' => $eventId]);
+        $cursor = $criteriaCollection->find(['event_id' => $eventId], ['sort' => ['percentage' => -1, 'title' => 1]]);
 
         $criteria = [];
         $totalWeight = 0;
@@ -34,6 +34,24 @@ if ($method === "GET") {
             $pct = (int)($doc['percentage'] ?? 0);
             $totalWeight += $pct;
 
+            $subCriteria = [];
+            if (!empty($doc['sub_criteria'])) {
+                foreach ($doc['sub_criteria'] as $sc) {
+                    $levels = [];
+                    if (!empty($sc['levels'])) {
+                        for ($lvl = 5; $lvl >= 1; $lvl--) {
+                            $levels[(string)$lvl] = (string)($sc['levels'][(string)$lvl] ?? ($sc['levels'][$lvl] ?? ''));
+                        }
+                    }
+                    $subCriteria[] = [
+                        'id' => (string)($sc['id'] ?? ('sub-' . bin2hex(random_bytes(3)))),
+                        'name' => (string)($sc['name'] ?? ''),
+                        'description' => (string)($sc['description'] ?? ''),
+                        'levels' => $levels
+                    ];
+                }
+            }
+
             $criteria[] = [
                 'id' => $idStr,
                 'title' => $doc['title'] ?? '',
@@ -41,6 +59,7 @@ if ($method === "GET") {
                 'event_id' => (int)($doc['event_id'] ?? $eventId),
                 'max_points' => (int)($doc['max_points'] ?? 100),
                 'percentage' => $pct,
+                'sub_criteria' => $subCriteria,
                 'created_at' => isset($doc['created_at']) ? (string)$doc['created_at'] : ''
             ];
         }
@@ -55,6 +74,42 @@ if ($method === "GET") {
         echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
         exit;
     }
+}
+
+// Helper to sanitize sub_criteria array
+function sanitizeSubCriteria($rawSubCriteria) {
+    if (!is_array($rawSubCriteria)) return [];
+    $sanitized = [];
+    foreach ($rawSubCriteria as $index => $sc) {
+        $name = trim($sc['name'] ?? '');
+        if ($name === '') continue;
+        $id = trim($sc['id'] ?? ('sub-' . ($index + 1) . '-' . bin2hex(random_bytes(2))));
+        $desc = trim($sc['description'] ?? '');
+
+        $levels = [];
+        $rawLevels = is_array($sc['levels'] ?? null) ? $sc['levels'] : [];
+        $defaultLabels = [
+            '5' => 'Outstanding performance and flawless execution.',
+            '4' => 'Very good performance with minor inconsistencies.',
+            '3' => 'Satisfactory performance meeting standard requirements.',
+            '2' => 'Fair performance with noticeable areas for improvement.',
+            '1' => 'Poor performance needing substantial development.'
+        ];
+
+        for ($lvl = 5; $lvl >= 1; $lvl--) {
+            $key = (string)$lvl;
+            $val = trim($rawLevels[$key] ?? ($rawLevels[$lvl] ?? ''));
+            $levels[$key] = $val !== '' ? $val : $defaultLabels[$key];
+        }
+
+        $sanitized[] = [
+            'id' => $id,
+            'name' => $name,
+            'description' => $desc,
+            'levels' => $levels
+        ];
+    }
+    return $sanitized;
 }
 
 // POST: Manage criteria (Admin only)
@@ -80,6 +135,7 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
+        $subCriteria = sanitizeSubCriteria($data['sub_criteria'] ?? []);
 
         if ($eventId <= 0 || $title === '') {
             echo json_encode(["success" => false, "message" => "Criterion title and valid event_id are required."]);
@@ -98,6 +154,7 @@ if ($method === "POST") {
                 'event_id' => $eventId,
                 'max_points' => $maxPoints,
                 'percentage' => $percentage,
+                'sub_criteria' => $subCriteria,
                 'created_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];
 
@@ -108,7 +165,7 @@ if ($method === "POST") {
                 $_SESSION['username'],
                 $_SESSION['role'],
                 'CREATE_CRITERIA',
-                "Added criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts) for event ID: {$eventId}."
+                "Added criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts, " . count($subCriteria) . " rubric indicators) for event ID: {$eventId}."
             );
 
             echo json_encode([
@@ -120,7 +177,8 @@ if ($method === "POST") {
                     'description' => $description,
                     'event_id' => $eventId,
                     'max_points' => $maxPoints,
-                    'percentage' => $percentage
+                    'percentage' => $percentage,
+                    'sub_criteria' => $subCriteria
                 ]
             ]);
             exit;
@@ -158,17 +216,21 @@ if ($method === "POST") {
                 exit;
             }
 
+            $updateFields = [
+                'title' => $title,
+                'description' => $description,
+                'max_points' => $maxPoints,
+                'percentage' => $percentage,
+                'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
+            ];
+
+            if (isset($data['sub_criteria']) && is_array($data['sub_criteria'])) {
+                $updateFields['sub_criteria'] = sanitizeSubCriteria($data['sub_criteria']);
+            }
+
             $criteriaCollection->updateOne(
                 ['_id' => $existing['_id']],
-                [
-                    '$set' => [
-                        'title' => $title,
-                        'description' => $description,
-                        'max_points' => $maxPoints,
-                        'percentage' => $percentage,
-                        'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
-                    ]
-                ]
+                ['$set' => $updateFields]
             );
 
             logSystemAction(

@@ -34,7 +34,9 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 </head>
 
 <body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased relative overflow-x-hidden"
-    data-role="<?= $role ?>">
+    data-role="<?= $role ?>"
+    data-username="<?= $username ?>"
+    data-user-id="<?= htmlspecialchars($_SESSION['user_id'] ?? '') ?>">
 
     <div class="dashboard-bg"></div>
 
@@ -461,9 +463,14 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                     <textarea id="edit-ev-desc" rows="2" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none"></textarea>
                 </div>
 
-                <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl cursor-pointer">Cancel</button>
-                    <button type="submit" id="saveEditEventBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer">Update Event</button>
+                <div class="pt-2 flex items-center justify-between gap-2">
+                    <button type="button" id="deleteArchivedEventFromEditBtn" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5 transition-colors hidden">
+                        <i class="fa-solid fa-trash-can"></i> Delete Archived Competition
+                    </button>
+                    <div class="flex items-center gap-2 ms-auto">
+                        <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl cursor-pointer">Cancel</button>
+                        <button type="submit" id="saveEditEventBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer">Update Event</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -565,12 +572,36 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                                 <input type="number" id="new-contestant-num" min="1" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Full Name / Entry Title</label>
-                                <input type="text" id="new-contestant-name" required placeholder="e.g. John Doe or Team Alpha" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <label class="block font-semibold text-slate-700 mb-1.5">Entry Type</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300">
+                                        <input type="radio" name="contestant_entry_type" value="individual" checked class="text-buksu-navy focus:ring-indigo-500">
+                                        <span class="font-bold text-xs text-slate-700"><i class="fa-solid fa-user me-1 text-slate-400"></i> Individual</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300">
+                                        <input type="radio" name="contestant_entry_type" value="team" class="text-buksu-navy focus:ring-indigo-500">
+                                        <span class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users-line me-1 text-indigo-500"></i> Team-based</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label id="new-contestant-name-label" class="block font-semibold text-slate-700 mb-1">Full Name / Entry Title</label>
+                                <input type="text" id="new-contestant-name" required placeholder="e.g. John Doe" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div id="new-contestant-team-members-group" class="hidden">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="font-semibold text-slate-700">Team Members <span class="text-slate-400 font-normal">(Optional)</span></label>
+                                    <span class="text-[10px] text-slate-400">Comma or line-separated</span>
+                                </div>
+                                <textarea id="new-contestant-members" rows="2" placeholder="e.g. Alice (Vocals), Bob (Keyboardist)&#10;or leave blank to register team name only" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Department / Organization</label>
                                 <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Special Citation / Note <span class="text-slate-400 font-normal">(Optional)</span></label>
+                                <input type="text" id="new-contestant-comment" placeholder="e.g. Best Keyboardist, Special Award note..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Entry Info</label>
@@ -599,9 +630,14 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                             <div id="setup-criteria-weight-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
-                        <i class="fa-solid fa-sliders"></i> Adjust All Weights
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="openNewCriterionRubricBtn" class="px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-buksu-gold font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-plus text-buksu-gold"></i> Create Criterion with Rubric
+                        </button>
+                        <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-sliders"></i> Adjust All Weights
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -643,7 +679,10 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                                 <textarea id="new-criterion-desc" rows="2" placeholder="Judging rubrics and guidelines..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                             </div>
                             <button type="submit" id="addCriterionBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-plus text-buksu-gold"></i> Add Criterion
+                                <i class="fa-solid fa-plus text-buksu-gold"></i> Quick Add Criterion
+                            </button>
+                            <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-layer-group"></i> Build Custom Sub-Criteria &amp; Rubric
                             </button>
                         </form>
                     </div>
@@ -680,11 +719,139 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
             </div>
         </div>
     </div>
+
+    <!-- MODAL: EDIT CRITERION & 5-1 RUBRIC BUILDER -->
+    <div id="criterion-rubric-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold text-sm shadow-xs border border-buksu-gold/30">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; 5-to-1 Rubric</h3>
+                        <p class="text-[11px] text-slate-500">Define performance dimensions and descriptive level guides for judges</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none">&times;</button>
+            </div>
+
+            <form id="criterionRubricForm" onsubmit="return false;" class="space-y-4 text-xs">
+                <input type="hidden" id="rubric-modal-crit-id" value="">
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div class="sm:col-span-6">
+                        <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
+                        <input type="text" id="rubric-modal-title-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block font-semibold text-slate-700 mb-1">Weight (%)</label>
+                        <input type="number" id="rubric-modal-pct-input" min="0" max="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block font-semibold text-slate-700 mb-1">Max Points</label>
+                        <input type="number" id="rubric-modal-max-input" min="1" value="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Description / Core Objective</label>
+                    <textarea id="rubric-modal-desc-input" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <!-- Sub-criteria Builder Header -->
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-buksu-navy"></i> Sub-Criteria &amp; Rubric Indicators
+                        </h4>
+                        <p class="text-[10px] text-slate-400">Judges evaluate each indicator on a 5-to-1 scale. Scores are totaled and normalized to 100.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="rubricAddIndicatorBtn" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-plus text-xs"></i> Add Sub-Criterion
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Container for Sub-criteria items -->
+                <div id="rubric-subcriteria-container" class="space-y-3 max-h-[44vh] overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">Cancel</button>
+                    <button type="submit" id="saveRubricCriterionBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-check text-buksu-gold"></i> Save Criterion &amp; Rubrics
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CONTESTANT CITATIONS & TEAM COMMENTS -->
+    <div id="contestant-comments-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-7 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                    <div>
+                        <h3 id="contestant-comments-modal-title" class="font-extrabold text-slate-800 text-sm leading-tight">Contestant Citations &amp; Comments</h3>
+                        <p id="contestant-comments-modal-sub" class="text-[11px] text-slate-500">Special awards, member citations (e.g. Best Keyboardist), and notes</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none">&times;</button>
+            </div>
+
+            <input type="hidden" id="contestant-comments-modal-id" value="">
+
+            <!-- Team Members Quick View / Edit Section (visible if team) -->
+            <div id="contestant-modal-team-section" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-users text-indigo-600"></i> Team Members
+                    </span>
+                    <button type="button" id="saveContestantMembersBtn" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer">
+                        <i class="fa-solid fa-check me-1"></i> Update Members
+                    </button>
+                </div>
+                <textarea id="contestant-modal-members-input" rows="2" placeholder="List member names (e.g. John Doe - Vocals, Jane Smith - Keyboardist)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <!-- Add Citation / Comment Form -->
+            <form id="addContestantCommentForm" onsubmit="return false;" class="space-y-2">
+                <label class="block font-bold text-xs text-slate-700">Add Special Citation or Member Comment</label>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="new-citation-text" required placeholder="e.g. Best Keyboardist - Jane Doe" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <button type="submit" id="addCitationBtn" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-plus"></i> Add Citation
+                    </button>
+                </div>
+            </form>
+
+            <!-- List of existing comments/citations -->
+            <div class="space-y-2 pt-2 border-t border-slate-100 flex-1">
+                <h5 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Current Citations &amp; Comments</h5>
+                <div id="contestant-comments-list" class="space-y-2 max-h-[36vh] overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
+                <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
     <?php endif; ?>
 
     <!-- MODAL: JUDGE SCORING SHEET (ACCESSIBLE TO JUDGE & ADMIN) -->
     <div id="judge-scoring-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <!-- Header -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div class="flex items-center gap-3">

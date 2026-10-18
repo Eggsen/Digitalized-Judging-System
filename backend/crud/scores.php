@@ -67,17 +67,36 @@ if ($method === "GET") {
         }
 
         // Fetch criteria for this event
-        $criteriaCursor = $criteriaCollection->find(['event_id' => $eventId]);
+        $criteriaCursor = $criteriaCollection->find(['event_id' => $eventId], ['sort' => ['percentage' => -1, 'title' => 1]]);
         $criteria = [];
         $criteriaMap = [];
         foreach ($criteriaCursor as $doc) {
             $idStr = (string)$doc['_id'];
+            $subCriteria = [];
+            if (!empty($doc['sub_criteria'])) {
+                foreach ($doc['sub_criteria'] as $sc) {
+                    $levels = [];
+                    if (!empty($sc['levels'])) {
+                        for ($lvl = 5; $lvl >= 1; $lvl--) {
+                            $levels[(string)$lvl] = (string)($sc['levels'][(string)$lvl] ?? ($sc['levels'][$lvl] ?? ''));
+                        }
+                    }
+                    $subCriteria[] = [
+                        'id' => (string)($sc['id'] ?? ('sub-' . bin2hex(random_bytes(3)))),
+                        'name' => (string)($sc['name'] ?? ''),
+                        'description' => (string)($sc['description'] ?? ''),
+                        'levels' => $levels
+                    ];
+                }
+            }
+
             $critData = [
                 'id' => $idStr,
                 'title' => $doc['title'] ?? '',
                 'description' => $doc['description'] ?? '',
                 'max_points' => (int)($doc['max_points'] ?? 100),
-                'percentage' => (int)($doc['percentage'] ?? 0)
+                'percentage' => (int)($doc['percentage'] ?? 0),
+                'sub_criteria' => $subCriteria
             ];
             $criteria[] = $critData;
             $criteriaMap[$idStr] = $critData;
@@ -95,7 +114,10 @@ if ($method === "GET") {
                 'contestant_number' => (int)($doc['contestant_number'] ?? 0),
                 'name' => $doc['name'] ?? '',
                 'department_or_org' => $doc['department_or_org'] ?? '',
-                'description' => $doc['description'] ?? ''
+                'description' => $doc['description'] ?? '',
+                'entry_type' => $doc['entry_type'] ?? 'individual',
+                'team_members' => (array)($doc['team_members'] ?? []),
+                'comments' => (array)($doc['comments'] ?? [])
             ];
         }
 
@@ -109,10 +131,27 @@ if ($method === "GET") {
             $judgeScores = [];
             foreach ($scoresCursor as $s) {
                 $cId = (string)($s['contestant_id'] ?? '');
+                $formattedCriteriaScores = [];
+                if (!empty($s['criteria_scores'])) {
+                    foreach ($s['criteria_scores'] as $cs) {
+                        $sub = [];
+                        if (!empty($cs['sub_scores'])) {
+                            foreach ($cs['sub_scores'] as $k => $v) {
+                                $sub[(string)$k] = (int)$v;
+                            }
+                        }
+                        $formattedCriteriaScores[] = [
+                            'criteria_id' => (string)($cs['criteria_id'] ?? ''),
+                            'max' => (int)($cs['max'] ?? 100),
+                            'score' => (float)($cs['score'] ?? 0),
+                            'sub_scores' => (object)$sub
+                        ];
+                    }
+                }
                 $judgeScores[$cId] = [
                     'id' => (string)$s['_id'],
                     'contestant_id' => $cId,
-                    'criteria_scores' => (array)($s['criteria_scores'] ?? []),
+                    'criteria_scores' => $formattedCriteriaScores,
                     'total_score' => (float)($s['total_score'] ?? 0),
                     'status' => $s['status'] ?? 'draft',
                     'submitted_at' => $s['submitted_at'] ?? ''
@@ -122,6 +161,8 @@ if ($method === "GET") {
             echo json_encode([
                 "success" => true,
                 "role" => "judge",
+                "judge_id" => $userId,
+                "judge_username" => $_SESSION['username'] ?? 'Judge',
                 "event" => [
                     'id' => $eventId,
                     'eventName' => $event['eventName'] ?? '',
@@ -158,11 +199,28 @@ if ($method === "GET") {
         foreach ($scoresCursor as $s) {
             $cId = (string)($s['contestant_id'] ?? '');
             $jId = (string)($s['judge_id'] ?? '');
+            $formattedCriteriaScores = [];
+            if (!empty($s['criteria_scores'])) {
+                foreach ($s['criteria_scores'] as $cs) {
+                    $sub = [];
+                    if (!empty($cs['sub_scores'])) {
+                        foreach ($cs['sub_scores'] as $k => $v) {
+                            $sub[(string)$k] = (int)$v;
+                        }
+                    }
+                    $formattedCriteriaScores[] = [
+                        'criteria_id' => (string)($cs['criteria_id'] ?? ''),
+                        'max' => (int)($cs['max'] ?? 100),
+                        'score' => (float)($cs['score'] ?? 0),
+                        'sub_scores' => (object)$sub
+                    ];
+                }
+            }
             $scoreData = [
                 'id' => (string)$s['_id'],
                 'contestant_id' => $cId,
                 'judge_id' => $jId,
-                'criteria_scores' => (array)($s['criteria_scores'] ?? []),
+                'criteria_scores' => $formattedCriteriaScores,
                 'total_score' => (float)($s['total_score'] ?? 0),
                 'status' => $s['status'] ?? 'draft',
                 'submitted_at' => $s['submitted_at'] ?? ''
@@ -207,6 +265,9 @@ if ($method === "GET") {
                 'name' => $c['name'],
                 'department_or_org' => $c['department_or_org'],
                 'description' => $c['description'],
+                'entry_type' => $c['entry_type'] ?? 'individual',
+                'team_members' => $c['team_members'] ?? [],
+                'comments' => $c['comments'] ?? [],
                 'judge_scores' => $judgeEntries,
                 'submitted_count' => $submittedCount,
                 'total_score' => round($submittedSum, 2),
@@ -335,7 +396,8 @@ if ($method === "POST") {
             $criteriaMap[(string)$doc['_id']] = [
                 'title' => $doc['title'] ?? '',
                 'max_points' => (int)($doc['max_points'] ?? 100),
-                'percentage' => (int)($doc['percentage'] ?? 0)
+                'percentage' => (int)($doc['percentage'] ?? 0),
+                'sub_criteria' => (array)($doc['sub_criteria'] ?? [])
             ];
         }
 
@@ -345,15 +407,42 @@ if ($method === "POST") {
             $critId = (string)($cs['criteria_id'] ?? '');
             $maxPts = isset($criteriaMap[$critId]) ? (float)$criteriaMap[$critId]['max_points'] : (float)($cs['max'] ?? 100);
             $scorePts = (float)($cs['score'] ?? 0);
+            $subScores = isset($cs['sub_scores']) && (is_array($cs['sub_scores']) || is_object($cs['sub_scores'])) ? (array)$cs['sub_scores'] : [];
+
+            // If sub_scores are present and criterion has sub_criteria, calculate score accurately from 5-to-1 ratings
+            if (!empty($subScores) && !empty($criteriaMap[$critId]['sub_criteria'])) {
+                $subCriteria = (array)$criteriaMap[$critId]['sub_criteria'];
+                $subTotal = 0;
+                $validSubScores = [];
+                foreach ($subCriteria as $sc) {
+                    $scId = (string)($sc['id'] ?? '');
+                    if ($scId === '') continue;
+                    $rating = isset($subScores[$scId]) ? (int)$subScores[$scId] : 0;
+                    if ($rating < 1) $rating = 1;
+                    if ($rating > 5) $rating = 5;
+                    $validSubScores[$scId] = $rating;
+                    $subTotal += $rating;
+                }
+                $maxPossibleRating = count($subCriteria) * 5;
+                if ($maxPossibleRating > 0) {
+                    $scorePts = ($subTotal / $maxPossibleRating) * $maxPts;
+                }
+                $subScores = $validSubScores;
+            }
 
             if ($scorePts < 0) $scorePts = 0;
             if ($scorePts > $maxPts) $scorePts = $maxPts;
 
-            $cleanedScores[] = [
+            $scoreEntry = [
                 'criteria_id' => $critId,
                 'max' => (int)$maxPts,
                 'score' => round($scorePts, 2)
             ];
+            if (!empty($subScores)) {
+                $scoreEntry['sub_scores'] = (object)$subScores;
+            }
+
+            $cleanedScores[] = $scoreEntry;
         }
 
         $totalScore = calculateTotalScore($cleanedScores, $criteriaMap);

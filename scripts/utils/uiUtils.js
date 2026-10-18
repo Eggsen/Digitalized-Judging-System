@@ -53,7 +53,12 @@ export function hideNotice(noticeTarget) {
  * @param {'create'|'edit'|'archive'|'success'|'info'|'warning'|'error'} [type='success'] - Toast type
  * @param {number} [duration=4000] - Duration before auto-dismiss in ms
  */
-export function showToast(title, message, type = 'success', duration = 4000) {
+export function showToast(title, message = '', type = 'success', duration = 4000) {
+    if (['success', 'error', 'info', 'warning', 'create', 'edit', 'archive'].includes(message)) {
+        type = message;
+        message = '';
+    }
+
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -70,19 +75,19 @@ export function showToast(title, message, type = 'success', duration = 4000) {
     let borderColor = 'border-emerald-200';
 
     if (type === 'create' || type === 'success') {
-        icon = 'fa-trophy';
-        iconBg = 'bg-indigo-600 text-buksu-gold';
-        borderColor = 'border-indigo-200';
+        icon = 'fa-circle-check';
+        iconBg = 'bg-emerald-600 text-white';
+        borderColor = 'border-emerald-200';
     } else if (type === 'edit' || type === 'info') {
         icon = 'fa-pen-to-square';
         iconBg = 'bg-sky-600 text-white';
         borderColor = 'border-sky-200';
     } else if (type === 'archive' || type === 'warning') {
-        icon = 'fa-box-archive';
+        icon = 'fa-circle-exclamation';
         iconBg = 'bg-amber-500 text-white';
         borderColor = 'border-amber-200';
     } else if (type === 'error') {
-        icon = 'fa-circle-exclamation';
+        icon = 'fa-triangle-exclamation';
         iconBg = 'bg-rose-600 text-white';
         borderColor = 'border-rose-200';
     }
@@ -94,8 +99,8 @@ export function showToast(title, message, type = 'success', duration = 4000) {
             <i class="fa-solid ${icon}"></i>
         </div>
         <div class="flex-1 min-w-0">
-            <h4 class="font-extrabold text-buksu-navy text-xs tracking-tight mb-0.5">${escapeHtml(title)}</h4>
-            <p class="text-[11px] text-slate-500 font-normal leading-snug">${escapeHtml(message)}</p>
+            <h4 class="font-extrabold text-buksu-navy text-xs tracking-tight ${message ? 'mb-0.5' : ''}">${escapeHtml(title)}</h4>
+            ${message ? `<p class="text-[11px] text-slate-500 font-normal leading-snug">${escapeHtml(message)}</p>` : ''}
         </div>
         <button type="button" class="toast-close-btn text-slate-400 hover:text-slate-600 transition-colors text-sm cursor-pointer p-0.5">&times;</button>
     `;

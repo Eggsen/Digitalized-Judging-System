@@ -41,6 +41,33 @@ try {
         exit;
     }
 
+    $currentStatus = strtolower($existing['status'] ?? '');
+    $currentJudgingStatus = strtolower($existing['judgingStatus'] ?? '');
+
+    if ($currentStatus === 'archived') {
+        echo json_encode(["success" => false, "message" => "This competition is already archived."]);
+        exit;
+    }
+
+    $isOngoing = ($currentStatus === 'ongoing' || $currentJudgingStatus === 'in progress');
+    $isStopped = ($currentJudgingStatus === 'finished' || $currentStatus === 'completed');
+
+    if ($isOngoing && !$isStopped) {
+        if ($currentJudgingStatus === 'in progress') {
+            echo json_encode([
+                "success" => false,
+                "message" => "Cannot archive competition while judging is in progress. Please stop the judging period first to prevent conflicts."
+            ]);
+            exit;
+        } else {
+            echo json_encode([
+                "success" => false,
+                "message" => "Cannot archive an ongoing competition. Please stop the judging period or finalize the event before archiving."
+            ]);
+            exit;
+        }
+    }
+
     $result = $eventsCollection->updateOne(
         ['_id' => $eventId],
         [

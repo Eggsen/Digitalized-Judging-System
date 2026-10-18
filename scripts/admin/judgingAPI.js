@@ -60,6 +60,57 @@ export async function deleteContestant(id) {
     }
 }
 
+export async function addContestantComment(contestantId, commentText, memberName = '', awardTitle = '') {
+    try {
+        const res = await fetch("/backend/crud/contestants.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                action: "add_comment", 
+                contestant_id: contestantId, 
+                text: commentText,
+                member_name: memberName,
+                award_title: awardTitle
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("addContestantComment error: ", e);
+        return { success: false, message: "Network error adding comment." };
+    }
+}
+
+export async function deleteContestantComment(contestantId, commentId) {
+    try {
+        const res = await fetch("/backend/crud/contestants.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete_comment", contestant_id: contestantId, comment_id: commentId }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("deleteContestantComment error: ", e);
+        return { success: false, message: "Network error removing comment." };
+    }
+}
+
+export async function updateTeamMembers(contestantId, teamMembers) {
+    try {
+        const res = await fetch("/backend/crud/contestants.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "update_members", contestant_id: contestantId, team_members: teamMembers }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("updateTeamMembers error: ", e);
+        return { success: false, message: "Network error updating team members." };
+    }
+}
+
 // -------------------------------------------------------------
 // CRITERIA API
 // -------------------------------------------------------------

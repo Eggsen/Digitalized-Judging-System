@@ -1,4 +1,4 @@
-import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, listLogs } from "./eventsAPI.js";
+import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, deleteArchivedEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
 import { showToast } from "../utils/uiUtils.js";
 import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
@@ -108,6 +108,10 @@ export async function loadAdminEvents() {
     }
 
     grid.innerHTML = events.map(e => {
+        const isOngoing = (e.status === 'Ongoing' || e.judgingStatus === 'In Progress');
+        const isStopped = (e.judgingStatus === 'Finished' || e.status === 'Completed');
+        const canArchive = (!isOngoing || isStopped);
+
         let judgingBadge = '';
         if (e.judgingStatus === 'In Progress') {
             judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 animate-pulse"><i class="fa-solid fa-play text-[8px]"></i> Judging Active</span>';
@@ -185,11 +189,21 @@ export async function loadAdminEvents() {
                         title="Edit Competition">
                         <i class="fa-solid fa-pen text-buksu-navy"></i>
                     </button>
-                    ${e.status !== 'Archived' ? `
-                        <button class="archive-btn p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Archive Competition">
-                            <i class="fa-solid fa-box-archive"></i>
+                    ${e.status !== 'Archived' ? (
+                        canArchive ? `
+                            <button class="archive-btn p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="true" title="Archive Competition">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </button>
+                        ` : `
+                            <button class="archive-btn p-1.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-xs cursor-not-allowed transition-colors opacity-60" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="false" data-judging="${e.judgingStatus}" data-status="${e.status}" title="Cannot archive: Competition is ongoing. Stop judging first.">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </button>
+                        `
+                    ) : `
+                        <button class="delete-archived-btn p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Permanently Delete Archived Competition">
+                            <i class="fa-solid fa-trash-can"></i>
                         </button>
-                    ` : ''}
+                    `}
                 </div>
             </div>
         </div>
@@ -418,6 +432,13 @@ function initAdminEventActions() {
         const date = document.getElementById('edit-ev-date').value;
         const description = document.getElementById('edit-ev-desc').value.trim();
 
+        const isOngoing = (status === 'Ongoing' || judgingStatus === 'In Progress');
+        const isStopped = (judgingStatus === 'Finished' || status === 'Completed');
+        if (status === 'Archived' && isOngoing && !isStopped) {
+            showToast("Cannot Archive", "Cannot archive an ongoing competition. Please stop the judging period before archiving.", "warning");
+            return;
+        }
+
         const res = await editEvent({ id, eventName, type, venue, status, judgingStatus, date, description });
         if (res.success) {
             document.getElementById('edit-event-modal')?.classList.add('hidden');
@@ -425,6 +446,34 @@ function initAdminEventActions() {
             await loadAdminEvents();
         } else {
             showToast("Update Failed", res.message || "Failed to update event.", "error");
+        }
+    });
+
+    // Delete Archived Competition from Edit Modal
+    document.getElementById('deleteArchivedEventFromEditBtn')?.addEventListener('click', async () => {
+        const id = document.getElementById('edit-ev-id').value;
+        const name = document.getElementById('edit-ev-name').value;
+        if (confirm(`Are you completely sure you want to permanently delete the archived competition "${name}"?\n\nThis will permanently remove all associated contestants, criteria, and scores. This action cannot be undone.`)) {
+            const res = await deleteArchivedEvent({ id });
+            if (res.success) {
+                document.getElementById('edit-event-modal')?.classList.add('hidden');
+                showToast("Competition Deleted!", `Archived competition "${name}" has been permanently deleted.`, "archive");
+                await loadAdminEvents();
+            } else {
+                showToast("Deletion Failed", res.message || "Failed to delete competition.", "error");
+            }
+        }
+    });
+
+    // Toggle delete button visibility when status is changed in Edit Modal
+    document.getElementById('edit-ev-status')?.addEventListener('change', (e) => {
+        const deleteBtn = document.getElementById('deleteArchivedEventFromEditBtn');
+        if (deleteBtn) {
+            if (e.target.value === 'Archived') {
+                deleteBtn.classList.remove('hidden');
+            } else {
+                deleteBtn.classList.add('hidden');
+            }
         }
     });
 
@@ -541,6 +590,30 @@ function bindEventCardActions() {
             document.getElementById('edit-ev-date').value = btn.dataset.rawdate;
             document.getElementById('edit-ev-desc').value = btn.dataset.desc;
 
+            const isOngoing = (btn.dataset.status === 'Ongoing' || btn.dataset.judging === 'In Progress');
+            const isStopped = (btn.dataset.judging === 'Finished' || btn.dataset.status === 'Completed');
+            const canArchive = (!isOngoing || isStopped);
+
+            const archivedOption = document.querySelector('#edit-ev-status option[value="Archived"]');
+            if (archivedOption) {
+                if (!canArchive) {
+                    archivedOption.disabled = true;
+                    archivedOption.textContent = 'Archived (Stop judging first)';
+                } else {
+                    archivedOption.disabled = false;
+                    archivedOption.textContent = 'Archived';
+                }
+            }
+
+            const deleteBtn = document.getElementById('deleteArchivedEventFromEditBtn');
+            if (deleteBtn) {
+                if (btn.dataset.status === 'Archived') {
+                    deleteBtn.classList.remove('hidden');
+                } else {
+                    deleteBtn.classList.add('hidden');
+                }
+            }
+
             document.getElementById('edit-event-modal')?.classList.remove('hidden');
         });
     });
@@ -550,6 +623,17 @@ function bindEventCardActions() {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const eventName = btn.dataset.name;
+            const canArchive = btn.dataset.canArchive === 'true';
+
+            if (!canArchive) {
+                const judging = btn.dataset.judging;
+                const reason = judging === 'In Progress' 
+                    ? `Judging for "${eventName}" is currently in progress. Please stop the judging period before archiving.` 
+                    : `Competition "${eventName}" is currently ongoing. Please stop judging before archiving to prevent conflicts.`;
+                showToast("Cannot Archive", reason, "warning");
+                return;
+            }
+
             if (confirm(`Are you sure you want to archive competition "${eventName}"?`)) {
                 const res = await archiveEvent({ id: btn.dataset.id });
                 if (res.success) {
@@ -557,6 +641,24 @@ function bindEventCardActions() {
                     await loadAdminEvents();
                 } else {
                     showToast("Archive Failed", res.message || "Failed to archive event.", "error");
+                }
+            }
+        });
+    });
+
+    // Delete Archived Event from Card
+    document.querySelectorAll('.delete-archived-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const eventName = btn.dataset.name;
+            const eventId = btn.dataset.id;
+            if (confirm(`Are you completely sure you want to permanently delete the archived competition "${eventName}"?\n\nThis will permanently delete all associated contestants, criteria, and scores. This action cannot be undone.`)) {
+                const res = await deleteArchivedEvent({ id: eventId });
+                if (res.success) {
+                    showToast("Competition Deleted!", `Archived competition "${eventName}" was permanently removed.`, "archive");
+                    await loadAdminEvents();
+                } else {
+                    showToast("Deletion Failed", res.message || "Failed to delete archived competition.", "error");
                 }
             }
         });
@@ -680,6 +782,11 @@ export async function openViewEventModal(eventId) {
                 <button type="button" class="view-modal-board-btn px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
                     <i class="fa-solid fa-calculator"></i> Live Board
                 </button>
+                ${event.status === 'Archived' ? `
+                    <button type="button" class="view-modal-delete-btn px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
+                        <i class="fa-solid fa-trash-can"></i> Delete Competition
+                    </button>
+                ` : ''}
             `;
             actionsBox.querySelector('.view-modal-setup-btn')?.addEventListener('click', () => {
                 modal.classList.add('hidden');
@@ -688,6 +795,18 @@ export async function openViewEventModal(eventId) {
             actionsBox.querySelector('.view-modal-board-btn')?.addEventListener('click', () => {
                 modal.classList.add('hidden');
                 openTabulationBoardModal(event.id, event.eventName);
+            });
+            actionsBox.querySelector('.view-modal-delete-btn')?.addEventListener('click', async () => {
+                if (confirm(`Are you completely sure you want to permanently delete the archived competition "${event.eventName}"?\n\nThis will permanently delete all associated contestants, criteria, and scores.`)) {
+                    const res = await deleteArchivedEvent({ id: event.id });
+                    if (res.success) {
+                        modal.classList.add('hidden');
+                        showToast("Competition Deleted!", `Archived competition "${event.eventName}" was permanently removed.`, "archive");
+                        await loadAdminEvents();
+                    } else {
+                        showToast("Deletion Failed", res.message || "Failed to delete competition.", "error");
+                    }
+                }
             });
         } else if (userRole === 'judge') {
             actionsBox.innerHTML = `
