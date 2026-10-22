@@ -20,6 +20,11 @@ $roleBadges = [
 ];
 
 $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-user', 'color' => 'bg-slate-700'];
+
+$userPrefs = $_SESSION['preferences'] ?? [];
+$serverTheme = htmlspecialchars($userPrefs['theme'] ?? 'light');
+$serverColorRule = htmlspecialchars($userPrefs['colorRule'] ?? 'normal');
+$serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,8 +34,57 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" href="assets/logo/DJS Logo.png">
     <title><?= $badgeInfo['title'] ?> | BukSU DJS</title>
+    <script>
+        (function() {
+            try {
+                // Expose current authenticated user identifiers
+                window.__CURRENT_USER_ID__ = "<?= htmlspecialchars($_SESSION['user_id'] ?? '') ?>";
+                window.__CURRENT_USERNAME__ = "<?= htmlspecialchars($username ?? '') ?>";
+                window.__CURRENT_ROLE__ = "<?= htmlspecialchars($role ?? '') ?>";
+
+                const userId = "<?= htmlspecialchars($_SESSION['user_id'] ?? '') ?>";
+                const userPrefix = userId ? ('djs_user_' + userId + '_') : 'djs_';
+
+                const serverTheme = "<?= $serverTheme ?>";
+                const serverColorRule = "<?= $serverColorRule ?>";
+                const serverNavPlacement = "<?= $serverNavPlacement ?>";
+
+                // Clean up legacy global settings so they never bleed into other user sessions
+                try {
+                    localStorage.removeItem('djs_theme');
+                    localStorage.removeItem('djs_color_rule');
+                    localStorage.removeItem('djs_nav_placement');
+                } catch (_) {}
+
+                // Load user-specific theme (defaults to crisp light mode)
+                const theme = localStorage.getItem(userPrefix + 'theme') || (serverTheme || 'light');
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+
+                // Load user-specific color rule (defaults to standard normal mode)
+                const colorRule = localStorage.getItem(userPrefix + 'color_rule') || (serverColorRule || 'normal');
+                if (colorRule === 'three-color') {
+                    document.documentElement.classList.add('three-color-mode');
+                } else {
+                    document.documentElement.classList.remove('three-color-mode');
+                }
+
+                // Load user-specific navigation placement (defaults to top tabs)
+                const navPlacement = localStorage.getItem(userPrefix + 'nav_placement') || (serverNavPlacement || 'top');
+                if (navPlacement === 'sidebar') {
+                    document.documentElement.classList.add('layout-sidebar');
+                } else {
+                    document.documentElement.classList.remove('layout-sidebar');
+                }
+            } catch (e) {
+                console.error('Error applying early preferences:', e);
+            }
+        })();
+    </script>
 </head>
 
 <body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased relative overflow-x-hidden"
@@ -57,6 +111,11 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
             </div>
 
             <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Quick Preferences Button -->
+                <button id="openPreferencesBtn" title="Appearance & UI Preferences" class="p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
+                    <i class="fa-solid fa-sliders text-lg"></i>
+                </button>
+
                 <!-- Topbar Notifications -->
                 <div class="relative" id="notification-wrapper">
                     <button id="notifBtn" class="relative p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
@@ -96,59 +155,141 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="dashboard-layout-container" class="flex flex-col lg:flex-row gap-6 items-start w-full">
 
-        <!-- Welcome Card -->
-        <div class="rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden bg-white">
-            <!-- Top Section: BukSU Dark Blue Header -->
-            <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-6 sm:p-8 text-white relative">
-                <!-- Decorative ambient background glow & watermark -->
-                <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
-                    <i class="fa-solid fa-scale-balanced text-9xl"></i>
+            <!-- Sidebar Navigation (Active in Sidebar Mode) -->
+            <aside id="dashboard-sidebar-nav" class="dashboard-sidebar w-full lg:w-72 shrink-0 bg-white rounded-3xl shadow-xl border border-slate-200/80 p-5 space-y-4 lg:sticky lg:top-20">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold shadow-xs border border-buksu-gold/30">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-sm text-buksu-navy">Navigation Hub</h3>
+                        <p class="text-[10px] text-slate-400 font-medium"><?= $badgeInfo['title'] ?></p>
+                    </div>
                 </div>
 
-                <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
-                            <i class="fa-solid <?= $badgeInfo['icon'] ?>"></i> <?= strtoupper($role) ?> PORTAL
-                        </span>
-                        <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Welcome back, <?= $username ?>!</h1>
-                        <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2">
-                            <i class="fa-solid fa-circle-check text-emerald-400 text-[10px]"></i>
-                            <span><?= $email ? $email : 'Authenticated user session active.' ?></span>
-                        </p>
+                <?php if ($role === 'admin'): ?>
+                <!-- Navigation Links for Admin -->
+                <nav class="space-y-1.5" id="sidebar-admin-links">
+                    <button type="button" data-tab="events-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30">
+                        <i class="fa-solid fa-trophy text-buksu-gold w-4 text-center"></i>
+                        <span>Events &amp; Competitions</span>
+                    </button>
+                    <button type="button" data-tab="assignments-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-user-check text-indigo-500 w-4 text-center"></i>
+                        <span>Judge Assignments</span>
+                    </button>
+                    <button type="button" data-tab="users-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-users-gear text-emerald-500 w-4 text-center"></i>
+                        <span>User Invitations</span>
+                    </button>
+                    <button type="button" data-tab="logs-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-500 w-4 text-center"></i>
+                        <span>Audit Logs</span>
+                    </button>
+                    <button type="button" data-tab="settings-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-sliders text-amber-500 w-4 text-center"></i>
+                        <span>System Settings</span>
+                    </button>
+                </nav>
+                <?php else: ?>
+                <!-- Navigation Links for Judge / Tabulator -->
+                <nav class="space-y-1.5" id="sidebar-user-links">
+                    <button type="button" data-tab="user-events-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30">
+                        <i class="fa-solid fa-clipboard-list text-buksu-gold w-4 text-center"></i>
+                        <span>Assigned Competitions</span>
+                    </button>
+                    <button type="button" data-tab="user-preferences-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-sliders text-amber-500 w-4 text-center"></i>
+                        <span>Preferences</span>
+                    </button>
+                </nav>
+                <?php endif; ?>
+
+                <!-- Sidebar Footer Status Card -->
+                <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-600">Active Role</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-700"><?= $role ?></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400">Layout</span>
+                        <span class="text-[10px] font-bold text-buksu-navy">Sidebar Mode</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div id="dashboard-content-area" class="flex-1 w-full min-w-0 space-y-6">
+
+                <!-- Welcome Card -->
+                <div class="rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden bg-white">
+                    <!-- Top Section: BukSU Dark Blue Header -->
+                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-6 sm:p-8 text-white relative">
+                        <!-- Decorative ambient background glow & watermark -->
+                        <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
+                            <i class="fa-solid fa-scale-balanced text-9xl"></i>
+                        </div>
+
+                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
+                                    <i class="fa-solid <?= $badgeInfo['icon'] ?>"></i> <?= strtoupper($role) ?> PORTAL
+                                </span>
+                                <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Welcome back, <?= $username ?>!</h1>
+                                <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2">
+                                    <i class="fa-solid fa-circle-check text-emerald-400 text-[10px]"></i>
+                                    <span><?= $email ? $email : 'Authenticated user session active.' ?></span>
+                                </p>
+                            </div>
+
+                            <?php if ($role === 'admin'): ?>
+                                <button id="open-create-event-modal-btn"
+                                    class="px-5 py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300">
+                                    <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
+                                </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <?php if ($role === 'admin'): ?>
-                        <button id="open-create-event-modal-btn"
-                            class="px-5 py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300">
-                            <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
-                        </button>
+                        <!-- Bottom Section: Admin Navigation Tabs -->
+                        <div class="top-nav-bar bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
+                            <div class="flex items-center gap-2 overflow-x-auto" id="admin-tabs">
+                                <button data-tab="events-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
+                                    <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
+                                </button>
+                                <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-user-check me-1.5"></i> Judge Assignments
+                                </button>
+                                <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-users-gear me-1.5"></i> User Invitations
+                                </button>
+                                <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-clock-rotate-left me-1.5"></i> Audit Logs
+                                </button>
+                                <button data-tab="settings-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> System Settings
+                                </button>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <!-- Bottom Section: Judge / Tabulator Navigation Tabs -->
+                        <div class="top-nav-bar bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
+                            <div class="flex items-center gap-2 overflow-x-auto" id="user-tabs">
+                                <button data-tab="user-events-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
+                                    <i class="fa-solid fa-clipboard-list me-1.5 text-buksu-gold"></i> Assigned Competitions
+                                </button>
+                                <button data-tab="user-preferences-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> Preferences
+                                </button>
+                            </div>
+                        </div>
                     <?php endif; ?>
                 </div>
-            </div>
-
-            <?php if ($role === 'admin'): ?>
-                <!-- Bottom Section: Admin Navigation Tabs -->
-                <div class="bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
-                    <div class="flex items-center gap-2 overflow-x-auto" id="admin-tabs">
-                        <button data-tab="events-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
-                            <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
-                        </button>
-                        <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                            <i class="fa-solid fa-user-check me-1.5"></i> Judge Assignments
-                        </button>
-                        <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                            <i class="fa-solid fa-users-gear me-1.5"></i> User Invitations
-                        </button>
-                        <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                            <i class="fa-solid fa-clock-rotate-left me-1.5"></i> Audit Logs
-                        </button>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
 
 
         <?php if ($role === 'admin'): ?>
@@ -332,9 +473,410 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                 </div>
             </div>
 
+            <!-- TAB 5: SYSTEM SETTINGS HUB -->
+            <div id="settings-tab" class="admin-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
+                <!-- Header Banner -->
+                <div class="flex items-start justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-5">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-buksu-navy text-buksu-gold shadow-2xs">
+                                Global Configuration
+                            </span>
+                            <span id="setting-last-backup-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
+                                Checking status...
+                            </span>
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-black text-buksu-navy flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-amber-500"></i> System Settings Hub
+                        </h2>
+                        <p class="text-xs text-slate-500 max-w-2xl">
+                            Configure institutional identity &amp; branding, enforce judging &amp; tabulation rules, manage report signatories, and generate system data backups.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" id="refreshSettingsBtn" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh
+                        </button>
+                        <button type="button" id="resetSettingsBtn" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Reset Defaults
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-tabs Navigation -->
+                <div class="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="settings-subtabs">
+                    <button type="button" data-subtab="settings-content-branding" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30">
+                        <i class="fa-solid fa-building-columns me-1.5 text-buksu-gold"></i> Institution &amp; Branding
+                    </button>
+                    <button type="button" data-subtab="settings-content-judging" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
+                        <i class="fa-solid fa-scale-balanced me-1.5"></i> Judging &amp; Tabulation Rules
+                    </button>
+                    <button type="button" data-subtab="settings-content-backup" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
+                        <i class="fa-solid fa-database me-1.5"></i> Data Backup &amp; Diagnostics
+                    </button>
+                    <button type="button" data-subtab="settings-content-preferences" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
+                        <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> Preferences &amp; UI
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="settings-loading-state" class="hidden py-12 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-buksu-navy mb-2"></i>
+                    <p class="font-bold text-slate-600">Loading system settings &amp; diagnostics...</p>
+                </div>
+
+                <!-- Settings Content Wrapper -->
+                <div id="settings-content-wrapper">
+                    <form id="systemSettingsForm" onsubmit="return false;" class="space-y-6">
+
+                        <!-- SECTION 1: INSTITUTION & BRANDING -->
+                        <div id="settings-content-branding" class="settings-subtab-content space-y-6 animate-fade-in">
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <!-- Left: Branding Identity Form -->
+                                <div class="lg:col-span-7 space-y-5">
+                                    <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
+                                        <div class="flex items-center gap-2 border-b border-slate-200/70 pb-3">
+                                            <div class="w-8 h-8 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-xs font-bold shadow-2xs">
+                                                <i class="fa-solid fa-school"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-extrabold text-sm text-slate-800">Institutional Identity</h3>
+                                                <p class="text-[11px] text-slate-500">Official university and campus details shown on public portals &amp; tally sheets.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-3.5 text-xs">
+                                            <div>
+                                                <label class="block font-bold text-slate-700 mb-1">Institution / University Name <span class="text-rose-500">*</span></label>
+                                                <input type="text" id="setting-institution-name" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Bukidnon State University">
+                                            </div>
+
+                                            <div>
+                                                <label class="block font-bold text-slate-700 mb-1">Campus / Department / Organizing Unit</label>
+                                                <input type="text" id="setting-campus-unit" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Main Campus, Malaybalay City - Office of Student Affairs &amp; Services">
+                                            </div>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="block font-bold text-slate-700 mb-1">System Title / App Name</label>
+                                                    <input type="text" id="setting-system-title" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="JudgeTab - Digitalized Judging System">
+                                                </div>
+                                                <div>
+                                                    <label class="block font-bold text-slate-700 mb-1">Official Report Subtitle</label>
+                                                    <input type="text" id="setting-header-subtitle" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="Official Tabulation &amp; Certification of Results">
+                                                </div>
+                                            </div>
+
+                                            <div class="pt-2 flex items-center justify-between border-t border-slate-200">
+                                                <div class="space-y-0.5">
+                                                    <span class="font-bold text-slate-800 block text-xs">University Watermark on Prints</span>
+                                                    <span class="text-[11px] text-slate-500 block">Render official seal watermark on exported certificates &amp; printable tally sheets.</span>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-show-watermark" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Live Branding Preview Card -->
+                                <div class="lg:col-span-5 space-y-4">
+                                    <div class="p-5 rounded-2xl bg-gradient-to-br from-buksu-navy to-buksu-navy-light text-white shadow-md relative overflow-hidden border border-buksu-gold/30">
+                                        <div class="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-buksu-gold/10 blur-xl pointer-events-none"></div>
+                                        <div class="flex items-center justify-between pb-3 border-b border-white/15">
+                                            <span class="text-[10px] uppercase font-black tracking-widest text-buksu-gold">Live Header Preview</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 border border-white/20">System Brand</span>
+                                        </div>
+                                        <div class="py-4 space-y-1">
+                                            <h4 id="setting-preview-inst" class="text-base font-black tracking-tight text-white">Bukidnon State University</h4>
+                                            <p id="setting-preview-unit" class="text-xs text-slate-300">Malaybalay City, Bukidnon</p>
+                                            <div class="pt-3 flex items-center gap-2">
+                                                <div class="w-8 h-8 rounded-lg bg-buksu-gold text-buksu-navy flex items-center justify-center font-black text-xs shadow-xs">
+                                                    <i class="fa-solid fa-gavel"></i>
+                                                </div>
+                                                <div>
+                                                    <span id="setting-preview-title" class="text-xs font-black text-buksu-gold block">JudgeTab</span>
+                                                    <span class="text-[10px] text-slate-300 block">Tabulation &amp; Evaluation Platform</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-4 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs space-y-1">
+                                        <div class="flex items-center gap-1.5 font-bold">
+                                            <i class="fa-solid fa-circle-info text-amber-600"></i>
+                                            <span>Branding Usage Note</span>
+                                        </div>
+                                        <p class="text-[11px] text-amber-800 leading-relaxed">
+                                            Changes to the institution name and campus header are applied immediately to judge scorecards, tabulation boards, and printable reports.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Official Signatories Card -->
+                            <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-200/70 pb-3 flex-wrap gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                            <i class="fa-solid fa-signature"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-extrabold text-sm text-slate-800">Official Report Signatories</h3>
+                                            <p class="text-[11px] text-slate-500">Authorized officials whose names and designations appear on official certified tally sheets.</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-slate-400">3 Designated Signatories</span>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                                    <!-- Signatory 1 -->
+                                    <div class="p-4 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-100 text-slate-700 block w-fit">Signatory 1 (Tabulation)</span>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Official Name</label>
+                                            <input type="text" id="setting-sig-name-0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Dr. Juan Dela Cruz">
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Designation / Role Title</label>
+                                            <input type="text" id="setting-sig-title-0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Head Tabulator">
+                                        </div>
+                                    </div>
+
+                                    <!-- Signatory 2 -->
+                                    <div class="p-4 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-100 text-slate-700 block w-fit">Signatory 2 (Judging)</span>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Official Name</label>
+                                            <input type="text" id="setting-sig-name-1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Prof. Maria Santos">
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Designation / Role Title</label>
+                                            <input type="text" id="setting-sig-title-1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Chairman, Board of Judges">
+                                        </div>
+                                    </div>
+
+                                    <!-- Signatory 3 -->
+                                    <div class="p-4 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-100 text-slate-700 block w-fit">Signatory 3 (Management)</span>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Official Name</label>
+                                            <input type="text" id="setting-sig-name-2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Engr. Roberto Reyes">
+                                        </div>
+                                        <div>
+                                            <label class="block font-bold text-slate-600 mb-1">Designation / Role Title</label>
+                                            <input type="text" id="setting-sig-title-2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500" placeholder="e.g. Overall Event Coordinator">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 2: JUDGING & TABULATION RULES -->
+                        <div id="settings-content-judging" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+                                <!-- Rule 1: Decimal Precision -->
+                                <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-xs">
+                                            <i class="fa-solid fa-calculator"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-extrabold text-sm text-slate-800">Scoring Decimal Precision</h4>
+                                            <p class="text-[11px] text-slate-500">Number of decimal places shown in total scores &amp; ranks.</p>
+                                        </div>
+                                    </div>
+                                    <select id="setting-decimal-precision" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs">
+                                        <option value="1">1 Decimal Place (e.g. 94.2%)</option>
+                                        <option value="2" selected>2 Decimal Places (e.g. 94.25%) - Recommended Standard</option>
+                                        <option value="3">3 Decimal Places (e.g. 94.250%) - High Precision</option>
+                                        <option value="4">4 Decimal Places (e.g. 94.2500%) - Ultra Precision</option>
+                                    </select>
+                                    <p class="text-[11px] text-slate-400 italic">Affects the Tabulation Board display and printed tally certificates.</p>
+                                </div>
+
+                                <!-- Rule 2: Tabulation Algorithm -->
+                                <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-xs">
+                                            <i class="fa-solid fa-chart-simple"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-extrabold text-sm text-slate-800">Tabulation Algorithm</h4>
+                                            <p class="text-[11px] text-slate-500">Mathematical formula used to calculate final rankings.</p>
+                                        </div>
+                                    </div>
+                                    <select id="setting-tabulation-method" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs">
+                                        <option value="standard_average" selected>Standard Average (Mean of all assigned judges) - Recommended</option>
+                                        <option value="olympic_trimming">Olympic Trimming (Drop highest &amp; lowest judge rating before averaging)</option>
+                                        <option value="ordinal_ranking">Ordinal Ranking (Rank sum system across judges)</option>
+                                    </select>
+                                    <p class="text-[11px] text-slate-400 italic">Olympic trimming requires at least 3 assigned judges per event.</p>
+                                </div>
+
+                                <!-- Rule 3: Tie-Breaker Rule -->
+                                <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+                                            <i class="fa-solid fa-equals"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-extrabold text-sm text-slate-800">Tie-Breaking Resolution</h4>
+                                            <p class="text-[11px] text-slate-500">Automated protocol when two contestants produce identical final scores.</p>
+                                        </div>
+                                    </div>
+                                    <select id="setting-tie-breaker" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs">
+                                        <option value="highest_weight_criterion" selected>Highest Weight Criterion Priority (Break ties via Criterion #1) - Default</option>
+                                        <option value="judge_majority_vote">Judge Majority Preference (Break ties by head-to-head vote)</option>
+                                        <option value="split_award">Allow Tied Placements (Co-winners with shared prize)</option>
+                                    </select>
+                                    <p class="text-[11px] text-slate-400 italic">Eliminates ambiguity during final medal and trophy distribution.</p>
+                                </div>
+
+                                <!-- Rule 4: Submission Unlock Policy -->
+                                <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black text-xs">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-extrabold text-sm text-slate-800">Judge Score Unlock Policy</h4>
+                                            <p class="text-[11px] text-slate-500">Security rule when a judge attempts to edit a submitted score.</p>
+                                        </div>
+                                    </div>
+                                    <select id="setting-unlock-policy" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs">
+                                        <option value="admin_approval" selected>Admin / Tabulator Approval Required (Strict Audit Mode) - Default</option>
+                                        <option value="judge_self_unlock">Judge Self-Unlock Allowed (Logged with audit timestamp)</option>
+                                    </select>
+                                    <p class="text-[11px] text-slate-400 italic">Protects tabulated scores against accidental mid-event overwrites.</p>
+                                </div>
+                            </div>
+
+                            <!-- Privacy & Blind Judging -->
+                            <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 flex items-center justify-between gap-4 flex-wrap">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        <i class="fa-solid fa-eye-slash"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-extrabold text-sm text-slate-800">Blind Judging Mode</h4>
+                                        <p class="text-xs text-slate-500 mt-0.5">Prevent judges from viewing ratings submitted by other judges during live sessions.</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="setting-blind-judging" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 3: DATA BACKUP & DIAGNOSTICS -->
+                        <div id="settings-content-backup" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                            <!-- Backup Action Card -->
+                            <div class="p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-white to-amber-50/40 border border-amber-200 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+                                <div class="space-y-1 max-w-xl">
+                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-amber-400 text-buksu-navy">
+                                        Data Protection
+                                    </span>
+                                    <h3 class="text-base font-black text-slate-800">Instant One-Click Database Snapshot</h3>
+                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                        Generate and download an encrypted, portable JSON backup of all registered competitions, criteria rubrics, contestant rosters, judge scores, and user credentials.
+                                    </p>
+                                </div>
+                                <button type="button" id="downloadBackupBtn" class="px-5 py-3 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
+                                    <i class="fa-solid fa-download text-buksu-gold"></i> Download Full Database Backup (.json)
+                                </button>
+                            </div>
+
+                            <!-- Live Diagnostics Grid -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-heart-pulse text-emerald-500"></i> Live System Diagnostics
+                                    </h4>
+                                    <span class="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Operational
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Database</span>
+                                        <span id="diag-db-name" class="font-black text-slate-800 block text-sm">djs_db</span>
+                                        <span class="text-[9px] text-emerald-600 font-bold block">Atlas Connected</span>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Events</span>
+                                        <span id="diag-events-count" class="font-black text-buksu-navy block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 block">Competitions</span>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Contestants</span>
+                                        <span id="diag-contestants-count" class="font-black text-buksu-navy block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 block">Registered</span>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Criteria</span>
+                                        <span id="diag-criteria-count" class="font-black text-buksu-navy block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 block">Configured</span>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Scores</span>
+                                        <span id="diag-scores-count" class="font-black text-buksu-navy block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 block">Evaluations</span>
+                                    </div>
+                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                        <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Accounts</span>
+                                        <span id="diag-users-count" class="font-black text-buksu-navy block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 block">Total Users</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Maintenance Controls Card -->
+                            <div class="p-5 rounded-2xl bg-rose-50/50 border border-rose-200 space-y-3 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-black text-sm text-slate-800">System Log Maintenance</h4>
+                                        <p class="text-[11px] text-slate-500">Purge historical audit records to reclaim database storage space.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 pt-2 border-t border-rose-200/60 flex-wrap">
+                                    <p class="text-[11px] text-slate-600">Current audit records: <strong id="diag-logs-count" class="text-rose-700">0</strong> entries</p>
+                                    <button type="button" id="clearLogsBtn" class="px-4 py-2 bg-white hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-300 transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5">
+                                        <i class="fa-solid fa-trash-can"></i> Purge Activity Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 4: PREFERENCES & UI CUSTOMIZATION -->
+                        <div id="settings-content-preferences" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                            <?php include __DIR__ . '/frontend/components/preferences_section.php'; ?>
+                        </div>
+
+                        <!-- Sticky Bottom Action Footer -->
+                        <div class="pt-5 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3">
+                            <span class="text-xs text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-halved text-emerald-500"></i> Settings stored securely in MongoDB Atlas
+                            </span>
+                            <button type="submit" id="saveSettingsBtn" class="px-6 py-2.5 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
+                                <i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save All Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         <?php else: ?>
             <!-- JUDGE / TABULATOR VIEW: ASSIGNED COMPETITIONS -->
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
+            <div id="user-events-tab" class="user-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
                 <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
@@ -354,8 +896,15 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                     </div>
                 </div>
             </div>
+
+            <!-- JUDGE / TABULATOR VIEW: PREFERENCES ONLY -->
+            <div id="user-preferences-tab" class="user-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
+                <?php include __DIR__ . '/frontend/components/preferences_section.php'; ?>
+            </div>
         <?php endif; ?>
 
+            </div> <!-- End #dashboard-content-area -->
+        </div> <!-- End #dashboard-layout-container -->
     </main>
 
     <?php if ($role === 'admin'): ?>
@@ -911,9 +1460,30 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
 
     <!-- MODAL: LIVE TABULATION BOARD (ACCESSIBLE TO TABULATOR & ADMIN) -->
     <div id="tabulation-board-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
-            <!-- Header -->
-            <div class="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3">
+        <!-- Print Watermark (controlled via Settings -> Branding) -->
+        <div id="tab-print-watermark" class="hidden pointer-events-none fixed inset-0 z-0 flex items-center justify-center opacity-[0.06] select-none">
+            <span id="tab-print-watermark-text" class="text-7xl font-black uppercase text-slate-800 -rotate-45 tracking-widest text-center">OFFICIAL TABULATION SHEET</span>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col relative z-10">
+            <!-- Print Header (Official Institution Banner for window.print) -->
+            <div id="tab-print-header" class="hidden print-only mb-6 border-b-2 border-slate-900 pb-4">
+                <div class="flex items-center justify-between gap-4">
+                    <img src="/assets/icons/BukSU-Logo.png" alt="BukSU Logo" class="w-16 h-16 object-contain shrink-0">
+                    <div class="text-center flex-1">
+                        <h2 id="tab-print-institution" class="text-lg font-black uppercase tracking-wider text-slate-900">Bukidnon State University</h2>
+                        <p class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Office of Student Affairs & Services &bull; Tabulation Committee</p>
+                        <h1 id="tab-print-event-title" class="text-base font-extrabold text-slate-900 mt-1">Official Event Scoring Sheet</h1>
+                        <p class="text-[10px] text-slate-500 font-medium">Certified Tabulation Report &bull; Printed: <span id="tab-print-date"></span></p>
+                    </div>
+                    <div class="w-16 h-16 shrink-0 flex items-center justify-center">
+                        <span class="text-xs font-black px-2.5 py-1 rounded bg-slate-100 text-slate-800 border border-slate-300 uppercase">Official</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header (Screen view) -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3 no-print">
                 <div class="flex items-center gap-3">
                     <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md">
                         <i class="fa-solid fa-calculator text-lg"></i>
@@ -952,6 +1522,14 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Print Signatories Section (Certified Signatures for window.print) -->
+            <div id="tab-print-signatories" class="hidden print-only mt-8 pt-4">
+                <p class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-8 text-center">Certified Correct and Approved by the Board of Judges & Tabulation Committee:</p>
+                <div class="grid grid-cols-3 gap-8 text-center" id="tab-signatories-grid">
+                    <!-- Dynamic Signatories populated from settings.branding.signatories -->
+                </div>
             </div>
 
             <!-- Footer -->
@@ -1070,6 +1648,8 @@ $badgeInfo = $roleBadges[$role] ?? ['title' => 'User Dashboard', 'icon' => 'fa-u
     <script type="module" src="/scripts/judge/judgeUI.js"></script>
     <script type="module" src="/scripts/tabulator/tabulatorUI.js"></script>
     <script type="module" src="/scripts/ui/notificationUI.js"></script>
+    <script type="module" src="/scripts/admin/settingsUI.js"></script>
+    <script type="module" src="/scripts/preferences.js"></script>
 
 </body>
 

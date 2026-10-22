@@ -1,4 +1,4 @@
-import { getScores } from "/scripts/admin/judgingAPI.js";
+import { getScores, unlockJudgeScore } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 
 let currentEventId = null;
@@ -76,7 +76,63 @@ async function loadTabulationData(isManual = false) {
 }
 
 function renderTabulationBoard(data) {
-    const { event, judges = [], matrix = [], stats = {} } = data;
+    const { event, judges = [], matrix = [], stats = {}, settings = {}, role = '' } = data;
+    const judgingSettings = settings.judging || {};
+    const branding = settings.branding || {};
+    const precision = parseInt(judgingSettings.decimalPrecision ?? 2);
+    const tabulationMethod = judgingSettings.tabulationMethod || 'standard_average';
+    const tieBreakerRule = judgingSettings.tieBreakerRule || 'highest_weight_criterion';
+    const unlockPolicy = judgingSettings.unlockPolicy || 'admin_approval';
+
+    // Update Print Header & Signatories
+    const printInstEl = document.getElementById('tab-print-institution');
+    if (printInstEl) {
+        printInstEl.textContent = branding.institutionName || 'Bukidnon State University';
+    }
+    const printTitleEl = document.getElementById('tab-print-event-title');
+    if (printTitleEl) {
+        printTitleEl.textContent = `${event.eventName || `Competition #${currentEventId}`} — Official Tabulation Matrix`;
+    }
+    const printDateEl = document.getElementById('tab-print-date');
+    if (printDateEl) {
+        printDateEl.textContent = new Date().toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        });
+    }
+
+    // Watermark
+    const watermarkEl = document.getElementById('tab-print-watermark');
+    const watermarkTextEl = document.getElementById('tab-print-watermark-text');
+    if (watermarkEl && watermarkTextEl) {
+        if (branding.watermarkEnabled) {
+            watermarkTextEl.textContent = branding.watermarkText || 'OFFICIAL TABULATION SHEET';
+            watermarkEl.classList.remove('hidden');
+        } else {
+            watermarkEl.classList.add('hidden');
+        }
+    }
+
+    // Signatories
+    const signatoriesContainer = document.getElementById('tab-signatories-grid');
+    if (signatoriesContainer) {
+        const defaultSignatories = [
+            { name: "John Doe", role: "Tabulator" },
+            { name: "Jane Smith", role: "Head Tabulator" },
+            { name: "Dr. Alex Morgan", role: "Chairman of the Board" }
+        ];
+        const signatories = (Array.isArray(branding.signatories) && branding.signatories.length === 3) 
+            ? branding.signatories 
+            : defaultSignatories;
+
+        signatoriesContainer.innerHTML = signatories.map(sig => `
+            <div class="flex flex-col items-center">
+                <div class="w-48 border-b-2 border-slate-800 mb-2 h-12"></div>
+                <span class="text-xs font-black uppercase text-slate-900 leading-tight">${escapeHtml(sig.name || 'Signatory Name')}</span>
+                <span class="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mt-0.5">${escapeHtml(sig.role || 'Designated Signatory')}</span>
+            </div>
+        `).join('');
+    }
 
     // Header status & live indicator
     const judgingStatusEl = document.getElementById('tab-event-judging-badge');
@@ -209,19 +265,29 @@ function renderTabulationBoard(data) {
 
             if (entry) {
                 if (entry.status === 'submitted') {
+                    let unlockBtnHtml = '';
+                    if ((role === 'admin' || role === 'tabulator') && unlockPolicy !== 'locked_after_submit') {
+                        unlockBtnHtml = `
+                            <button type="button" class="unlock-judge-score-btn text-[9px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-1.5 py-0.5 rounded border border-slate-200 hover:border-rose-200 transition-colors inline-flex items-center gap-1 mt-1 cursor-pointer" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" data-judge-name="${escapeHtml(j.username)}" data-contestant-name="${escapeHtml(row.name)}" title="Unlock score to allow judge to edit">
+                                <i class="fa-solid fa-lock-open text-[8px]"></i> Unlock
+                            </button>
+                        `;
+                    }
+
                     scoreCell = `
                         <div class="inline-flex flex-col items-center">
                             <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                ${parseFloat(entry.total_score).toFixed(2)}%
+                                ${parseFloat(entry.total_score).toFixed(precision)}%
                             </span>
                             <span class="text-[9px] text-emerald-600 font-semibold mt-0.5"><i class="fa-solid fa-circle-check"></i> Final</span>
+                            ${unlockBtnHtml}
                         </div>
                     `;
                 } else if (entry.status === 'draft') {
                     scoreCell = `
                         <div class="inline-flex flex-col items-center opacity-70">
                             <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                                ${parseFloat(entry.total_score).toFixed(2)}%
+                                ${parseFloat(entry.total_score).toFixed(precision)}%
                             </span>
                             <span class="text-[9px] text-amber-600 font-semibold mt-0.5"><i class="fa-solid fa-pen-ruler"></i> Draft</span>
                         </div>
@@ -242,12 +308,21 @@ function renderTabulationBoard(data) {
             `;
         });
 
-        // Average score
+        // Average score with method badges
+        let methodBadges = '';
+        if (row.is_olympic_trimmed) {
+            methodBadges += `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 inline-block mb-1" title="Olympic Trimming Applied (Highest & Lowest judge score excluded)">Olympic Trimmed</span>`;
+        }
+        if (tabulationMethod === 'ordinal_ranking' && row.rank_sum !== undefined) {
+            methodBadges += `<div class="text-[10px] font-extrabold text-indigo-700 mb-0.5">Rank Sum: ${row.rank_sum}</div>`;
+        }
+
         tbodyHtml += `
                 <td class="py-3.5 px-4 text-center align-middle bg-indigo-50/40">
-                    <span class="text-sm font-black text-buksu-navy font-mono">
-                        ${row.submitted_count > 0 ? `${row.average_score.toFixed(2)}%` : '<span class="text-slate-400 font-normal text-xs">No submissions</span>'}
-                    </span>
+                    ${methodBadges}
+                    <div class="text-sm font-black text-buksu-navy font-mono">
+                        ${row.submitted_count > 0 ? `${parseFloat(row.average_score).toFixed(precision)}%` : '<span class="text-slate-400 font-normal text-xs">No submissions</span>'}
+                    </div>
                     ${row.submitted_count > 0 ? `<div class="text-[9px] text-slate-400 font-normal">from ${row.submitted_count}/${judges.length} judges</div>` : ''}
                 </td>
             </tr>
@@ -255,6 +330,34 @@ function renderTabulationBoard(data) {
     });
 
     tableBody.innerHTML = tbodyHtml;
+
+    // Bind Unlock Score button click handlers
+    tableBody.querySelectorAll('.unlock-judge-score-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const cid = btn.dataset.contestantId;
+            const jid = btn.dataset.judgeId;
+            const jName = btn.dataset.judgeName;
+            const cName = btn.dataset.contestantName;
+
+            if (!confirm(`Unlock submitted score by Judge "${jName}" for "${cName}"?\n\nThis will return the score to draft status so the judge can revise and re-submit.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[8px]"></i> Unlocking...';
+
+            const res = await unlockJudgeScore(currentEventId, cid, jid);
+            if (res.success) {
+                showToast(res.message || 'Score unlocked successfully!', 'success');
+                await loadTabulationData(false);
+            } else {
+                showToast(res.message || 'Failed to unlock score.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-lock-open text-[8px]"></i> Unlock';
+            }
+        });
+    });
 }
 
 function escapeHtml(str) {

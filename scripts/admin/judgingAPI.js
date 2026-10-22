@@ -229,3 +229,23 @@ export async function submitScore(data) {
         return { success: false, message: "Network error submitting score." };
     }
 }
+
+export async function unlockJudgeScore(eventId, contestantId, judgeId) {
+    try {
+        const res = await fetch("/backend/crud/scores.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "unlock_score",
+                event_id: parseInt(eventId),
+                contestant_id: contestantId,
+                judge_id: judgeId
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("unlockJudgeScore error: ", e);
+        return { success: false, message: "Network error unlocking score." };
+    }
+}

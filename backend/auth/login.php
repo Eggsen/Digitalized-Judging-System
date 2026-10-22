@@ -108,6 +108,11 @@ try {
     $_SESSION['username'] = $user['username'] ?? $identifier;
     $_SESSION['email'] = $user['email'] ?? '';
     $_SESSION['role'] = strtolower($user['role'] ?? 'user');
+    if (isset($user['preferences']) && (is_array($user['preferences']) || is_object($user['preferences']))) {
+        $_SESSION['preferences'] = (array)$user['preferences'];
+    } else {
+        $_SESSION['preferences'] = ['theme' => 'light', 'colorRule' => 'normal', 'navPlacement' => 'top'];
+    }
 
     echo json_encode([
         "success" => true,

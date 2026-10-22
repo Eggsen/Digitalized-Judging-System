@@ -68,41 +68,41 @@ export function showToast(title, message = '', type = 'success', duration = 4000
     }
 
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border bg-white/95 backdrop-blur-md transition-all duration-300 transform translate-x-full opacity-0`;
+    toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 backdrop-blur-md transition-all duration-300 transform translate-x-full opacity-0`;
 
     let icon = 'fa-circle-check';
     let iconBg = 'bg-emerald-600 text-white';
-    let borderColor = 'border-emerald-200';
+    let borderColor = 'border-emerald-200 dark:border-emerald-800';
 
     if (type === 'create' || type === 'success') {
         icon = 'fa-circle-check';
         iconBg = 'bg-emerald-600 text-white';
-        borderColor = 'border-emerald-200';
+        borderColor = 'border-emerald-200 dark:border-emerald-800';
     } else if (type === 'edit' || type === 'info') {
         icon = 'fa-pen-to-square';
         iconBg = 'bg-sky-600 text-white';
-        borderColor = 'border-sky-200';
+        borderColor = 'border-sky-200 dark:border-sky-800';
     } else if (type === 'archive' || type === 'warning') {
         icon = 'fa-circle-exclamation';
         iconBg = 'bg-amber-500 text-white';
-        borderColor = 'border-amber-200';
+        borderColor = 'border-amber-200 dark:border-amber-800';
     } else if (type === 'error') {
         icon = 'fa-triangle-exclamation';
         iconBg = 'bg-rose-600 text-white';
-        borderColor = 'border-rose-200';
+        borderColor = 'border-rose-200 dark:border-rose-800';
     }
 
-    toast.classList.add(borderColor);
+    toast.classList.add(...borderColor.split(' '));
 
     toast.innerHTML = `
         <div class="w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center shrink-0 text-sm shadow-sm">
             <i class="fa-solid ${icon}"></i>
         </div>
         <div class="flex-1 min-w-0">
-            <h4 class="font-extrabold text-buksu-navy text-xs tracking-tight ${message ? 'mb-0.5' : ''}">${escapeHtml(title)}</h4>
-            ${message ? `<p class="text-[11px] text-slate-500 font-normal leading-snug">${escapeHtml(message)}</p>` : ''}
+            <h4 class="font-extrabold text-slate-900 dark:text-slate-100 text-xs tracking-tight ${message ? 'mb-0.5' : ''}">${escapeHtml(title)}</h4>
+            ${message ? `<p class="text-[11px] text-slate-600 dark:text-slate-300 font-normal leading-snug">${escapeHtml(message)}</p>` : ''}
         </div>
-        <button type="button" class="toast-close-btn text-slate-400 hover:text-slate-600 transition-colors text-sm cursor-pointer p-0.5">&times;</button>
+        <button type="button" class="toast-close-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-sm cursor-pointer p-0.5">&times;</button>
     `;
 
     container.appendChild(toast);

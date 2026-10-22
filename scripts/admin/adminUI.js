@@ -28,19 +28,19 @@ async function loadAccounts() {
     }
 
     tbody.innerHTML = res.accounts.map(account => `
-        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-semibold text-slate-800 align-middle">
-                <i class="fa-solid fa-user text-slate-400 me-1.5"></i>${account.username}
-                ${account.email ? `<div class="text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
-                ${account.created_at ? `<div class="text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
-                ${account.activated_at ? `<div class="text-emerald-600 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
+        <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
+            <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
+                <i class="fa-solid fa-user text-slate-400 dark:text-slate-500 me-1.5"></i>${account.username}
+                ${account.email ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
+                ${account.created_at ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
+                ${account.activated_at ? `<div class="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
             </td>
             <td class="px-4 py-3 text-center align-middle">
                 ${account.role === 'admin' 
                     ? getRoleBadge('admin')
-                    : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200">
-                        <i class="fa-solid ${account.role === 'judge' ? 'fa-gavel' : 'fa-calculator'} text-buksu-navy text-xs"></i>
-                        <select class="role-select bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer" data-id="${account.id}" data-current="${account.role}">
+                    : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <i class="fa-solid ${account.role === 'judge' ? 'fa-gavel' : 'fa-calculator'} text-buksu-navy dark:text-buksu-gold text-xs"></i>
+                        <select class="role-select bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer" data-id="${account.id}" data-current="${account.role}">
                             <option value="judge" ${account.role === 'judge' ? 'selected' : ''}>Judge</option>
                             <option value="tabulator" ${account.role === 'tabulator' ? 'selected' : ''}>Tabulator</option>
                         </select>

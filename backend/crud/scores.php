@@ -46,7 +46,7 @@ function calculateTotalScore($criteriaScores, $criteriaMap) {
         }
     }
 
-    return round($total, 2);
+    return round($total, 4);
 }
 
 // -------------------------------------------------------------
@@ -65,6 +65,21 @@ if ($method === "GET") {
             echo json_encode(["success" => false, "message" => "Event not found."]);
             exit;
         }
+
+        // Load System Settings
+        $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+        $judgingSettings = (array)($settingsDoc['judging'] ?? [
+            'decimalPrecision' => 2,
+            'tabulationMethod' => 'standard_average',
+            'tieBreakerRule' => 'highest_weight_criterion',
+            'unlockPolicy' => 'admin_approval',
+            'blindJudging' => true
+        ]);
+        $brandingSettings = (array)($settingsDoc['branding'] ?? []);
+        $decimalPrecision = (int)($judgingSettings['decimalPrecision'] ?? 2);
+        $tabulationMethod = $judgingSettings['tabulationMethod'] ?? 'standard_average';
+        $tieBreakerRule = $judgingSettings['tieBreakerRule'] ?? 'highest_weight_criterion';
+        $unlockPolicy = $judgingSettings['unlockPolicy'] ?? 'admin_approval';
 
         // Fetch criteria for this event
         $criteriaCursor = $criteriaCollection->find(['event_id' => $eventId], ['sort' => ['percentage' => -1, 'title' => 1]]);
@@ -171,7 +186,11 @@ if ($method === "GET") {
                 ],
                 "contestants" => $contestants,
                 "criteria" => $criteria,
-                "scores" => $judgeScores
+                "scores" => $judgeScores,
+                "settings" => [
+                    "judging" => $judgingSettings,
+                    "branding" => $brandingSettings
+                ]
             ]);
             exit;
         }
@@ -235,8 +254,10 @@ if ($method === "GET") {
         foreach ($contestants as $c) {
             $cId = $c['id'];
             $judgeEntries = [];
+            $submittedScoresList = [];
             $submittedSum = 0.0;
             $submittedCount = 0;
+            $critScoresSum = []; // For tie-breaking: sum per criteria_id across judges
 
             foreach ($judges as $j) {
                 $jId = $j['id'];
@@ -245,9 +266,19 @@ if ($method === "GET") {
                     $entry = $scoresByContestantJudge[$key];
                     $judgeEntries[$jId] = $entry;
                     if ($entry['status'] === 'submitted') {
-                        $submittedSum += (float)$entry['total_score'];
+                        $sVal = (float)$entry['total_score'];
+                        $submittedSum += $sVal;
+                        $submittedScoresList[] = $sVal;
                         $submittedCount++;
                         $totalSubmittedEntries++;
+
+                        // Sum per criterion
+                        if (!empty($entry['criteria_scores'])) {
+                            foreach ($entry['criteria_scores'] as $cs) {
+                                $crId = (string)($cs['criteria_id'] ?? '');
+                                $critScoresSum[$crId] = ($critScoresSum[$crId] ?? 0.0) + (float)($cs['score'] ?? 0);
+                            }
+                        }
                     }
                 } else {
                     $judgeEntries[$jId] = [
@@ -257,7 +288,19 @@ if ($method === "GET") {
                 }
             }
 
-            $avgScore = $submittedCount > 0 ? round($submittedSum / $submittedCount, 2) : 0.0;
+            // Tabulation Algorithm: Standard Average vs Olympic Trimming
+            $isTrimmed = false;
+            $avgScore = 0.0;
+            if ($tabulationMethod === 'olympic_trimming' && count($submittedScoresList) >= 3) {
+                $tempScores = $submittedScoresList;
+                sort($tempScores);
+                // Drop highest and lowest score
+                $trimmed = array_slice($tempScores, 1, -1);
+                $avgScore = round(array_sum($trimmed) / count($trimmed), $decimalPrecision);
+                $isTrimmed = true;
+            } else {
+                $avgScore = $submittedCount > 0 ? round($submittedSum / $submittedCount, $decimalPrecision) : 0.0;
+            }
 
             $matrix[] = [
                 'contestant_id' => $cId,
@@ -270,18 +313,65 @@ if ($method === "GET") {
                 'comments' => $c['comments'] ?? [],
                 'judge_scores' => $judgeEntries,
                 'submitted_count' => $submittedCount,
-                'total_score' => round($submittedSum, 2),
-                'average_score' => $avgScore
+                'total_score' => round($submittedSum, $decimalPrecision),
+                'average_score' => $avgScore,
+                'is_olympic_trimmed' => $isTrimmed,
+                'crit_scores_sum' => $critScoresSum
             ];
         }
 
-        // Sort matrix by average_score desc to assign ranks
-        usort($matrix, function($a, $b) {
-            if ($b['average_score'] == $a['average_score']) {
-                return $a['contestant_number'] - $b['contestant_number'];
+        // Handle Ordinal Ranking if selected:
+        if ($tabulationMethod === 'ordinal_ranking' && count($judges) > 0) {
+            $rankSums = [];
+            foreach ($judges as $j) {
+                $jId = $j['id'];
+                $judgeContestantScores = [];
+                foreach ($matrix as $row) {
+                    $entry = $row['judge_scores'][$jId] ?? null;
+                    if ($entry && $entry['status'] === 'submitted') {
+                        $judgeContestantScores[] = [
+                            'contestant_id' => $row['contestant_id'],
+                            'score' => (float)$entry['total_score']
+                        ];
+                    }
+                }
+                usort($judgeContestantScores, function($a, $b) {
+                    return ($b['score'] > $a['score']) ? 1 : -1;
+                });
+                for ($r = 0; $r < count($judgeContestantScores); $r++) {
+                    $cid = $judgeContestantScores[$r]['contestant_id'];
+                    $rankSums[$cid] = ($rankSums[$cid] ?? 0) + ($r + 1);
+                }
             }
-            return ($b['average_score'] > $a['average_score']) ? 1 : -1;
-        });
+            foreach ($matrix as &$row) {
+                $cid = $row['contestant_id'];
+                $row['rank_sum'] = $rankSums[$cid] ?? 999;
+            }
+            unset($row);
+
+            usort($matrix, function($a, $b) {
+                if ($a['rank_sum'] == $b['rank_sum']) {
+                    return ($b['average_score'] > $a['average_score']) ? 1 : -1;
+                }
+                return ($a['rank_sum'] > $b['rank_sum']) ? 1 : -1;
+            });
+        } else {
+            // Sort matrix by average_score desc with Tie-breaker rule!
+            usort($matrix, function($a, $b) use ($tieBreakerRule, $criteria) {
+                if ($b['average_score'] == $a['average_score']) {
+                    if ($tieBreakerRule === 'highest_weight_criterion' && !empty($criteria)) {
+                        $topCritId = (string)($criteria[0]['id'] ?? '');
+                        $critScoreA = (float)($a['crit_scores_sum'][$topCritId] ?? 0);
+                        $critScoreB = (float)($b['crit_scores_sum'][$topCritId] ?? 0);
+                        if ($critScoreB != $critScoreA) {
+                            return ($critScoreB > $critScoreA) ? 1 : -1;
+                        }
+                    }
+                    return $a['contestant_number'] - $b['contestant_number'];
+                }
+                return ($b['average_score'] > $a['average_score']) ? 1 : -1;
+            });
+        }
 
         // Assign ranks (with tie-handling)
         $rank = 1;
@@ -289,8 +379,19 @@ if ($method === "GET") {
             if ($matrix[$i]['submitted_count'] === 0) {
                 $matrix[$i]['rank'] = '-';
             } else {
-                if ($i > 0 && $matrix[$i]['average_score'] === $matrix[$i - 1]['average_score']) {
+                $isTied = false;
+                if ($i > 0) {
+                    if ($tabulationMethod === 'ordinal_ranking') {
+                        $isTied = ($matrix[$i]['rank_sum'] === $matrix[$i - 1]['rank_sum'] && $matrix[$i]['average_score'] === $matrix[$i - 1]['average_score']);
+                    } else {
+                        $isTied = ($matrix[$i]['average_score'] === $matrix[$i - 1]['average_score']);
+                    }
+                }
+
+                if ($isTied) {
                     $matrix[$i]['rank'] = $matrix[$i - 1]['rank'];
+                    $matrix[$i]['is_tie'] = true;
+                    $matrix[$i - 1]['is_tie'] = true;
                 } else {
                     $matrix[$i]['rank'] = $rank;
                 }
@@ -313,6 +414,10 @@ if ($method === "GET") {
             "criteria" => $criteria,
             "contestants" => $contestants,
             "matrix" => $matrix,
+            "settings" => [
+                "judging" => $judgingSettings,
+                "branding" => $brandingSettings
+            ],
             "stats" => [
                 'total_contestants' => count($contestants),
                 'total_judges' => count($judges),
@@ -333,8 +438,8 @@ if ($method === "GET") {
 // POST: Enter, Save Draft, or Submit Scores (Judge only, or Admin)
 // -------------------------------------------------------------
 if ($method === "POST") {
-    if ($role !== 'judge' && $role !== 'admin') {
-        echo json_encode(["success" => false, "message" => "Only designated judges can enter scores."]);
+    if ($role !== 'judge' && $role !== 'admin' && $role !== 'tabulator') {
+        echo json_encode(["success" => false, "message" => "Unauthorized access."]);
         exit;
     }
 
@@ -345,10 +450,107 @@ if ($method === "POST") {
         exit;
     }
 
+    $action = trim($data['action'] ?? 'submit'); // 'draft', 'submit', or 'unlock_score'
+
+    // ---------------------------------------------------------
+    // ACTION: UNLOCK SCORE (Admin or Tabulator only)
+    // ---------------------------------------------------------
+    if ($action === 'unlock_score') {
+        if ($role !== 'admin' && $role !== 'tabulator') {
+            echo json_encode(["success" => false, "message" => "Only administrators or tabulators can unlock submitted scores."]);
+            exit;
+        }
+
+        $eventId = (int)($data['event_id'] ?? 0);
+        $contestantId = trim($data['contestant_id'] ?? '');
+        $targetJudgeId = trim($data['judge_id'] ?? '');
+
+        if ($eventId <= 0 || $contestantId === '' || $targetJudgeId === '') {
+            echo json_encode(["success" => false, "message" => "Event ID, Contestant ID, and Judge ID are required to unlock score."]);
+            exit;
+        }
+
+        try {
+            $existing = $scoresCollection->findOne([
+                'event_id' => $eventId,
+                'contestant_id' => $contestantId,
+                'judge_id' => $targetJudgeId
+            ]);
+
+            if (!$existing) {
+                echo json_encode(["success" => false, "message" => "No score record found to unlock."]);
+                exit;
+            }
+
+            $nowStr = (new DateTime())->format('Y-m-d H:i:s');
+            $scoresCollection->updateOne(
+                [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId
+                ],
+                [
+                    '$set' => [
+                        'status' => 'draft',
+                        'unlocked_at' => $nowStr,
+                        'unlocked_by' => $_SESSION['username'] ?? 'Admin'
+                    ]
+                ]
+            );
+
+            $contestant = $contestantsCollection->findOne(['_id' => $contestantId]);
+            $cName = $contestant ? ($contestant['name'] ?? "Contestant {$contestantId}") : "Contestant {$contestantId}";
+            $judgeUser = $usersCollection->findOne(['_id' => $targetJudgeId]);
+            $jName = $judgeUser ? ($judgeUser['username'] ?? $targetJudgeId) : $targetJudgeId;
+            $eventDoc = $eventsCollection->findOne(['_id' => $eventId]);
+            $evName = $eventDoc ? ($eventDoc['eventName'] ?? "Event #{$eventId}") : "Event #{$eventId}";
+
+            logSystemAction(
+                $userId,
+                $_SESSION['username'] ?? 'System',
+                $role,
+                'UNLOCK_SCORE',
+                "Unlocked submitted score for {$cName} from Judge {$jName} in '{$evName}'."
+            );
+
+            // Send notification to judge
+            $notificationsCollection->insertOne([
+                'user_id' => $targetJudgeId,
+                'type' => 'score_unlocked',
+                'title' => 'Score Unlocked for Editing',
+                'message' => "Your submitted score for {$cName} in '{$evName}' was unlocked by {$_SESSION['username']}. You may now revise and resubmit your score.",
+                'event_id' => $eventId,
+                'role' => 'judge',
+                'is_read' => false,
+                'created_at' => new MongoDB\BSON\UTCDateTime()
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Score successfully unlocked! Judge {$jName} may now edit and resubmit.",
+                "unlocked" => [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId,
+                    'status' => 'draft'
+                ]
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    // Normal Score Entry (Judge or Admin only)
+    if ($role !== 'judge' && $role !== 'admin') {
+        echo json_encode(["success" => false, "message" => "Only designated judges can enter scores."]);
+        exit;
+    }
+
     $eventId = (int)($data['event_id'] ?? 0);
     $contestantId = trim($data['contestant_id'] ?? '');
     $criteriaScores = $data['criteria_scores'] ?? []; // Array of [{criteria_id, max, score}]
-    $action = trim($data['action'] ?? 'submit'); // 'draft' or 'submit'
     $status = ($action === 'draft') ? 'draft' : 'submitted';
 
     if ($eventId <= 0 || $contestantId === '' || !is_array($criteriaScores)) {
@@ -453,6 +655,26 @@ if ($method === "POST") {
             'judge_id' => $userId,
             'contestant_id' => $contestantId
         ]);
+
+        // Enforce lock policy if existing score was already submitted
+        if ($role === 'judge' && $existingScore && ($existingScore['status'] ?? '') === 'submitted') {
+            $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+            $unlockPolicy = $settingsDoc['judging']['unlockPolicy'] ?? 'admin_approval';
+
+            if ($unlockPolicy === 'locked_after_submit') {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "This score is finalized and strictly locked. Edits are not allowed per system policy."
+                ]);
+                exit;
+            } else if ($unlockPolicy === 'admin_approval') {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "This score has already been submitted and locked. Please ask an Administrator or Tabulator to unlock it from the Tabulation Board."
+                ]);
+                exit;
+            }
+        }
 
         $nowStr = (new DateTime())->format('Y-m-d H:i:s');
         $scoreId = $existingScore ? (string)$existingScore['_id'] : ("score-" . bin2hex(random_bytes(6)));

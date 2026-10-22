@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --color-buksu-navy: #031527;
@@ -38,4 +40,542 @@
 
 .animate-fade-in {
   animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* =============================================================
+   DARK MODE PALETTE & SYSTEM STYLING
+   ============================================================= */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b1320 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .dashboard-bg {
+  opacity: 0.12 !important;
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.dark header {
+  background-color: rgba(11, 19, 32, 0.92) !important;
+  border-color: #1e293b !important;
+}
+
+html.dark .bg-white {
+  background-color: #111c2e !important;
+  color: #f8fafc !important;
+  border-color: #1e2f47 !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/90,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/40,
+html.dark .bg-slate-50\/20 {
+  background-color: #0d1726 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/90,
+html.dark .bg-slate-100\/80 {
+  background-color: #162338 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-slate-200,
+html.dark .bg-slate-200\/80,
+html.dark .bg-slate-200\/70 {
+  background-color: #1e304b !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-800,
+html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.dark .text-buksu-navy {
+  color: #f8fafc !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-300,
+html.dark .border-slate-300\/80 {
+  border-color: #1e2f47 !important;
+}
+
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #0a1322 !important;
+  border-color: #243852 !important;
+  color: #f8fafc !important;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #f5b800 !important;
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.25) !important;
+}
+
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark #create-event-modal > div,
+html.dark #edit-event-modal > div,
+html.dark #tabulation-board-modal > div,
+html.dark #judge-scoring-modal > div,
+html.dark #view-event-modal > div,
+html.dark #preferences-modal > div {
+  background-color: #111c2e !important;
+  color: #f8fafc !important;
+  border-color: #1e2f47 !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e2f47 !important;
+}
+
+/* =============================================================
+   DARK MODE TOAST NOTIFICATIONS (Guaranteed High Contrast)
+   ============================================================= */
+#toast-container > div {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+#toast-container > div h4 {
+  color: #031527 !important; /* Text is distinctly darker than the light bg */
+}
+
+#toast-container > div p {
+  color: #475569 !important;
+}
+
+html.dark #toast-container > div {
+  background-color: #111c2e !important;
+  border-color: #243852 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75) !important;
+}
+
+html.dark #toast-container > div h4 {
+  color: #f8fafc !important; /* Clearly readable bright title */
+}
+
+html.dark #toast-container > div p {
+  color: #cbd5e1 !important;
+}
+
+/* =============================================================
+   DARK MODE HOVER STATES (Darker on hover for true "Dark Modeness")
+   ============================================================= */
+html.dark .hover\:bg-white:hover,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/80:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-200:hover,
+html.dark .hover\:bg-amber-50:hover,
+html.dark .hover\:bg-amber-100:hover,
+html.dark .hover\:bg-indigo-50:hover,
+html.dark .hover\:bg-emerald-50:hover,
+html.dark .hover\:bg-rose-50:hover {
+  background-color: #09121f !important; /* Sleek, darker tone on hover */
+  color: #f8fafc !important;
+}
+
+/* Dark Mode Table Rows (User Invitations, Audit Logs, Tabulation) */
+html.dark table tbody tr {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark table tbody tr:hover,
+html.dark table tbody tr[class*="hover:bg-"]:hover {
+  background-color: #09121f !important; /* Darker background on hover so white text is crystal clear */
+  border-color: #2b3d58 !important;
+}
+
+html.dark table tbody tr:hover td {
+  color: #ffffff !important;
+}
+
+html.dark table tbody tr:hover td div,
+html.dark table tbody tr:hover td span:not([class*="bg-"]) {
+  color: #f8fafc !important;
+}
+
+html.dark table thead tr,
+html.dark table thead th {
+  background-color: #080f1a !important;
+  color: #94a3b8 !important;
+  border-color: #1e2f47 !important;
+}
+
+/* =============================================================
+   JUDGE CARDS (Criterion Deck, Rubric Cards, Awards Card)
+   ============================================================= */
+/* Explicit Light Mode rules (when NOT in dark mode) */
+html:not(.dark) .criterion-deck-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .criterion-deck-card:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .criterion-deck-card.border-buksu-gold,
+html:not(.dark) .criterion-deck-card[class*="border-buksu-gold"] {
+  background-color: #ffffff !important;
+  border-color: #f5b800 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) #gc-active-rubric-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .gc-sub-criterion-block {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .gc-level-card:not(.active):not([class*="border-buksu-gold"]) {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .gc-level-card:not(.active):hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) #judge-awards-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Dark Mode rules for cards */
+html.dark .criterion-deck-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .criterion-deck-card:hover {
+  background-color: #09121f !important;
+  border-color: #f5b800 !important;
+}
+
+html.dark .criterion-deck-card.bg-amber-50\/90,
+html.dark .criterion-deck-card.border-buksu-gold,
+html.dark .criterion-deck-card[class*="border-buksu-gold"],
+html.dark .criterion-deck-card[class*="bg-amber-50"] {
+  background-color: #162033 !important;
+  border-color: #f5b800 !important;
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.3) !important;
+  color: #f8fafc !important;
+}
+
+html.dark .criterion-deck-card h4,
+html.dark .criterion-deck-card p,
+html.dark .criterion-deck-card span {
+  color: #f8fafc !important;
+}
+
+html.dark .criterion-deck-card span.text-slate-400,
+html.dark .criterion-deck-card p.text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Rubric Level Cards (Selected Score Card & Hover) */
+html.dark .gc-level-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .gc-level-card:hover {
+  background-color: #09121f !important;
+  border-color: #f5b800 !important;
+}
+
+html.dark .gc-level-card.active,
+html.dark .gc-level-card.bg-amber-50\/90,
+html.dark .gc-level-card[class*="border-buksu-gold"],
+html.dark .gc-level-card[class*="bg-amber-50"] {
+  background-color: #1a253a !important; /* Dark slate instead of white/light yellow */
+  border-color: #f5b800 !important;
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+html.dark .gc-level-card h6,
+html.dark .gc-level-card p,
+html.dark .gc-level-card span {
+  color: #f8fafc !important;
+}
+
+html.dark .gc-sub-criterion-block {
+  background-color: #0d1726 !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark #gc-active-rubric-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark #judge-awards-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+/* Event Cards in Dark Mode */
+html.dark .event-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .event-card:hover {
+  background-color: #09121f !important;
+  border-color: #3b82f6 !important;
+}
+
+html.dark .event-card h3 {
+  color: #f8fafc !important;
+}
+
+html.dark .event-card p {
+  color: #94a3b8 !important;
+}
+
+/* General Amber/Yellow Alert & Card Blocks in Dark Mode */
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/90,
+html.dark .bg-amber-50\/80,
+html.dark .bg-amber-50\/70,
+html.dark .bg-amber-50\/50,
+html.dark .bg-amber-50\/40,
+html.dark .bg-amber-50\/30,
+html.dark .bg-amber-50\/20,
+html.dark .bg-amber-100 {
+  background-color: #182236 !important;
+  border-color: #854d0e !important;
+  color: #fef08a !important;
+}
+
+html.dark .text-amber-950,
+html.dark .text-amber-900,
+html.dark .text-amber-800 {
+  color: #fef08a !important;
+}
+
+/* =============================================================
+   3-COLOR RULE MODE (60% Neutral Surface, 30% BukSU Navy, 10% Gold)
+   ============================================================= */
+html.three-color-mode i.fa-solid:not(.text-white):not(.text-buksu-gold),
+html.three-color-mode i.fa-regular:not(.text-white):not(.text-buksu-gold),
+html.three-color-mode i.fa-brands:not(.text-white):not(.text-buksu-gold) {
+  color: #031527 !important;
+}
+
+html.three-color-mode.dark i.fa-solid:not(.text-white):not(.text-buksu-navy),
+html.three-color-mode.dark i.fa-regular:not(.text-white):not(.text-buksu-navy),
+html.three-color-mode.dark i.fa-brands:not(.text-white):not(.text-buksu-navy) {
+  color: #f5b800 !important;
+}
+
+html.three-color-mode .bg-buksu-navy i,
+html.three-color-mode .bg-buksu-navy-light i,
+html.three-color-mode .bg-buksu-navy-dark i {
+  color: inherit !important;
+}
+
+html.three-color-mode .bg-indigo-50,
+html.three-color-mode .bg-amber-50,
+html.three-color-mode .bg-emerald-50,
+html.three-color-mode .bg-rose-50,
+html.three-color-mode .bg-purple-50 {
+  background-color: rgba(3, 21, 39, 0.05) !important;
+  border-color: rgba(3, 21, 39, 0.18) !important;
+  color: #031527 !important;
+}
+
+html.three-color-mode.dark .bg-indigo-50,
+html.three-color-mode.dark .bg-amber-50,
+html.three-color-mode.dark .bg-emerald-50,
+html.three-color-mode.dark .bg-rose-50,
+html.three-color-mode.dark .bg-purple-50 {
+  background-color: rgba(245, 184, 0, 0.08) !important;
+  border-color: rgba(245, 184, 0, 0.22) !important;
+  color: #f5b800 !important;
+}
+
+html.three-color-mode .text-indigo-500,
+html.three-color-mode .text-indigo-600,
+html.three-color-mode .text-indigo-700,
+html.three-color-mode .text-emerald-500,
+html.three-color-mode .text-emerald-600,
+html.three-color-mode .text-emerald-700,
+html.three-color-mode .text-rose-500,
+html.three-color-mode .text-rose-600,
+html.three-color-mode .text-rose-700,
+html.three-color-mode .text-purple-500,
+html.three-color-mode .text-purple-600,
+html.three-color-mode .text-amber-500,
+html.three-color-mode .text-amber-600 {
+  color: #031527 !important;
+}
+
+html.three-color-mode.dark .text-indigo-500,
+html.three-color-mode.dark .text-indigo-600,
+html.three-color-mode.dark .text-indigo-700,
+html.three-color-mode.dark .text-emerald-500,
+html.three-color-mode.dark .text-emerald-600,
+html.three-color-mode.dark .text-emerald-700,
+html.three-color-mode.dark .text-rose-500,
+html.three-color-mode.dark .text-rose-600,
+html.three-color-mode.dark .text-rose-700,
+html.three-color-mode.dark .text-purple-500,
+html.three-color-mode.dark .text-purple-600,
+html.three-color-mode.dark .text-amber-500,
+html.three-color-mode.dark .text-amber-600 {
+  color: #f5b800 !important;
+}
+
+html.dark [data-pref-theme].ring-buksu-navy,
+html.dark [data-pref-color-rule].ring-buksu-navy,
+html.dark [data-pref-nav].ring-buksu-navy {
+  border-color: #f5b800 !important;
+  --tw-ring-color: #f5b800 !important;
+  background-color: rgba(245, 184, 0, 0.1) !important;
+}
+
+/* =============================================================
+   SIDEBAR LAYOUT MODE
+   ============================================================= */
+html.layout-sidebar .top-nav-bar {
+  display: none !important;
+}
+
+html.layout-sidebar #dashboard-sidebar-nav {
+  display: block !important;
+}
+
+html:not(.layout-sidebar) #dashboard-sidebar-nav {
+  display: none !important;
+}
+
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide everything except the tabulation board modal */
+  body > *:not(#tabulation-board-modal) {
+    display: none !important;
+  }
+
+  #tabulation-board-modal {
+    display: block !important;
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  #tabulation-board-modal > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Elements to suppress during printing */
+  .no-print,
+  .close-modal-btn,
+  #refreshTabulationBtn,
+  #printTabulationBtn,
+  #tab-stats-container,
+  .unlock-judge-score-btn,
+  #tabulation-board-modal .border-t:last-child {
+    display: none !important;
+  }
+
+  /* Make sure print-only sections are visible */
+  .print-only {
+    display: block !important;
+  }
+
+  .print-flex {
+    display: flex !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 10px !important;
+  }
+
+  @page {
+    size: landscape;
+    margin: 12mm 15mm;
+  }
 }

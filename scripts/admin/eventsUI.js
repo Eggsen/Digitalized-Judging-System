@@ -5,6 +5,7 @@ import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCr
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
 import { toggleJudgingPeriod } from "./judgingAPI.js";
+import { loadSystemSettings } from "./settingsUI.js";
 
 const userRole = document.body.dataset.role;
 let cachedEventsList = [];
@@ -22,47 +23,112 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAuditLogs();
     } else if (userRole === 'judge') {
         initJudgeUI();
+        initUserTabs();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     } else if (userRole === 'tabulator') {
         initTabulatorUI();
+        initUserTabs();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     }
 });
 
 /* -------------------------------------------------------------
- * ADMIN TABS & NAVIGATION
+ * ADMIN TABS & NAVIGATION (SIDEBAR + TOP BAR SYNC)
  * ------------------------------------------------------------- */
-function initAdminTabs() {
-    const tabBtns = document.querySelectorAll('.admin-tab-btn');
+export function switchAdminTab(targetTab) {
+    const tabBtns = document.querySelectorAll('.admin-tab-btn, .sidebar-nav-btn[data-tab]:not([data-tab^="user-"])');
     const tabContents = document.querySelectorAll('.admin-tab-content');
+
+    tabBtns.forEach(b => {
+        const isMatch = b.dataset.tab === targetTab;
+        if (b.classList.contains('sidebar-nav-btn')) {
+            if (isMatch) {
+                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30';
+            } else {
+                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent';
+            }
+        } else {
+            if (isMatch) {
+                b.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer';
+            } else {
+                b.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer';
+            }
+        }
+    });
+
+    tabContents.forEach(c => c.classList.add('hidden'));
+    const activeContent = document.getElementById(targetTab);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+        activeContent.classList.add('animate-fade-in');
+    }
+
+    if (targetTab === 'events-tab') loadAdminEvents();
+    if (targetTab === 'assignments-tab') loadJudgeAssignments();
+    if (targetTab === 'logs-tab') loadAuditLogs();
+    if (targetTab === 'settings-tab') loadSystemSettings();
+}
+
+function initAdminTabs() {
+    const tabBtns = document.querySelectorAll('.admin-tab-btn, .sidebar-nav-btn[data-tab]:not([data-tab^="user-"])');
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetTab = btn.dataset.tab;
-
-            tabBtns.forEach(b => {
-                b.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 transition-all cursor-pointer';
-            });
-            btn.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white transition-all cursor-pointer';
-
-            tabContents.forEach(c => c.classList.add('hidden'));
-            const activeContent = document.getElementById(targetTab);
-            if (activeContent) {
-                activeContent.classList.remove('hidden');
-                activeContent.classList.add('animate-fade-in');
-            }
-
-            if (targetTab === 'events-tab') loadAdminEvents();
-            if (targetTab === 'assignments-tab') loadJudgeAssignments();
-            if (targetTab === 'logs-tab') loadAuditLogs();
+            if (targetTab) switchAdminTab(targetTab);
         });
     });
 
     document.getElementById('event-status-filter')?.addEventListener('change', loadAdminEvents);
     document.getElementById('refreshEventsBtn')?.addEventListener('click', loadAdminEvents);
     document.getElementById('refreshLogsBtn')?.addEventListener('click', loadAuditLogs);
+}
+
+/* -------------------------------------------------------------
+ * JUDGE / TABULATOR USER TABS & NAVIGATION (SIDEBAR + TOP BAR SYNC)
+ * ------------------------------------------------------------- */
+export function switchUserTab(targetTab) {
+    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"]');
+    const userTabContents = document.querySelectorAll('.user-tab-content');
+
+    userTabBtns.forEach(b => {
+        const isMatch = b.dataset.tab === targetTab;
+        if (b.classList.contains('sidebar-nav-btn')) {
+            if (isMatch) {
+                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30';
+            } else {
+                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent';
+            }
+        } else {
+            if (isMatch) {
+                b.className = 'user-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer';
+            } else {
+                b.className = 'user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer';
+            }
+        }
+    });
+
+    userTabContents.forEach(c => c.classList.add('hidden'));
+    const activeContent = document.getElementById(targetTab);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+        activeContent.classList.add('animate-fade-in');
+    }
+
+    if (targetTab === 'user-events-tab') loadUserAssignedEvents();
+}
+
+function initUserTabs() {
+    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"]');
+
+    userTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            if (targetTab) switchUserTab(targetTab);
+        });
+    });
 }
 
 /* -------------------------------------------------------------
@@ -284,16 +350,16 @@ async function loadAuditLogs() {
     }
 
     tbody.innerHTML = res.logs.map(log => `
-        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-mono text-[11px] text-slate-500 align-middle whitespace-nowrap">${log.timestamp}</td>
-            <td class="px-4 py-3 font-semibold text-slate-800 align-middle">
+        <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
+            <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
+            <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
                 ${escapeHtml(log.username)}
-                <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 text-slate-600">${escapeHtml(log.role)}</span>
+                <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
             </td>
             <td class="px-4 py-3 text-center align-middle">
-                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">${escapeHtml(log.action)}</span>
+                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">${escapeHtml(log.action)}</span>
             </td>
-            <td class="px-4 py-3 text-slate-700 align-middle font-normal">${escapeHtml(log.details)}</td>
+            <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
         </tr>
     `).join('');
 }

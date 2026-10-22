@@ -293,6 +293,34 @@ if ($method === "POST") {
                 exit;
             }
 
+            // If user is a judge, enforce judging period and score lock policy (unified with scoring)
+            if ($userRole === 'judge') {
+                $event = $eventsCollection->findOne(['_id' => (int)$existing['event_id']]);
+                if (!$event || ($event['judgingStatus'] ?? '') !== 'In Progress') {
+                    echo json_encode(["success" => false, "message" => "Judging session is inactive. Awards cannot be modified."]);
+                    exit;
+                }
+
+                $judgeScore = $scoresCollection->findOne([
+                    'event_id' => (int)$existing['event_id'],
+                    'contestant_id' => (string)$existing['_id'],
+                    'judge_id' => (string)$_SESSION['user_id']
+                ]);
+
+                if ($judgeScore && ($judgeScore['status'] ?? '') === 'submitted') {
+                    $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+                    $unlockPolicy = $settingsDoc['judging']['unlockPolicy'] ?? 'admin_approval';
+
+                    if ($unlockPolicy === 'locked_after_submit') {
+                        echo json_encode(["success" => false, "message" => "This evaluation is finalized and strictly locked. Awards cannot be modified."]);
+                        exit;
+                    } else if ($unlockPolicy === 'admin_approval') {
+                        echo json_encode(["success" => false, "message" => "This contestant's evaluation is submitted and locked. You must ask an Administrator or Tabulator to unlock it before modifying awards."]);
+                        exit;
+                    }
+                }
+            }
+
             $commentObj = [
                 'id' => 'cmt-' . bin2hex(random_bytes(4)),
                 'text' => $displayText,
@@ -357,8 +385,33 @@ if ($method === "POST") {
                 exit;
             }
 
-            // If judge, verify ownership
+            // If judge, verify judging session, score lock policy, and ownership
             if ($userRole === 'judge') {
+                $event = $eventsCollection->findOne(['_id' => (int)$existing['event_id']]);
+                if (!$event || ($event['judgingStatus'] ?? '') !== 'In Progress') {
+                    echo json_encode(["success" => false, "message" => "Judging session is inactive. Awards cannot be modified."]);
+                    exit;
+                }
+
+                $judgeScore = $scoresCollection->findOne([
+                    'event_id' => (int)$existing['event_id'],
+                    'contestant_id' => (string)$existing['_id'],
+                    'judge_id' => (string)$_SESSION['user_id']
+                ]);
+
+                if ($judgeScore && ($judgeScore['status'] ?? '') === 'submitted') {
+                    $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+                    $unlockPolicy = $settingsDoc['judging']['unlockPolicy'] ?? 'admin_approval';
+
+                    if ($unlockPolicy === 'locked_after_submit') {
+                        echo json_encode(["success" => false, "message" => "This evaluation is finalized and strictly locked. Awards cannot be removed."]);
+                        exit;
+                    } else if ($unlockPolicy === 'admin_approval') {
+                        echo json_encode(["success" => false, "message" => "This contestant's evaluation has been submitted and locked. Ask an Administrator or Tabulator to unlock it before removing awards."]);
+                        exit;
+                    }
+                }
+
                 $isOwner = false;
                 $currentUserId = (string)$_SESSION['user_id'];
                 $currentUsername = (string)($_SESSION['username'] ?? '');

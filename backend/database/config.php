@@ -31,6 +31,7 @@ try {
     $contestantsCollection = $db->contestants;
     $criteriaCollection = $db->criteria;
     $scoresCollection = $db->scores;
+    $settingsCollection = $db->settings;
 
 
 } catch (Exception $e) {
