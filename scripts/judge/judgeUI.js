@@ -167,16 +167,16 @@ function renderJudgeContestants() {
 
     container.innerHTML = contestantsList.map(c => {
         const scoreEntry = judgeScoresMap[c.id];
-        let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500">Unscored</span>';
+        let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">Unscored</span>';
         let scorePill = '';
 
         if (scoreEntry) {
             if (scoreEntry.status === 'submitted') {
-                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-700 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Submitted</span>';
-                scorePill = `<span class="text-xs font-black text-emerald-700">${formatScore(scoreEntry.total_score)}%</span>`;
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Submitted</span>';
+                scorePill = `<span class="text-xs font-black text-emerald-700 dark:text-emerald-400">${formatScore(scoreEntry.total_score)}%</span>`;
             } else if (scoreEntry.status === 'draft') {
-                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-700 flex items-center gap-1"><i class="fa-solid fa-pen-ruler"></i> Draft</span>';
-                scorePill = `<span class="text-xs font-bold text-amber-700">${formatScore(scoreEntry.total_score)}%</span>`;
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1"><i class="fa-solid fa-pen-ruler"></i> Draft</span>';
+                scorePill = `<span class="text-xs font-bold text-amber-700 dark:text-amber-400">${formatScore(scoreEntry.total_score)}%</span>`;
             }
         }
 
@@ -185,24 +185,24 @@ function renderJudgeContestants() {
         return `
             <div class="judge-contestant-item p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                 isSelected 
-                    ? 'bg-buksu-navy text-white border-buksu-navy shadow-md ring-2 ring-buksu-gold/40' 
-                    : 'bg-slate-50 hover:bg-white border-slate-200/80 text-slate-700'
-            }" data-id="${c.id}">
+                    ? 'active bg-amber-50/80 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-800 border-buksu-gold dark:border-buksu-gold shadow-sm ring-2 ring-buksu-gold/40 text-slate-900 dark:text-white' 
+                    : 'bg-white hover:bg-slate-50 dark:bg-slate-850 dark:hover:bg-slate-800 border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-2xs'
+            }" data-id="${c.id}" data-selected="${isSelected}">
                 <div class="flex items-center gap-3 overflow-hidden">
                     <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 ${
                         isSelected 
-                            ? 'bg-buksu-gold text-buksu-navy font-black shadow-xs' 
-                            : 'bg-slate-200 text-slate-700'
+                            ? 'bg-buksu-navy text-buksu-gold font-black shadow-xs border border-buksu-gold/30 dark:bg-buksu-gold dark:text-buksu-navy' 
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-bold'
                     }">
                         #${c.contestant_number}
                     </div>
                     <div class="overflow-hidden">
                         <div class="flex items-center gap-1.5 flex-wrap">
-                            <h5 class="font-extrabold text-xs truncate ${isSelected ? 'text-white' : 'text-slate-800'}">${escapeHtml(c.name)}</h5>
-                            ${c.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSelected ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}">Team</span>` : ''}
-                            ${c.comments && c.comments.length > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSelected ? 'bg-amber-400 text-buksu-navy' : 'bg-amber-100 text-amber-800 border border-amber-300'}"><i class="fa-solid fa-award"></i> ${c.comments.length}</span>` : ''}
+                            <h5 class="font-extrabold text-xs truncate ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'}">${escapeHtml(c.name)}</h5>
+                            ${c.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">Team</span>` : ''}
+                            ${c.comments && c.comments.length > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800"><i class="fa-solid fa-award"></i> ${c.comments.length}</span>` : ''}
                         </div>
-                        <p class="text-[10px] truncate ${isSelected ? 'text-slate-200' : 'text-slate-400'}">${escapeHtml(c.department_or_org || 'General')}</p>
+                        <p class="text-[10px] truncate ${isSelected ? 'text-slate-600 dark:text-slate-300 font-semibold' : 'text-slate-500 dark:text-slate-400'}">${escapeHtml(c.department_or_org || 'General')}</p>
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-1 shrink-0">

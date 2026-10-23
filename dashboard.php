@@ -776,80 +776,80 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <!-- SECTION 3: DATA BACKUP & DIAGNOSTICS -->
                         <div id="settings-content-backup" class="settings-subtab-content space-y-6 hidden animate-fade-in">
                             <!-- Backup Action Card -->
-                            <div class="p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-white to-amber-50/40 border border-amber-200 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+                            <div class="backup-action-card p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-amber-100/40 to-amber-50/60 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 border border-amber-200 dark:border-amber-500/40 shadow-sm flex items-center justify-between gap-4 flex-wrap">
                                 <div class="space-y-1 max-w-xl">
-                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-amber-400 text-buksu-navy">
+                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-amber-400 text-buksu-navy dark:bg-amber-500 dark:text-slate-950">
                                         Data Protection
                                     </span>
-                                    <h3 class="text-base font-black text-slate-800">Instant One-Click Database Snapshot</h3>
-                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                    <h3 class="text-base font-black text-slate-800 dark:text-slate-100">Instant One-Click Database Snapshot</h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                                         Generate and download an encrypted, portable JSON backup of all registered competitions, criteria rubrics, contestant rosters, judge scores, and user credentials.
                                     </p>
                                 </div>
-                                <button type="button" id="downloadBackupBtn" class="px-5 py-3 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
-                                    <i class="fa-solid fa-download text-buksu-gold"></i> Download Full Database Backup (.json)
+                                <button type="button" id="downloadBackupBtn" class="px-5 py-3 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-slate-950 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30 dark:border-amber-400/50">
+                                    <i class="fa-solid fa-download text-buksu-gold dark:text-slate-950"></i> Download Full Database Backup (.json)
                                 </button>
                             </div>
 
                             <!-- Live Diagnostics Grid -->
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
                                         <i class="fa-solid fa-heart-pulse text-emerald-500"></i> Live System Diagnostics
                                     </h4>
-                                    <span class="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Operational
                                     </span>
                                 </div>
 
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Database</span>
-                                        <span id="diag-db-name" class="font-black text-slate-800 block text-sm">djs_db</span>
-                                        <span class="text-[9px] text-emerald-600 font-bold block">Atlas Connected</span>
+                                        <span id="diag-db-name" class="font-black text-slate-800 dark:text-slate-100 block text-sm">djs_db</span>
+                                        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold block">Atlas Connected</span>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Events</span>
-                                        <span id="diag-events-count" class="font-black text-buksu-navy block text-lg">0</span>
-                                        <span class="text-[9px] text-slate-500 block">Competitions</span>
+                                        <span id="diag-events-count" class="font-black text-buksu-navy dark:text-amber-400 block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block">Competitions</span>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Contestants</span>
-                                        <span id="diag-contestants-count" class="font-black text-buksu-navy block text-lg">0</span>
-                                        <span class="text-[9px] text-slate-500 block">Registered</span>
+                                        <span id="diag-contestants-count" class="font-black text-buksu-navy dark:text-amber-400 block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block">Registered</span>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Criteria</span>
-                                        <span id="diag-criteria-count" class="font-black text-buksu-navy block text-lg">0</span>
-                                        <span class="text-[9px] text-slate-500 block">Configured</span>
+                                        <span id="diag-criteria-count" class="font-black text-buksu-navy dark:text-amber-400 block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block">Configured</span>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Scores</span>
-                                        <span id="diag-scores-count" class="font-black text-buksu-navy block text-lg">0</span>
-                                        <span class="text-[9px] text-slate-500 block">Evaluations</span>
+                                        <span id="diag-scores-count" class="font-black text-buksu-navy dark:text-amber-400 block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block">Evaluations</span>
                                     </div>
-                                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                                    <div class="diag-card p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center space-y-1">
                                         <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Accounts</span>
-                                        <span id="diag-users-count" class="font-black text-buksu-navy block text-lg">0</span>
-                                        <span class="text-[9px] text-slate-500 block">Total Users</span>
+                                        <span id="diag-users-count" class="font-black text-buksu-navy dark:text-amber-400 block text-lg">0</span>
+                                        <span class="text-[9px] text-slate-500 dark:text-slate-400 block">Total Users</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Maintenance Controls Card -->
-                            <div class="p-5 rounded-2xl bg-rose-50/50 border border-rose-200 space-y-3 text-xs">
+                            <div class="maintenance-control-card p-5 rounded-2xl bg-rose-50/50 dark:bg-slate-850 border border-rose-200 dark:border-rose-900/40 space-y-3 text-xs">
                                 <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
+                                    <div class="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/50 flex items-center justify-center font-bold text-xs">
                                         <i class="fa-solid fa-triangle-exclamation"></i>
                                     </div>
                                     <div>
-                                        <h4 class="font-black text-sm text-slate-800">System Log Maintenance</h4>
-                                        <p class="text-[11px] text-slate-500">Purge historical audit records to reclaim database storage space.</p>
+                                        <h4 class="font-black text-sm text-slate-800 dark:text-slate-100">System Log Maintenance</h4>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Purge historical audit records to reclaim database storage space.</p>
                                     </div>
                                 </div>
-                                <div class="flex items-center justify-between gap-3 pt-2 border-t border-rose-200/60 flex-wrap">
-                                    <p class="text-[11px] text-slate-600">Current audit records: <strong id="diag-logs-count" class="text-rose-700">0</strong> entries</p>
-                                    <button type="button" id="clearLogsBtn" class="px-4 py-2 bg-white hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-300 transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5">
+                                <div class="flex items-center justify-between gap-3 pt-2 border-t border-rose-200/60 dark:border-rose-900/40 flex-wrap">
+                                    <p class="text-[11px] text-slate-600 dark:text-slate-300">Current audit records: <strong id="diag-logs-count" class="text-rose-700 dark:text-rose-400">0</strong> entries</p>
+                                    <button type="button" id="clearLogsBtn" class="px-4 py-2 bg-white hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold rounded-xl border border-rose-300 dark:border-rose-800 transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5">
                                         <i class="fa-solid fa-trash-can"></i> Purge Activity Logs
                                     </button>
                                 </div>

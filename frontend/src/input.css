@@ -414,6 +414,124 @@ html.dark .text-amber-800 {
 }
 
 /* =============================================================
+   JUDGE CONTESTANTS LIST CARDS (Light Mode & Dark Mode Contrast)
+   ============================================================= */
+html:not(.dark) .judge-contestant-item {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html:not(.dark) .judge-contestant-item:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .judge-contestant-item.active,
+html:not(.dark) .judge-contestant-item[data-selected="true"] {
+  background-color: #fffbeb !important; /* amber-50 */
+  border-color: #f5b800 !important;     /* buksu-gold */
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.35) !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .judge-contestant-item.active h5,
+html:not(.dark) .judge-contestant-item[data-selected="true"] h5 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .judge-contestant-item.active p,
+html:not(.dark) .judge-contestant-item[data-selected="true"] p {
+  color: #475569 !important;
+}
+
+/* Dark Mode for Judge Contestant Cards */
+html.dark .judge-contestant-item {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .judge-contestant-item:hover {
+  background-color: #16243b !important;
+  border-color: #334155 !important;
+}
+
+html.dark .judge-contestant-item.active,
+html.dark .judge-contestant-item[data-selected="true"] {
+  background-color: #16243b !important;
+  border-color: #f5b800 !important;
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.35) !important;
+  color: #f8fafc !important;
+}
+
+html.dark .judge-contestant-item.active h5,
+html.dark .judge-contestant-item[data-selected="true"] h5 {
+  color: #ffffff !important;
+}
+
+html.dark .judge-contestant-item.active p,
+html.dark .judge-contestant-item[data-selected="true"] p {
+  color: #cbd5e1 !important;
+}
+
+/* =============================================================
+   BACKUP & MAINTENANCE CARDS (Dark Mode Contrast)
+   ============================================================= */
+html.dark .backup-action-card {
+  background: #111c2e !important;
+  background-image: linear-gradient(to right, #111c2e, #16243b, #111c2e) !important;
+  border-color: rgba(245, 184, 0, 0.4) !important;
+  color: #f8fafc !important;
+}
+
+html.dark .backup-action-card h3 {
+  color: #f8fafc !important;
+}
+
+html.dark .backup-action-card p {
+  color: #cbd5e1 !important;
+}
+
+html.dark .diag-card {
+  background-color: #111c2e !important;
+  border-color: #1e2f47 !important;
+}
+
+html.dark .diag-card span {
+  color: #94a3b8 !important;
+}
+
+html.dark .diag-card span[id^="diag-"] {
+  color: #f8fafc !important;
+}
+
+html.dark .maintenance-control-card {
+  background-color: #18131e !important;
+  background-image: none !important;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+}
+
+html.dark .maintenance-control-card h4 {
+  color: #f8fafc !important;
+}
+
+html.dark .maintenance-control-card p {
+  color: #cbd5e1 !important;
+}
+
+html.dark #clearLogsBtn {
+  background-color: #24141d !important;
+  border-color: rgba(225, 29, 72, 0.5) !important;
+  color: #fda4af !important;
+}
+
+html.dark #clearLogsBtn:hover {
+  background-color: #3b1625 !important;
+  color: #ffe4e6 !important;
+}
+
+/* =============================================================
    3-COLOR RULE MODE (60% Neutral Surface, 30% BukSU Navy, 10% Gold)
    ============================================================= */
 html.three-color-mode i.fa-solid:not(.text-white):not(.text-buksu-gold),
