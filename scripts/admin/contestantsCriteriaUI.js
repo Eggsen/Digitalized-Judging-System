@@ -71,13 +71,52 @@ export function initContestantsCriteriaUI() {
     // Form: Configure Weights Modal
     document.getElementById('saveWeightsBtn')?.addEventListener('click', handleSaveWeights);
 
-    // Rubric Modal: Add Indicator Button
+    // Rubric Modal: Add Category Button
+    document.getElementById('rubricAddCategoryBtn')?.addEventListener('click', () => {
+        addCategoryRow();
+    });
     document.getElementById('rubricAddIndicatorBtn')?.addEventListener('click', () => {
-        addSubCriterionRow();
+        addCategoryRow();
     });
 
-    // Form: Save Criterion & Rubrics
+    // Rubric Modal: Auto Distribute Points Button
+    document.getElementById('rubricAutoDistributeBtn')?.addEventListener('click', autoDistributeCategoryPoints);
+
+    // Rubric Modal: Max points input change listener (scale categories)
+    document.getElementById('rubric-modal-max-input')?.addEventListener('input', handleRubricMaxPointsChange);
+
+    // Form: Save Criterion & Rubric
     document.getElementById('criterionRubricForm')?.addEventListener('submit', handleSaveRubricCriterion);
+
+    // Live validation: Quick Add Weight input (cannot exceed remaining to 100%)
+    document.getElementById('new-criterion-pct')?.addEventListener('input', (e) => {
+        const input = e.target;
+        const entered = parseInt(input.value) || 0;
+        const currentTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+        const remaining = Math.max(0, 100 - currentTotal);
+        if (entered > remaining) {
+            showToast('Weight Limit Exceeded', `Total criteria weight cannot exceed 100%! Only ${remaining}% is available.`, 'warning');
+            input.value = remaining;
+        }
+    });
+
+    // Live validation: Rubric Modal Weight input (cannot exceed remaining to 100%)
+    document.getElementById('rubric-modal-pct-input')?.addEventListener('input', (e) => {
+        const input = e.target;
+        const entered = parseInt(input.value) || 0;
+        const critId = document.getElementById('rubric-modal-crit-id')?.value;
+        let otherTotal = 0;
+        if (critId) {
+            otherTotal = cachedCriteria.filter(c => String(c.id) !== String(critId)).reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+        } else {
+            otherTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+        }
+        const maxAllowed = Math.max(0, 100 - otherTotal);
+        if (entered > maxAllowed) {
+            showToast('Weight Limit Exceeded', `Total criteria weight cannot exceed 100%! Only ${maxAllowed}% is available for this criterion.`, 'warning');
+            input.value = maxAllowed;
+        }
+    });
 
     // Close button for child modals: close ONLY that child modal
     document.querySelectorAll('#adjust-weights-modal .close-modal-btn').forEach(btn => {
@@ -135,6 +174,72 @@ export function initContestantsCriteriaUI() {
     });
 }
 
+export function updateWeightsModalState(triggerWarningToast = false) {
+    const inputs = document.querySelectorAll('.weight-adjust-input');
+    const badge = document.getElementById('weights-modal-total-badge');
+    const bar = document.getElementById('weights-modal-total-bar');
+    const warningAlert = document.getElementById('weights-modal-warning-alert');
+    const warningText = document.getElementById('weights-modal-warning-text');
+    const saveBtn = document.getElementById('saveWeightsBtn');
+
+    let total = 0;
+    inputs.forEach(input => {
+        let val = parseInt(input.value);
+        if (isNaN(val) || val < 0) {
+            val = 0;
+        }
+        total += val;
+    });
+
+    if (badge) {
+        if (total > 100) {
+            badge.textContent = `${total}% / 100% (Exceeds by ${total - 100}%)`;
+            badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 animate-pulse';
+        } else if (total === 100) {
+            badge.textContent = `100% / 100% (Balanced)`;
+            badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300';
+        } else {
+            badge.textContent = `${total}% / 100% (${100 - total}% remaining)`;
+            badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300';
+        }
+    }
+
+    if (bar) {
+        bar.style.width = `${Math.min(total, 100)}%`;
+        if (total > 100) {
+            bar.className = 'h-full bg-rose-500 rounded-full transition-all duration-300';
+        } else if (total === 100) {
+            bar.className = 'h-full bg-emerald-500 rounded-full transition-all duration-300';
+        } else {
+            bar.className = 'h-full bg-amber-500 rounded-full transition-all duration-300';
+        }
+    }
+
+    if (total > 100) {
+        if (warningAlert) warningAlert.classList.remove('hidden');
+        if (warningText) {
+            warningText.textContent = `Total weight cannot exceed 100%! Current total is ${total}% (exceeds limit by ${total - 100}%). Please decrease one or more criteria weights.`;
+        }
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            saveBtn.title = 'Cannot save: Total weight exceeds 100%';
+        }
+        if (triggerWarningToast) {
+            showToast('Weight Limit Exceeded', `Total criteria weight is ${total}%, exceeding 100% by ${total - 100}%.`, 'warning');
+        }
+    } else {
+        if (warningAlert) warningAlert.classList.add('hidden');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            saveBtn.title = '';
+        }
+    }
+
+    return total;
+}
+
 export function openAdjustWeightsModal() {
     const weightsModal = document.getElementById('adjust-weights-modal');
     const container = document.getElementById('weights-adjust-container');
@@ -149,7 +254,6 @@ export function openAdjustWeightsModal() {
         <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
             <div class="overflow-hidden">
                 <h5 class="font-extrabold text-xs text-slate-800 truncate">${escapeHtml(cr.title)}</h5>
-                <span class="text-[10px] text-slate-400 font-medium">Max Points: ${cr.max_points} pts</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
                 <input type="number" 
@@ -162,6 +266,13 @@ export function openAdjustWeightsModal() {
         </div>
     `).join('');
 
+    container.querySelectorAll('.weight-adjust-input').forEach(input => {
+        input.addEventListener('input', () => {
+            updateWeightsModalState(true);
+        });
+    });
+
+    updateWeightsModalState(false);
     weightsModal.classList.remove('hidden');
 }
 
@@ -571,15 +682,18 @@ async function loadCriteriaList() {
 
     cachedCriteria = res.criteria;
     const totalWeight = res.total_weight || 0;
+    const remainingWeight = Math.max(0, 100 - totalWeight);
 
     // Update weight indicator
     if (weightBadge) {
-        weightBadge.textContent = `${totalWeight}% / 100% Total`;
         if (totalWeight === 100) {
+            weightBadge.textContent = '100% / 100% (Balanced)';
             weightBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300';
         } else if (totalWeight > 100) {
-            weightBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300';
+            weightBadge.textContent = `${totalWeight}% / 100% (Exceeds by ${totalWeight - 100}%)`;
+            weightBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse';
         } else {
+            weightBadge.textContent = `${totalWeight}% / 100% (${remainingWeight}% available)`;
             weightBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
         }
     }
@@ -587,6 +701,23 @@ async function loadCriteriaList() {
     if (weightBar) {
         weightBar.style.width = `${Math.min(totalWeight, 100)}%`;
         weightBar.className = `h-full rounded-full transition-all duration-300 ${totalWeight === 100 ? 'bg-emerald-500' : totalWeight > 100 ? 'bg-rose-500' : 'bg-amber-500'}`;
+    }
+
+    // Update Quick Add form hint and max attribute
+    const quickAddPctInput = document.getElementById('new-criterion-pct');
+    const quickAddHint = document.getElementById('new-criterion-weight-hint');
+    if (quickAddPctInput) {
+        quickAddPctInput.max = remainingWeight;
+        quickAddPctInput.placeholder = remainingWeight > 0 ? `Max ${remainingWeight}%` : '0% left';
+    }
+    if (quickAddHint) {
+        if (remainingWeight > 0) {
+            quickAddHint.textContent = `${remainingWeight}% available`;
+            quickAddHint.className = 'text-[10px] font-bold text-emerald-600';
+        } else {
+            quickAddHint.textContent = `0% available (100% reached)`;
+            quickAddHint.className = 'text-[10px] font-bold text-rose-500';
+        }
     }
 
     if (cachedCriteria.length === 0) {
@@ -601,7 +732,11 @@ async function loadCriteriaList() {
     }
 
     container.innerHTML = cachedCriteria.map(cr => {
-        const subCount = cr.sub_criteria ? cr.sub_criteria.length : 0;
+        const categories = Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0 
+            ? cr.scoring_categories 
+            : (Array.isArray(cr.sub_criteria) && cr.sub_criteria.length > 0 ? getDefaultScoringCategories(cr.max_points) : []);
+        const catCount = categories.length;
+
         return `
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-all space-y-3">
             <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -614,22 +749,22 @@ async function loadCriteriaList() {
                         <div class="flex items-center gap-2 flex-wrap">
                             <h5 class="font-extrabold text-slate-800 text-sm leading-tight">${escapeHtml(cr.title)}</h5>
                             <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/70 text-slate-700 shrink-0">Max: ${cr.max_points} pts</span>
-                            ${subCount > 0 
-                                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0"><i class="fa-solid fa-layer-group me-1"></i>${subCount} Indicators</span>` 
-                                : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">No Indicators</span>'}
+                            ${catCount > 0 
+                                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0"><i class="fa-solid fa-layer-group me-1"></i>${catCount} Score Categories</span>` 
+                                : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">No Categories</span>'}
                         </div>
                         ${cr.description ? `<p class="text-xs text-slate-500 font-normal leading-relaxed line-clamp-2">${escapeHtml(cr.description)}</p>` : ''}
                     </div>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    ${subCount > 0 ? `
+                    ${catCount > 0 ? `
                         <button type="button" class="toggle-rubric-view-btn px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] cursor-pointer transition-colors flex items-center gap-1" data-id="${cr.id}">
                             <i class="fa-solid fa-eye text-xs"></i> <span>View Rubric</span>
                         </button>
                     ` : ''}
                     <button class="edit-criterion-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-buksu-navy hover:text-buksu-gold text-slate-700 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1" 
                         data-id="${cr.id}" 
-                        title="Edit Criterion & 5-1 Rubric">
+                        title="Edit Criterion & Scoring Rubric">
                         <i class="fa-solid fa-pen text-xs"></i> <span>Edit</span>
                     </button>
                     <button class="delete-criterion-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
@@ -641,45 +776,23 @@ async function loadCriteriaList() {
                 </div>
             </div>
 
-            <!-- Collapsible 5-to-1 Rubric Matrix Preview -->
-            ${subCount > 0 ? `
+            <!-- Collapsible Rubric Categories Matrix Preview -->
+            ${catCount > 0 ? `
                 <div id="rubric-preview-${cr.id}" class="hidden pt-3 border-t border-slate-200/70 space-y-2.5 text-xs">
                     <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                        <span>5-to-1 Rubric Dimensions (${subCount} indicators &bull; 5=High, 1=Low)</span>
-                        <span class="text-indigo-600 font-bold normal-case">Scores are totaled &amp; scaled to ${cr.max_points} pts</span>
+                        <span>Scoring Rubric (${catCount} categories)</span>
+                        <span class="text-indigo-600 font-bold normal-case">Scores scale to ${cr.max_points} pts</span>
                     </div>
-                    <div class="space-y-2">
-                        ${cr.sub_criteria.map(sc => `
-                            <div class="p-3 rounded-xl bg-white border border-slate-200/80 space-y-1.5 shadow-2xs">
-                                <div class="flex items-center justify-between font-extrabold text-slate-800 text-xs">
-                                    <span class="flex items-center gap-1.5">
-                                        <i class="fa-solid fa-angle-right text-buksu-navy text-[10px]"></i>
-                                        ${escapeHtml(sc.name)}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(catCount, 4)} gap-2">
+                        ${categories.map(cat => `
+                            <div class="p-3 rounded-xl bg-white border border-slate-200/80 space-y-1 shadow-2xs">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(cat.name)}</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                        Max: ${cat.points} pts
                                     </span>
                                 </div>
-                                ${sc.description ? `<p class="text-[11px] text-slate-500 italic font-normal">${escapeHtml(sc.description)}</p>` : ''}
-                                <div class="grid grid-cols-1 sm:grid-cols-5 gap-1.5 pt-1 text-[10px]">
-                                    <div class="p-2 rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-950">
-                                        <span class="font-black text-emerald-800 block text-[11px]">5 - Outstanding</span>
-                                        <span class="text-[10px] text-emerald-900 leading-tight block mt-0.5">${escapeHtml(sc.levels?.['5'] || 'Outstanding execution and mastery.')}</span>
-                                    </div>
-                                    <div class="p-2 rounded-lg bg-teal-50/80 border border-teal-200 text-teal-950">
-                                        <span class="font-black text-teal-800 block text-[11px]">4 - Very Good</span>
-                                        <span class="text-[10px] text-teal-900 leading-tight block mt-0.5">${escapeHtml(sc.levels?.['4'] || 'Very good execution with minor flaws.')}</span>
-                                    </div>
-                                    <div class="p-2 rounded-lg bg-indigo-50/80 border border-indigo-200 text-indigo-950">
-                                        <span class="font-black text-indigo-800 block text-[11px]">3 - Good</span>
-                                        <span class="text-[10px] text-indigo-900 leading-tight block mt-0.5">${escapeHtml(sc.levels?.['3'] || 'Satisfactory execution meeting standard.')}</span>
-                                    </div>
-                                    <div class="p-2 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-950">
-                                        <span class="font-black text-amber-800 block text-[11px]">2 - Fair</span>
-                                        <span class="text-[10px] text-amber-900 leading-tight block mt-0.5">${escapeHtml(sc.levels?.['2'] || 'Inconsistent execution, needs improvement.')}</span>
-                                    </div>
-                                    <div class="p-2 rounded-lg bg-rose-50/80 border border-rose-200 text-rose-950">
-                                        <span class="font-black text-rose-800 block text-[11px]">1 - Poor</span>
-                                        <span class="text-[10px] text-rose-900 leading-tight block mt-0.5">${escapeHtml(sc.levels?.['1'] || 'Substantial errors and poor control.')}</span>
-                                    </div>
-                                </div>
+                                ${cat.description ? `<p class="text-[11px] text-slate-500 font-normal leading-tight mt-1 line-clamp-3">${escapeHtml(cat.description)}</p>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -741,156 +854,285 @@ export function openCriterionRubricModal(criterionId) {
     const pctInput = document.getElementById('rubric-modal-pct-input');
     const maxInput = document.getElementById('rubric-modal-max-input');
     const descInput = document.getElementById('rubric-modal-desc-input');
-    const container = document.getElementById('rubric-subcriteria-container');
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
     const modalTitle = document.getElementById('rubric-modal-title');
+    const maxBadge = document.getElementById('rubric-max-points-badge');
 
+    if (!container) return;
     container.innerHTML = '';
 
     const criterion = cachedCriteria.find(c => String(c.id) === String(criterionId));
+    let initialMax = 50;
+    let categories = [];
+
     if (criterion) {
         modalTitle.textContent = `Edit Rubric: ${criterion.title}`;
         critIdInput.value = criterion.id;
         titleInput.value = criterion.title || '';
         pctInput.value = criterion.percentage || 0;
-        maxInput.value = criterion.max_points || 100;
+        initialMax = parseInt(criterion.max_points) || 50;
+        maxInput.value = initialMax;
         descInput.value = criterion.description || '';
 
-        const subCriteria = (criterion.sub_criteria && criterion.sub_criteria.length > 0)
-            ? criterion.sub_criteria
-            : getDefaultSubCriteria(criterion.title);
-
-        subCriteria.forEach(sc => addSubCriterionRow(sc));
+        categories = (Array.isArray(criterion.scoring_categories) && criterion.scoring_categories.length > 0)
+            ? criterion.scoring_categories
+            : getDefaultScoringCategories(initialMax);
     } else {
         modalTitle.textContent = 'Add New Judging Criterion & Rubric';
         critIdInput.value = '';
         titleInput.value = '';
-        pctInput.value = 25;
-        maxInput.value = 100;
+        pctInput.value = 0;
+        initialMax = 50;
+        maxInput.value = initialMax;
         descInput.value = '';
 
-        getDefaultSubCriteria('General Performance').forEach(sc => addSubCriterionRow(sc));
+        categories = getDefaultScoringCategories(initialMax);
     }
+
+    // Set weight remaining bounds and hint in Rubric Modal
+    let otherCriteriaTotal = 0;
+    if (criterion) {
+        otherCriteriaTotal = cachedCriteria.filter(c => String(c.id) !== String(criterion.id)).reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+    } else {
+        otherCriteriaTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+    }
+    const maxAllowedForThis = Math.max(0, 100 - otherCriteriaTotal);
+
+    const rubricPctHint = document.getElementById('rubric-modal-weight-hint');
+    if (pctInput) {
+        pctInput.max = maxAllowedForThis;
+        pctInput.placeholder = maxAllowedForThis > 0 ? `Max ${maxAllowedForThis}%` : '0% left';
+        if (!criterion) {
+            pctInput.value = Math.min(25, maxAllowedForThis);
+        }
+    }
+    if (rubricPctHint) {
+        if (maxAllowedForThis > 0) {
+            rubricPctHint.textContent = `Max ${maxAllowedForThis}% available`;
+            rubricPctHint.className = 'text-[10px] font-bold text-emerald-600';
+        } else {
+            rubricPctHint.textContent = `0% available (100% reached)`;
+            rubricPctHint.className = 'text-[10px] font-bold text-rose-500';
+        }
+    }
+
+    maxInput.dataset.previousMax = initialMax;
+    if (maxBadge) maxBadge.textContent = `${initialMax} pts`;
+
+    categories.forEach((cat, idx) => addCategoryRow(cat, initialMax, idx));
 
     modal.classList.remove('hidden');
 }
 
-function getDefaultSubCriteria(title) {
+export function getDefaultScoringCategories(maxPoints = 40) {
+    const max = parseFloat(maxPoints) || 40;
+    const count = 4;
+    const perCat = roundScore(max / count);
     return [
         {
-            id: 'sub-' + Math.random().toString(36).substring(2, 7),
-            name: 'Good Performance & Execution',
-            description: 'Degree of technical mastery, stage presence, and overall flow.',
-            levels: {
-                '5': 'Flawless precision, exceptional mastery and seamless execution throughout.',
-                '4': 'Solid execution with strong control and only isolated minor slips.',
-                '3': 'Competent execution meeting standard criteria with average control.',
-                '2': 'Inconsistent execution, visible technical insecurity and lapses.',
-                '1': 'Poor execution, lack of preparation, and significant disruptions.'
-            }
+            id: 'cat-' + Math.random().toString(36).substring(2, 7),
+            name: 'Difficulty & Variety',
+            description: 'Complexity, variety of movements, and creative staging variations.',
+            points: perCat
         },
         {
-            id: 'sub-' + Math.random().toString(36).substring(2, 7),
-            name: 'Delivery & Variety',
-            description: 'Complexity, stylistic variety, and creative delivery.',
-            levels: {
-                '5': 'Highly complex and creative sequences delivered with captivating confidence.',
-                '4': 'Good variety and strong delivery with minimal repetitive moments.',
-                '3': 'Standard delivery with conventional, predictable patterns.',
-                '2': 'Repetitive routines with limited variety and weak delivery.',
-                '1': 'Elementary delivery with no discernible variety or complexity.'
-            }
+            id: 'cat-' + Math.random().toString(36).substring(2, 7),
+            name: 'Synchronization & Timing',
+            description: 'Precision, unison among dancers, and micro-timing accuracy.',
+            points: perCat
         },
         {
-            id: 'sub-' + Math.random().toString(36).substring(2, 7),
-            name: 'Poise & Impact',
-            description: 'Audience engagement, recovery, demeanor, and stage discipline.',
-            levels: {
-                '5': 'Commanding charisma, superb poise, and instant recovery from mistakes.',
-                '4': 'Confident demeanor and good stage presence with minor hesitation.',
-                '3': 'Fair composure maintained for most of the performance.',
-                '2': 'Nervous demeanor, lack of poise, and visible panic when errors occur.',
-                '1': 'Total disengagement from audience and lack of professionalism.'
-            }
+            id: 'cat-' + Math.random().toString(36).substring(2, 7),
+            name: 'Technique & Form',
+            description: 'Body control, posture, extension, lines, and movement cleanliness.',
+            points: perCat
+        },
+        {
+            id: 'cat-' + Math.random().toString(36).substring(2, 7),
+            name: 'Transitions & Staging',
+            description: 'Fluidity between routine sections, formations, and spatial coverage.',
+            points: perCat
         }
     ];
 }
 
-function addSubCriterionRow(sc = null) {
-    const container = document.getElementById('rubric-subcriteria-container');
+function roundScore(val) {
+    return Math.round(val * 10) / 10;
+}
+
+function handleRubricMaxPointsChange() {
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    const maxBadge = document.getElementById('rubric-max-points-badge');
+    if (!maxInput) return;
+
+    const newMax = parseFloat(maxInput.value) || 1;
+    const prevMax = parseFloat(maxInput.dataset.previousMax) || newMax;
+    maxInput.dataset.previousMax = newMax;
+
+    if (maxBadge) maxBadge.textContent = `${newMax} pts`;
+
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
     if (!container) return;
 
-    const subId = sc?.id || ('sub-' + Math.random().toString(36).substring(2, 7));
-    const name = sc?.name || '';
-    const desc = sc?.description || '';
-    const levels = sc?.levels || {
-        '5': 'Flawless precision, exceptional mastery and seamless execution throughout.',
-        '4': 'Solid execution with strong control and only isolated minor slips.',
-        '3': 'Competent execution meeting standard criteria with average control.',
-        '2': 'Inconsistent execution, visible technical insecurity and lapses.',
-        '1': 'Poor execution, lack of preparation, and significant disruptions.'
-    };
+    const rows = container.querySelectorAll('.rubric-category-item');
+    const ratio = prevMax > 0 ? (newMax / prevMax) : 1;
+
+    rows.forEach(row => {
+        const pointsInput = row.querySelector('.cat-points-input');
+        if (pointsInput) {
+            const currentVal = parseFloat(pointsInput.value) || 0;
+            const scaled = Math.min(newMax, roundScore(currentVal * ratio));
+            pointsInput.value = scaled;
+            pointsInput.max = newMax;
+        }
+        updateCategoryRowIndicators(row, newMax);
+    });
+
+    updateRubricCategoriesSum();
+}
+
+function autoDistributeCategoryPoints() {
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
+    if (!maxInput || !container) return;
+
+    const max = parseFloat(maxInput.value) || 50;
+    const rows = container.querySelectorAll('.rubric-category-item');
+    const count = rows.length;
+    if (count === 0) return;
+
+    const perCategory = roundScore(max / count);
+
+    rows.forEach((row) => {
+        const pointsInput = row.querySelector('.cat-points-input');
+        if (pointsInput) {
+            pointsInput.value = perCategory;
+            pointsInput.max = max;
+        }
+        updateCategoryRowIndicators(row, max);
+    });
+
+    updateRubricCategoriesSum();
+    showToast(`Divided ${max} max points evenly: ${perCategory} pts per category.`, 'info');
+}
+
+function addCategoryRow(cat = null, maxPoints = null, index = null) {
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    if (!container) return;
+
+    const max = maxPoints !== null ? maxPoints : (parseFloat(maxInput?.value) || 50);
+    const existingRows = container.querySelectorAll('.rubric-category-item');
+    const nextIdx = index !== null ? index : existingRows.length;
+
+    let defaultPts = roundScore(max / Math.max(1, existingRows.length + 1));
+    if (cat && typeof cat.points !== 'undefined') {
+        defaultPts = parseFloat(cat.points);
+    }
+
+    const catId = cat?.id || ('cat-' + Math.random().toString(36).substring(2, 7));
+    const catName = cat?.name || '';
+    const catDesc = cat?.description || '';
 
     const row = document.createElement('div');
-    row.className = 'rubric-sub-item p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3 transition-all hover:border-slate-300 shadow-2xs';
-    row.dataset.subId = subId;
+    row.className = 'rubric-category-item p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3 transition-all hover:border-slate-300 shadow-2xs';
+    row.dataset.catId = catId;
 
     row.innerHTML = `
         <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2.5">
-            <div class="flex items-center gap-2.5 flex-1">
-                <span class="w-7 h-7 rounded-lg bg-buksu-navy text-buksu-gold flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                    <i class="fa-solid fa-list-check"></i>
+            <div class="flex items-center gap-2.5 flex-1 flex-wrap sm:flex-nowrap">
+                <span class="category-index-badge w-7 h-7 rounded-lg bg-buksu-navy text-buksu-gold flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                    #${nextIdx + 1}
                 </span>
-                <div class="flex-1">
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Sub-Criterion / Performance Indicator Title</label>
-                    <input type="text" class="sub-name-input w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Word Organization, Sentence Flow, Execution..." value="${escapeHtml(name)}" required>
+                <div class="flex-1 min-w-[180px]">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Category Name / Title</label>
+                    <input type="text" class="cat-name-input w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Difficulty, Form, Synchronization..." value="${escapeHtml(catName)}" required>
+                </div>
+                <div class="shrink-0">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Max Score (pts)</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" step="0.5" min="0" max="${max}" class="cat-points-input w-20 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="${defaultPts}">
+                        <span class="text-xs font-bold text-slate-500 whitespace-nowrap">
+                            pts max
+                        </span>
+                        <span class="cat-ratio-badge px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 whitespace-nowrap">
+                            ${Math.round((defaultPts / max) * 100)}%
+                        </span>
+                    </div>
                 </div>
             </div>
-            <button type="button" class="remove-sub-btn px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl text-xs cursor-pointer font-bold flex items-center gap-1 transition-colors" title="Remove Indicator">
+            <button type="button" class="remove-category-btn px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl text-xs cursor-pointer font-bold flex items-center gap-1 transition-colors" title="Remove Category">
                 <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Remove</span>
             </button>
         </div>
 
         <div>
-            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">Sub-Criterion Description &amp; Evaluation Focus</label>
-            <textarea class="sub-desc-input w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal leading-relaxed" rows="2" placeholder="Describe the focus and guidelines for this indicator (e.g. Evaluates sentence transitions, paragraph unity, and logical progression...);">${escapeHtml(desc)}</textarea>
-        </div>
-
-        <!-- 5-to-1 Levels -->
-        <div class="space-y-2 pt-1 border-t border-slate-200/70">
-            <div class="flex items-center justify-between">
-                <span class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">5-to-1 Performance Level Descriptions (Highest to Lowest):</span>
-                <span class="text-[10px] text-slate-400">Judges will see these descriptions when evaluating</span>
-            </div>
-            <div class="space-y-2">
-                <div class="flex items-start gap-2.5">
-                    <span class="w-24 px-2 py-1 rounded-lg text-[10px] font-black bg-emerald-100 text-emerald-800 text-center shrink-0 mt-1 border border-emerald-200">5 - Outstanding</span>
-                    <textarea rows="2" class="sub-level-5 w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed font-normal" placeholder="Describe criteria for 5 (Outstanding)...">${escapeHtml(levels['5'] || '')}</textarea>
-                </div>
-                <div class="flex items-start gap-2.5">
-                    <span class="w-24 px-2 py-1 rounded-lg text-[10px] font-black bg-teal-100 text-teal-800 text-center shrink-0 mt-1 border border-teal-200">4 - Very Good</span>
-                    <textarea rows="2" class="sub-level-4 w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 leading-relaxed font-normal" placeholder="Describe criteria for 4 (Very Good)...">${escapeHtml(levels['4'] || '')}</textarea>
-                </div>
-                <div class="flex items-start gap-2.5">
-                    <span class="w-24 px-2 py-1 rounded-lg text-[10px] font-black bg-indigo-100 text-indigo-800 text-center shrink-0 mt-1 border border-indigo-200">3 - Good</span>
-                    <textarea rows="2" class="sub-level-3 w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed font-normal" placeholder="Describe criteria for 3 (Good)...">${escapeHtml(levels['3'] || '')}</textarea>
-                </div>
-                <div class="flex items-start gap-2.5">
-                    <span class="w-24 px-2 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-800 text-center shrink-0 mt-1 border border-amber-200">2 - Fair</span>
-                    <textarea rows="2" class="sub-level-2 w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 leading-relaxed font-normal" placeholder="Describe criteria for 2 (Fair)...">${escapeHtml(levels['2'] || '')}</textarea>
-                </div>
-                <div class="flex items-start gap-2.5">
-                    <span class="w-24 px-2 py-1 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 text-center shrink-0 mt-1 border border-rose-200">1 - Poor</span>
-                    <textarea rows="2" class="sub-level-1 w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500 leading-relaxed font-normal" placeholder="Describe criteria for 1 (Poor)...">${escapeHtml(levels['1'] || '')}</textarea>
-                </div>
-            </div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">Scoring Description &amp; Guidelines</label>
+            <textarea class="cat-desc-input w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal leading-relaxed" rows="2" placeholder="Describe the evaluation guidelines, criteria, and observable behavior required for this category...">${escapeHtml(catDesc)}</textarea>
         </div>
     `;
 
-    row.querySelector('.remove-sub-btn')?.addEventListener('click', () => {
+    // Bind points input change to update ratio badge and sum
+    const pointsInput = row.querySelector('.cat-points-input');
+    pointsInput?.addEventListener('input', () => {
+        updateCategoryRowIndicators(row, parseFloat(maxInput?.value) || max);
+    });
+
+    // Bind remove button
+    row.querySelector('.remove-category-btn')?.addEventListener('click', () => {
+        const remaining = container.querySelectorAll('.rubric-category-item');
+        if (remaining.length <= 1) {
+            showToast('A criterion must have at least one scoring category.', 'warning');
+            return;
+        }
         row.remove();
+        container.querySelectorAll('.rubric-category-item').forEach((item, idx) => {
+            const badge = item.querySelector('.category-index-badge');
+            if (badge) badge.textContent = `#${idx + 1}`;
+        });
+        updateRubricCategoriesSum();
     });
 
     container.appendChild(row);
+    updateRubricCategoriesSum();
+}
+
+function updateCategoryRowIndicators(row, maxPoints) {
+    const pointsInput = row.querySelector('.cat-points-input');
+    const ratioBadge = row.querySelector('.cat-ratio-badge');
+
+    const pts = parseFloat(pointsInput?.value) || 0;
+    const max = parseFloat(maxPoints) || 1;
+    const pct = Math.round((pts / max) * 100);
+
+    if (ratioBadge) {
+        ratioBadge.textContent = `${pct}%`;
+    }
+    updateRubricCategoriesSum();
+}
+
+function updateRubricCategoriesSum() {
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
+    const sumIndicator = document.getElementById('rubric-categories-sum-indicator');
+    if (!maxInput || !container) return;
+
+    const max = parseFloat(maxInput.value) || 50;
+    let sum = 0;
+    container.querySelectorAll('.cat-points-input').forEach(inp => {
+        sum += parseFloat(inp.value) || 0;
+    });
+    sum = roundScore(sum);
+
+    if (sumIndicator) {
+        if (Math.abs(sum - max) < 0.05) {
+            sumIndicator.className = 'text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200';
+            sumIndicator.innerHTML = `<i class="fa-solid fa-check me-1"></i> Sum: ${sum} / ${max} pts`;
+        } else {
+            sumIndicator.className = 'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200';
+            sumIndicator.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> Sum: ${sum} / ${max} pts (Diff: ${(max - sum).toFixed(1)})`;
+        }
+    }
 }
 
 async function handleSaveRubricCriterion(e) {
@@ -900,7 +1142,7 @@ async function handleSaveRubricCriterion(e) {
     const critId = document.getElementById('rubric-modal-crit-id')?.value;
     const title = document.getElementById('rubric-modal-title-input')?.value.trim();
     const pct = parseInt(document.getElementById('rubric-modal-pct-input')?.value) || 0;
-    const max = parseInt(document.getElementById('rubric-modal-max-input')?.value) || 100;
+    const max = parseInt(document.getElementById('rubric-modal-max-input')?.value) || 50;
     const desc = document.getElementById('rubric-modal-desc-input')?.value.trim();
     const saveBtn = document.getElementById('saveRubricCriterionBtn');
 
@@ -909,30 +1151,52 @@ async function handleSaveRubricCriterion(e) {
         return;
     }
 
-    // Collect all sub-criteria
-    const subItems = document.querySelectorAll('#rubric-subcriteria-container .rubric-sub-item');
-    const subCriteria = [];
+    // Weight validation: ensure total event weight does not exceed 100%
+    let otherTotal = 0;
+    if (critId) {
+        otherTotal = cachedCriteria.filter(c => String(c.id) !== String(critId)).reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+    } else {
+        otherTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+    }
+    const maxAllowed = Math.max(0, 100 - otherTotal);
+    if (pct > maxAllowed) {
+        showToast('Weight Limit Exceeded', `Cannot save: Weight of ${pct}% causes total event weight (${otherTotal + pct}%) to exceed 100%. Only ${maxAllowed}% is available.`, 'warning');
+        return;
+    }
 
-    subItems.forEach((item, idx) => {
-        const name = item.querySelector('.sub-name-input')?.value.trim();
-        if (!name) return;
-        const subDesc = item.querySelector('.sub-desc-input')?.value.trim();
-        const id = item.dataset.subId || ('sub-' + (idx + 1));
-        const levels = {
-            '5': item.querySelector('.sub-level-5')?.value.trim() || 'Outstanding performance.',
-            '4': item.querySelector('.sub-level-4')?.value.trim() || 'Very good performance.',
-            '3': item.querySelector('.sub-level-3')?.value.trim() || 'Satisfactory performance.',
-            '2': item.querySelector('.sub-level-2')?.value.trim() || 'Needs improvement.',
-            '1': item.querySelector('.sub-level-1')?.value.trim() || 'Poor performance.'
-        };
+    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
+    const items = container?.querySelectorAll('.rubric-category-item') || [];
 
-        subCriteria.push({
+    if (items.length === 0) {
+        showToast('Please configure at least one score category.', 'warning');
+        return;
+    }
+
+    const scoringCategories = [];
+    let hasInvalidName = false;
+
+    items.forEach((item, idx) => {
+        const name = item.querySelector('.cat-name-input')?.value.trim();
+        if (!name) {
+            hasInvalidName = true;
+            return;
+        }
+        const pts = parseFloat(item.querySelector('.cat-points-input')?.value);
+        const catDesc = item.querySelector('.cat-desc-input')?.value.trim() || '';
+        const id = item.dataset.catId || ('cat-' + (idx + 1));
+
+        scoringCategories.push({
             id,
             name,
-            description: subDesc,
-            levels
+            points: isNaN(pts) ? 0 : Math.min(max, Math.max(0, pts)),
+            description: catDesc
         });
     });
+
+    if (hasInvalidName) {
+        showToast('Please provide a name for each scoring category.', 'warning');
+        return;
+    }
 
     if (saveBtn) saveBtn.disabled = true;
 
@@ -944,7 +1208,7 @@ async function handleSaveRubricCriterion(e) {
             description: desc,
             max_points: max,
             percentage: pct,
-            sub_criteria: subCriteria
+            scoring_categories: scoringCategories
         });
     } else {
         res = await createCriterion({
@@ -953,14 +1217,14 @@ async function handleSaveRubricCriterion(e) {
             description: desc,
             max_points: max,
             percentage: pct,
-            sub_criteria: subCriteria
+            scoring_categories: scoringCategories
         });
     }
 
     if (saveBtn) saveBtn.disabled = false;
 
     if (res.success) {
-        showToast(critId ? 'Criterion Updated!' : 'Criterion Created!', res.message || 'Judging criterion and rubrics saved.', 'create');
+        showToast(critId ? 'Criterion Updated!' : 'Criterion Created!', res.message || 'Judging criterion and scoring rubric saved.', 'create');
         document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
         loadCriteriaList();
         document.getElementById('refreshEventsBtn')?.click();
@@ -981,7 +1245,7 @@ async function handleAddCriterion(e) {
 
     const title = titleInput?.value.trim();
     const description = descInput?.value.trim();
-    const maxPoints = parseInt(maxInput?.value) || 100;
+    const maxPoints = parseInt(maxInput?.value) || 50;
     const percentage = parseInt(pctInput?.value) || 0;
 
     if (!title) {
@@ -989,9 +1253,17 @@ async function handleAddCriterion(e) {
         return;
     }
 
+    // Weight validation: ensure total event weight does not exceed 100%
+    const currentTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
+    const remaining = Math.max(0, 100 - currentTotal);
+    if ((currentTotal + percentage) > 100) {
+        showToast('Weight Limit Exceeded', `Cannot add criterion: Weight of ${percentage}% causes total event weight (${currentTotal + percentage}%) to exceed 100%. Only ${remaining}% is available.`, 'warning');
+        return;
+    }
+
     if (btn) btn.disabled = true;
 
-    const defaultSub = getDefaultSubCriteria(title);
+    const defaultCategories = getDefaultScoringCategories(maxPoints);
 
     const res = await createCriterion({
         event_id: currentEventId,
@@ -999,13 +1271,13 @@ async function handleAddCriterion(e) {
         description,
         max_points: maxPoints,
         percentage,
-        sub_criteria: defaultSub
+        scoring_categories: defaultCategories
     });
 
     if (btn) btn.disabled = false;
 
     if (res.success) {
-        showToast('Criterion Added!', `Criterion '${title}' added with 5-to-1 rubrics!`, 'create');
+        showToast('Criterion Added!', `Criterion '${title}' added with custom scoring rubric!`, 'create');
         if (titleInput) titleInput.value = '';
         if (descInput) descInput.value = '';
         if (pctInput) pctInput.value = '';
@@ -1030,7 +1302,18 @@ async function handleSaveWeights() {
         weights.push({ id, percentage: pct });
     });
 
+    if (totalPct > 100) {
+        showToast('Weight Limit Exceeded', `Cannot save weights: Total is ${totalPct}%, which exceeds the 100% maximum limit by ${totalPct - 100}%. Please adjust weights so they do not exceed 100%.`, 'warning');
+        updateWeightsModalState(false);
+        return;
+    }
+
+    const saveBtn = document.getElementById('saveWeightsBtn');
+    if (saveBtn) saveBtn.disabled = true;
+
     const res = await updateCriteriaWeights(currentEventId, weights);
+    if (saveBtn) saveBtn.disabled = false;
+
     if (res.success) {
         showToast('Weights Configured!', res.message || 'Criteria weights updated successfully.', 'edit');
         document.getElementById('adjust-weights-modal')?.classList.add('hidden');

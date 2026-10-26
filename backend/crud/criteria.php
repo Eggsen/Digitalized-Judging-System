@@ -33,23 +33,15 @@ if ($method === "GET") {
             $idStr = (string)$doc['_id'];
             $pct = (int)($doc['percentage'] ?? 0);
             $totalWeight += $pct;
+            $maxPoints = (int)($doc['max_points'] ?? 100);
 
-            $subCriteria = [];
-            if (!empty($doc['sub_criteria'])) {
-                foreach ($doc['sub_criteria'] as $sc) {
-                    $levels = [];
-                    if (!empty($sc['levels'])) {
-                        for ($lvl = 5; $lvl >= 1; $lvl--) {
-                            $levels[(string)$lvl] = (string)($sc['levels'][(string)$lvl] ?? ($sc['levels'][$lvl] ?? ''));
-                        }
-                    }
-                    $subCriteria[] = [
-                        'id' => (string)($sc['id'] ?? ('sub-' . bin2hex(random_bytes(3)))),
-                        'name' => (string)($sc['name'] ?? ''),
-                        'description' => (string)($sc['description'] ?? ''),
-                        'levels' => $levels
-                    ];
-                }
+            $scoringCategories = [];
+            if (!empty($doc['scoring_categories'])) {
+                $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints);
+            } else if (!empty($doc['sub_criteria'])) {
+                $scoringCategories = getDefaultScoringCategories($maxPoints);
+            } else {
+                $scoringCategories = getDefaultScoringCategories($maxPoints);
             }
 
             $criteria[] = [
@@ -57,9 +49,10 @@ if ($method === "GET") {
                 'title' => $doc['title'] ?? '',
                 'description' => $doc['description'] ?? '',
                 'event_id' => (int)($doc['event_id'] ?? $eventId),
-                'max_points' => (int)($doc['max_points'] ?? 100),
+                'max_points' => $maxPoints,
                 'percentage' => $pct,
-                'sub_criteria' => $subCriteria,
+                'scoring_categories' => $scoringCategories,
+                'sub_criteria' => [],
                 'created_at' => isset($doc['created_at']) ? (string)$doc['created_at'] : ''
             ];
         }
@@ -76,40 +69,92 @@ if ($method === "GET") {
     }
 }
 
-// Helper to sanitize sub_criteria array
-function sanitizeSubCriteria($rawSubCriteria) {
-    if (!is_array($rawSubCriteria)) return [];
+// Helper to provide default scoring categories scaled to maxPoints
+function getDefaultScoringCategories($maxPoints) {
+    $maxPts = (float)$maxPoints;
+    if ($maxPts <= 0) $maxPts = 100.0;
+    $count = 4;
+    $perCat = round($maxPts / $count, 2);
+
+    return [
+        [
+            'id' => 'cat-1',
+            'name' => 'Difficulty & Variety',
+            'description' => 'Degree of difficulty, complexity, and choreographic variety.',
+            'points' => $perCat
+        ],
+        [
+            'id' => 'cat-2',
+            'name' => 'Synchronization & Timing',
+            'description' => 'Precision, unison among performers, and beat alignment.',
+            'points' => $perCat
+        ],
+        [
+            'id' => 'cat-3',
+            'name' => 'Technique & Form',
+            'description' => 'Body control, posture, execution lines, and cleanliness.',
+            'points' => $perCat
+        ],
+        [
+            'id' => 'cat-4',
+            'name' => 'Staging & Transitions',
+            'description' => 'Spatial coverage, dynamic formations, and transition fluidity.',
+            'points' => $perCat
+        ]
+    ];
+}
+
+// Helper to sanitize customizable scoring categories array
+function sanitizeScoringCategories($rawCategories, $maxPoints) {
+    if ($rawCategories instanceof Traversable) {
+        $rawCategories = iterator_to_array($rawCategories);
+    } elseif (is_object($rawCategories)) {
+        $rawCategories = (array)$rawCategories;
+    }
+
+    if (!is_array($rawCategories) || empty($rawCategories)) {
+        return getDefaultScoringCategories($maxPoints);
+    }
+
+    $maxPts = (float)$maxPoints;
+    if ($maxPts <= 0) $maxPts = 100.0;
+
     $sanitized = [];
-    foreach ($rawSubCriteria as $index => $sc) {
-        $name = trim($sc['name'] ?? '');
-        if ($name === '') continue;
-        $id = trim($sc['id'] ?? ('sub-' . ($index + 1) . '-' . bin2hex(random_bytes(2))));
-        $desc = trim($sc['description'] ?? '');
-
-        $levels = [];
-        $rawLevels = is_array($sc['levels'] ?? null) ? $sc['levels'] : [];
-        $defaultLabels = [
-            '5' => 'Outstanding performance and flawless execution.',
-            '4' => 'Very good performance with minor inconsistencies.',
-            '3' => 'Satisfactory performance meeting standard requirements.',
-            '2' => 'Fair performance with noticeable areas for improvement.',
-            '1' => 'Poor performance needing substantial development.'
-        ];
-
-        for ($lvl = 5; $lvl >= 1; $lvl--) {
-            $key = (string)$lvl;
-            $val = trim($rawLevels[$key] ?? ($rawLevels[$lvl] ?? ''));
-            $levels[$key] = $val !== '' ? $val : $defaultLabels[$key];
+    foreach ($rawCategories as $index => $cat) {
+        if ($cat instanceof Traversable) {
+            $cat = iterator_to_array($cat);
+        } elseif (is_object($cat)) {
+            $cat = (array)$cat;
         }
+
+        $name = trim($cat['name'] ?? '');
+        if ($name === '') {
+            $name = 'Score Tier ' . ($index + 1);
+        }
+        $id = trim($cat['id'] ?? ('cat-' . ($index + 1) . '-' . bin2hex(random_bytes(2))));
+        $desc = trim($cat['description'] ?? '');
+        $pts = (float)($cat['points'] ?? 0);
+        if ($pts < 0) $pts = 0;
+        if ($pts > $maxPts) $pts = $maxPts;
 
         $sanitized[] = [
             'id' => $id,
             'name' => $name,
             'description' => $desc,
-            'levels' => $levels
+            'points' => round($pts, 2)
         ];
     }
+
+    if (empty($sanitized)) {
+        return getDefaultScoringCategories($maxPoints);
+    }
+
     return $sanitized;
+}
+
+// Helper for backward compatibility
+function sanitizeSubCriteria($rawSubCriteria) {
+    return [];
 }
 
 // POST: Manage criteria (Admin only)
@@ -135,7 +180,6 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
-        $subCriteria = sanitizeSubCriteria($data['sub_criteria'] ?? []);
 
         if ($eventId <= 0 || $title === '') {
             echo json_encode(["success" => false, "message" => "Criterion title and valid event_id are required."]);
@@ -144,8 +188,28 @@ if ($method === "POST") {
 
         if ($maxPoints <= 0) $maxPoints = 100;
         if ($percentage < 0) $percentage = 0;
+        if ($percentage > 100) {
+            echo json_encode(["success" => false, "message" => "Total criteria weight cannot exceed 100%."]);
+            exit;
+        }
 
         try {
+            // Validate that total weight for this event will not exceed 100%
+            $existingCriteriaCursor = $criteriaCollection->find(['event_id' => $eventId]);
+            $currentTotalWeight = 0;
+            foreach ($existingCriteriaCursor as $ec) {
+                $currentTotalWeight += (int)($ec['percentage'] ?? 0);
+            }
+            if (($currentTotalWeight + $percentage) > 100) {
+                $remainingAllowed = max(0, 100 - $currentTotalWeight);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Total criteria weight cannot exceed 100%. Current criteria already total {$currentTotalWeight}%, leaving only {$remainingAllowed}% available."
+                ]);
+                exit;
+            }
+
+            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? [], $maxPoints);
             $newId = "criteria-" . bin2hex(random_bytes(6));
             $doc = [
                 '_id' => $newId,
@@ -154,7 +218,7 @@ if ($method === "POST") {
                 'event_id' => $eventId,
                 'max_points' => $maxPoints,
                 'percentage' => $percentage,
-                'sub_criteria' => $subCriteria,
+                'scoring_categories' => $scoringCategories,
                 'created_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];
 
@@ -165,7 +229,7 @@ if ($method === "POST") {
                 $_SESSION['username'],
                 $_SESSION['role'],
                 'CREATE_CRITERIA',
-                "Added criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts, " . count($subCriteria) . " rubric indicators) for event ID: {$eventId}."
+                "Added criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts, " . count($scoringCategories) . " score categories) for event ID: {$eventId}."
             );
 
             echo json_encode([
@@ -178,7 +242,7 @@ if ($method === "POST") {
                     'event_id' => $eventId,
                     'max_points' => $maxPoints,
                     'percentage' => $percentage,
-                    'sub_criteria' => $subCriteria
+                    'scoring_categories' => $scoringCategories
                 ]
             ]);
             exit;
@@ -203,6 +267,10 @@ if ($method === "POST") {
 
         if ($maxPoints <= 0) $maxPoints = 100;
         if ($percentage < 0) $percentage = 0;
+        if ($percentage > 100) {
+            echo json_encode(["success" => false, "message" => "Total criteria weight cannot exceed 100%."]);
+            exit;
+        }
 
         try {
             $filter = ['_id' => $id];
@@ -216,6 +284,25 @@ if ($method === "POST") {
                 exit;
             }
 
+            // Validate that total weight for this event excluding this criterion will not exceed 100%
+            $critEventId = (int)($existing['event_id'] ?? 0);
+            $otherCriteriaCursor = $criteriaCollection->find([
+                'event_id' => $critEventId,
+                '_id' => ['$ne' => $existing['_id']]
+            ]);
+            $otherTotalWeight = 0;
+            foreach ($otherCriteriaCursor as $oc) {
+                $otherTotalWeight += (int)($oc['percentage'] ?? 0);
+            }
+            if (($otherTotalWeight + $percentage) > 100) {
+                $remainingAllowed = max(0, 100 - $otherTotalWeight);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Total criteria weight cannot exceed 100%. Other criteria already total {$otherTotalWeight}%, leaving only {$remainingAllowed}% available."
+                ]);
+                exit;
+            }
+
             $updateFields = [
                 'title' => $title,
                 'description' => $description,
@@ -224,8 +311,8 @@ if ($method === "POST") {
                 'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];
 
-            if (isset($data['sub_criteria']) && is_array($data['sub_criteria'])) {
-                $updateFields['sub_criteria'] = sanitizeSubCriteria($data['sub_criteria']);
+            if (isset($data['scoring_categories']) && is_array($data['scoring_categories'])) {
+                $updateFields['scoring_categories'] = sanitizeScoringCategories($data['scoring_categories'], $maxPoints);
             }
 
             $criteriaCollection->updateOne(
@@ -265,9 +352,23 @@ if ($method === "POST") {
         try {
             $totalPercentage = 0;
             foreach ($weights as $w) {
+                $pct = (int)($w['percentage'] ?? 0);
+                if ($pct < 0) $pct = 0;
+                $totalPercentage += $pct;
+            }
+
+            if ($totalPercentage > 100) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Total criteria weight cannot exceed 100%. The sum of your configured weights is {$totalPercentage}%."
+                ]);
+                exit;
+            }
+
+            foreach ($weights as $w) {
                 $cId = trim($w['id'] ?? '');
                 $pct = (int)($w['percentage'] ?? 0);
-                $totalPercentage += $pct;
+                if ($pct < 0) $pct = 0;
 
                 if ($cId !== '') {
                     $filter = ['_id' => $cId];

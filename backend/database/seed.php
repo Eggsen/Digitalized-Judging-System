@@ -137,54 +137,30 @@ $criteria = [
         'event_id' => 1,
         'max_points' => 100,
         'percentage' => 40,
-        'sub_criteria' => [
+        'scoring_categories' => [
             [
-                'id' => 'sub-101',
-                'name' => 'Degree of Difficulty & Variety',
-                'description' => 'Complexity, variety of movements, and creative staging variations.',
-                'levels' => [
-                    '5' => 'Outstanding complexity with diverse, intricate combinations executed seamlessly.',
-                    '4' => 'High difficulty with good movement variety and minimal repetition.',
-                    '3' => 'Moderate difficulty with standard routines and familiar movement patterns.',
-                    '2' => 'Basic combinations with noticeable repetition and limited movement vocabulary.',
-                    '1' => 'Rudimentary routines lacking choreographic variety and creative effort.'
-                ]
+                'id' => 'cat-101',
+                'name' => 'Difficulty & Movement Variety',
+                'points' => 25.0,
+                'description' => 'Complexity, variety of movements, and creative staging variations.'
             ],
             [
-                'id' => 'sub-102',
+                'id' => 'cat-102',
                 'name' => 'Synchronization & Timing',
-                'description' => 'Precision, unison among dancers, and micro-timing accuracy.',
-                'levels' => [
-                    '5' => 'Razor-sharp precision and flawless synchronization across all performers.',
-                    '4' => 'Strong synchronization with only isolated, minor timing discrepancies.',
-                    '3' => 'Generally in sync with several noticeable timing lags or spacing gaps.',
-                    '2' => 'Frequent synchronization lapses and disjointed ensemble timing.',
-                    '1' => 'Persistent lack of unison, severely disrupted rhythm and coordination.'
-                ]
+                'points' => 25.0,
+                'description' => 'Precision, unison among dancers, and micro-timing accuracy.'
             ],
             [
-                'id' => 'sub-103',
+                'id' => 'cat-103',
                 'name' => 'Technique & Form',
-                'description' => 'Body control, posture, extension, lines, and movement cleanliness.',
-                'levels' => [
-                    '5' => 'Masterful body control, crisp lines, superb extension, and pristine form.',
-                    '4' => 'Solid technique and clean execution with consistent posture throughout.',
-                    '3' => 'Acceptable technique with occasional collapses in posture or arm extension.',
-                    '2' => 'Weak body control, sloppy lines, and visible technical insecurity.',
-                    '1' => 'Poor technique, lack of control, and disregard for form and safety.'
-                ]
+                'points' => 25.0,
+                'description' => 'Body control, posture, extension, lines, and movement cleanliness.'
             ],
             [
-                'id' => 'sub-104',
+                'id' => 'cat-104',
                 'name' => 'Transitions & Staging',
-                'description' => 'Fluidity between routine sections, formations, and spatial coverage.',
-                'levels' => [
-                    '5' => 'Effortless, dynamic formations with intelligent, seamless stage utilization.',
-                    '4' => 'Smooth transitions between formations with clear spatial awareness.',
-                    '3' => 'Functional staging with occasional awkward pauses during major transitions.',
-                    '2' => 'Sluggish, cluttered transitions causing spatial crowding and collisions.',
-                    '1' => 'Chaotic stage management with absent structure and disrupted flow.'
-                ]
+                'points' => 25.0,
+                'description' => 'Fluidity between routine sections, formations, and spatial coverage.'
             ]
         ],
         'created_at' => date('Y-m-d H:i:s')
@@ -194,44 +170,32 @@ $criteria = [
         'title' => 'Musicality & Rhythm',
         'description' => 'Beat synchronization, dynamic interpretation, and timing.',
         'event_id' => 1,
-        'max_points' => 100,
+        'max_points' => 40,
         'percentage' => 35,
-        'sub_criteria' => [
+        'scoring_categories' => [
             [
-                'id' => 'sub-201',
-                'name' => 'Beat Synchronization & Cadence',
-                'description' => 'Alignment with the rhythm, tempo consistency, and syncopation.',
-                'levels' => [
-                    '5' => 'Impeccable connection to micro-rhythms, tempo shifts, and syncopated beats.',
-                    '4' => 'Strong rhythm alignment with steady tempo and rare timing slips.',
-                    '3' => 'Rides the general beat but misses subtle musical nuances and accents.',
-                    '2' => 'Frequently rushing or lagging behind tempo, struggling with beat changes.',
-                    '1' => 'Total disconnection from the music tempo and rhythmic structure.'
-                ]
+                'id' => 'cat-201',
+                'name' => 'Beat Synchronization & Timing',
+                'points' => 10.0,
+                'description' => 'Alignment with rhythm, tempo consistency, and syncopation.'
             ],
             [
-                'id' => 'sub-202',
-                'name' => 'Musical Interpretation & Dynamics',
-                'description' => 'Embodying musical mood, dramatic dynamics, and emotional flow.',
-                'levels' => [
-                    '5' => 'Exceptional dynamic contrast matching every crescendo, drop, and melodic climax.',
-                    '4' => 'Clear musical interpretation with good expression of melodic themes.',
-                    '3' => 'Moderate musical dynamics; routine feels somewhat detached from the music feel.',
-                    '2' => 'Flat dynamics that ignore emotional peaks and changes in musical intensity.',
-                    '1' => 'Monotone execution completely ignoring the musical atmosphere.'
-                ]
+                'id' => 'cat-202',
+                'name' => 'Rhythm & Tempo Consistency',
+                'points' => 10.0,
+                'description' => 'Cadence stability and steady execution through tempo shifts.'
             ],
             [
-                'id' => 'sub-203',
-                'name' => 'Sound Cue Responsiveness',
-                'description' => 'Accents, sound effect hits, and sharpness on acoustic triggers.',
-                'levels' => [
-                    '5' => 'Every accent, sound hit, and musical punch is executed with stunning impact.',
-                    '4' => 'Hits key audio highlights reliably with solid power and intent.',
-                    '3' => 'Hits prominent bass cues but overlooks intricate acoustic layers.',
-                    '2' => 'Belated or sluggish responses to major musical accents.',
-                    '1' => 'Ignores acoustic triggers entirely; routine appears choreographed to silence.'
-                ]
+                'id' => 'cat-203',
+                'name' => 'Dynamic Interpretation',
+                'points' => 10.0,
+                'description' => 'Embodying musical mood, dramatic dynamics, and emotional flow.'
+            ],
+            [
+                'id' => 'cat-204',
+                'name' => 'Acoustic Hit Responsiveness',
+                'points' => 10.0,
+                'description' => 'Accents, sound effect hits, and sharpness on acoustic triggers.'
             ]
         ],
         'created_at' => date('Y-m-d H:i:s')
@@ -241,44 +205,32 @@ $criteria = [
         'title' => 'Stage Presence & Overall Impact',
         'description' => 'Audience engagement, costume, projection, and poise.',
         'event_id' => 1,
-        'max_points' => 100,
+        'max_points' => 50,
         'percentage' => 25,
-        'sub_criteria' => [
+        'scoring_categories' => [
             [
-                'id' => 'sub-301',
+                'id' => 'cat-301',
                 'name' => 'Audience Engagement & Energy',
-                'description' => 'Charisma, emotional projection, crowd connection, and enthusiasm.',
-                'levels' => [
-                    '5' => 'Electrifying stage charisma and genuine passion that captivates the audience.',
-                    '4' => 'High energy, expressive facial projection, and sustained enthusiasm.',
-                    '3' => 'Good energy maintained for most of the performance with minor dips.',
-                    '2' => 'Tentative stage projection, nervous demeanor, and restrained energy.',
-                    '1' => 'Lethargic or lifeless presence, disengaged from spectators and judges.'
-                ]
+                'points' => 12.5,
+                'description' => 'Charisma, emotional projection, crowd connection, and enthusiasm.'
             ],
             [
-                'id' => 'sub-302',
-                'name' => 'Attire, Costuming & Visual Polish',
-                'description' => 'Appropriateness, visual cohesion, cleanliness, and thematic harmony.',
-                'levels' => [
-                    '5' => 'Stunning, immaculate costuming that elevates the theme and visual aesthetics.',
-                    '4' => 'Coordinated, polished attire appropriate for the routine and category.',
-                    '3' => 'Acceptable costuming with minor styling imperfections or loose accessories.',
-                    '2' => 'Ill-fitting or disheveled attire that distracts from the performance.',
-                    '1' => 'Inappropriate, unsafe, or visibly unfinished costumes and props.'
-                ]
+                'id' => 'cat-302',
+                'name' => 'Attire & Visual Polish',
+                'points' => 12.5,
+                'description' => 'Appropriateness, visual cohesion, cleanliness, and thematic harmony.'
             ],
             [
-                'id' => 'sub-303',
-                'name' => 'Poise & Professionalism',
-                'description' => 'Confidence, stage recovery, discipline, and sportsmanship.',
-                'levels' => [
-                    '5' => 'Commanding confidence, instant recovery from mistakes, and consummate artistry.',
-                    '4' => 'Confident stage deportment with composed recovery if slips occur.',
-                    '3' => 'Moderate confidence, slight hesitation visible during challenging moments.',
-                    '2' => 'Visible frustration or panic when errors occur, disrupting performance flow.',
-                    '1' => 'Unprofessional demeanor, abrupt abandonment of routines, or disruptive exits.'
-                ]
+                'id' => 'cat-303',
+                'name' => 'Stage Projection & Poise',
+                'points' => 12.5,
+                'description' => 'Confidence, stage recovery, discipline, and sportsmanship.'
+            ],
+            [
+                'id' => 'cat-304',
+                'name' => 'Professionalism & Composure',
+                'points' => 12.5,
+                'description' => 'Commanding confidence and instant recovery from mistakes.'
             ]
         ],
         'created_at' => date('Y-m-d H:i:s')
@@ -292,7 +244,7 @@ foreach ($criteria as $cr) {
         ['upsert' => true]
     );
 }
-echo "Upserted 3 criteria with detailed 5-to-1 rubrics totaling 100% for Event #1.\n";
+echo "Upserted 3 criteria with customizable scoring categories totaling 100% for Event #1.\n";
 
 // 5. Sample Score
 $judgeIdStr = (string)$judge['_id'];
@@ -307,41 +259,43 @@ $scoresCollection->updateOne(
             [
                 'criteria_id' => 'criteria-001',
                 'max' => 100,
-                'score' => 95.0,
+                'score' => 94.0,
                 'sub_scores' => [
-                    'sub-101' => 5,
-                    'sub-102' => 4,
-                    'sub-103' => 5,
-                    'sub-104' => 5
+                    'cat-101' => 24.0,
+                    'cat-102' => 23.0,
+                    'cat-103' => 24.0,
+                    'cat-104' => 23.0
                 ]
             ],
             [
                 'criteria_id' => 'criteria-002',
-                'max' => 100,
-                'score' => 86.67,
+                'max' => 40,
+                'score' => 36.0,
                 'sub_scores' => [
-                    'sub-201' => 5,
-                    'sub-202' => 4,
-                    'sub-203' => 4
+                    'cat-201' => 9.0,
+                    'cat-202' => 9.0,
+                    'cat-203' => 9.0,
+                    'cat-204' => 9.0
                 ]
             ],
             [
                 'criteria_id' => 'criteria-003',
-                'max' => 100,
-                'score' => 93.33,
+                'max' => 50,
+                'score' => 45.0,
                 'sub_scores' => [
-                    'sub-301' => 5,
-                    'sub-302' => 4,
-                    'sub-303' => 5
+                    'cat-301' => 12.0,
+                    'cat-302' => 11.0,
+                    'cat-303' => 11.0,
+                    'cat-304' => 11.0
                 ]
             ]
         ],
-        'total_score' => 91.67,
+        'total_score' => 91.6,
         'status' => 'submitted',
         'submitted_at' => date('Y-m-d H:i:s')
     ]],
     ['upsert' => true]
 );
-echo "Upserted sample submitted score with sub-criteria ratings for Contestant #1.\n";
+echo "Upserted sample submitted score with rubric category selections for Contestant #1.\n";
 
 echo "Seeding completed successfully!\n";

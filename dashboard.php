@@ -1212,7 +1212,10 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Weight (%)</label>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block font-semibold text-slate-700">Weight (%)</label>
+                                        <span id="new-criterion-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
+                                    </div>
                                     <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 </div>
                                 <div>
@@ -1228,7 +1231,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                 <i class="fa-solid fa-plus text-buksu-gold"></i> Quick Add Criterion
                             </button>
                             <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-layer-group"></i> Build Custom Sub-Criteria &amp; Rubric
+                                <i class="fa-solid fa-layer-group"></i> Build Custom Scoring Rubric
                             </button>
                         </form>
                     </div>
@@ -1253,7 +1256,29 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 </h3>
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-xl cursor-pointer leading-none">&times;</button>
             </div>
-            <p class="text-xs text-slate-500">Assign percentage weights for each criterion. The total should ideally equal 100%.</p>
+            <p class="text-xs text-slate-500">Assign percentage weights for each criterion. The total weight can only be set up to 100% and cannot exceed 100%.</p>
+
+            <!-- Total Weight Live Indicator -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-extrabold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i> Total Weight:
+                    </span>
+                    <span id="weights-modal-total-badge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        100% / 100%
+                    </span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div id="weights-modal-total-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Exceeds 100% Warning Alert Banner -->
+            <div id="weights-modal-warning-alert" class="hidden p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-start gap-2.5">
+                <i class="fa-solid fa-triangle-exclamation text-rose-600 mt-0.5 shrink-0 text-sm"></i>
+                <span id="weights-modal-warning-text">Total weight exceeds 100%! Please decrease one or more criterion weights.</span>
+            </div>
+
             <div id="weights-adjust-container" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                 <div class="py-4 text-center text-slate-400 text-xs">Loading criteria...</div>
             </div>
@@ -1266,7 +1291,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         </div>
     </div>
 
-    <!-- MODAL: EDIT CRITERION & 5-1 RUBRIC BUILDER -->
+    <!-- MODAL: EDIT CRITERION & SCORING RUBRIC BUILDER -->
     <div id="criterion-rubric-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1275,8 +1300,8 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <i class="fa-solid fa-list-check"></i>
                     </div>
                     <div>
-                        <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; 5-to-1 Rubric</h3>
-                        <p class="text-[11px] text-slate-500">Define performance dimensions and descriptive level guides for judges</p>
+                        <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; Scoring Rubric</h3>
+                        <p class="text-[11px] text-slate-500">Define customizable scoring categories and point thresholds for judges</p>
                     </div>
                 </div>
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none">&times;</button>
@@ -1288,40 +1313,47 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
                     <div class="sm:col-span-6">
                         <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
-                        <input type="text" id="rubric-modal-title-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                        <input type="text" id="rubric-modal-title-input" required placeholder="e.g. Form &amp; Technique" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
                     </div>
                     <div class="sm:col-span-3">
-                        <label class="block font-semibold text-slate-700 mb-1">Weight (%)</label>
-                        <input type="number" id="rubric-modal-pct-input" min="0" max="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block font-semibold text-slate-700">Weight (%)</label>
+                            <span id="rubric-modal-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
+                        </div>
+                        <input type="number" id="rubric-modal-pct-input" min="0" max="100" placeholder="e.g. 25" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div class="sm:col-span-3">
                         <label class="block font-semibold text-slate-700 mb-1">Max Points</label>
-                        <input type="number" id="rubric-modal-max-input" min="1" value="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="number" id="rubric-modal-max-input" min="1" value="50" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                 </div>
 
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Description / Core Objective</label>
-                    <textarea id="rubric-modal-desc-input" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    <textarea id="rubric-modal-desc-input" rows="2" placeholder="Describe the evaluation guidelines and scope of this criterion..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 </div>
 
-                <!-- Sub-criteria Builder Header -->
+                <!-- Scoring Categories Builder Header -->
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-layer-group text-buksu-navy"></i> Sub-Criteria &amp; Rubric Indicators
+                            <i class="fa-solid fa-layer-group text-buksu-navy"></i> Customizable Scoring Categories
                         </h4>
-                        <p class="text-[10px] text-slate-400">Judges evaluate each indicator on a 5-to-1 scale. Scores are totaled and normalized to 100.</p>
+                        <p class="text-[10px] text-slate-400">Judges input scores on each of these category cards. The total max points (<span id="rubric-max-points-badge" class="font-bold text-indigo-600">50 pts</span>) is divided among them.</p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="rubricAddIndicatorBtn" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
-                            <i class="fa-solid fa-plus text-xs"></i> Add Sub-Criterion
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span id="rubric-categories-sum-indicator" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200"></span>
+                        <button type="button" id="rubricAutoDistributeBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Divide max score evenly across current categories">
+                            <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i> Auto-Divide by Max Score
+                        </button>
+                        <button type="button" id="rubricAddCategoryBtn" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-plus text-xs"></i> Add Score Category
                         </button>
                     </div>
                 </div>
 
-                <!-- Dynamic Container for Sub-criteria items -->
-                <div id="rubric-subcriteria-container" class="space-y-3 max-h-[44vh] overflow-y-auto pr-1">
+                <!-- Dynamic Container for Scoring Categories -->
+                <div id="rubric-categories-container" class="space-y-3 max-h-[44vh] overflow-y-auto pr-1">
                     <!-- Populated dynamically -->
                 </div>
 
@@ -1329,7 +1361,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                     <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">Cancel</button>
                     <button type="submit" id="saveRubricCriterionBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
-                        <i class="fa-solid fa-check text-buksu-gold"></i> Save Criterion &amp; Rubrics
+                        <i class="fa-solid fa-check text-buksu-gold"></i> Save Criterion &amp; Rubric
                     </button>
                 </div>
             </form>

@@ -87,31 +87,41 @@ if ($method === "GET") {
         $criteriaMap = [];
         foreach ($criteriaCursor as $doc) {
             $idStr = (string)$doc['_id'];
-            $subCriteria = [];
-            if (!empty($doc['sub_criteria'])) {
-                foreach ($doc['sub_criteria'] as $sc) {
-                    $levels = [];
-                    if (!empty($sc['levels'])) {
-                        for ($lvl = 5; $lvl >= 1; $lvl--) {
-                            $levels[(string)$lvl] = (string)($sc['levels'][(string)$lvl] ?? ($sc['levels'][$lvl] ?? ''));
-                        }
-                    }
-                    $subCriteria[] = [
-                        'id' => (string)($sc['id'] ?? ('sub-' . bin2hex(random_bytes(3)))),
-                        'name' => (string)($sc['name'] ?? ''),
-                        'description' => (string)($sc['description'] ?? ''),
-                        'levels' => $levels
+            $maxPts = (int)($doc['max_points'] ?? 100);
+
+            $scoringCategories = [];
+            if (!empty($doc['scoring_categories'])) {
+                foreach ($doc['scoring_categories'] as $cat) {
+                    $catPts = (float)($cat['points'] ?? 0);
+                    if ($catPts < 0) $catPts = 0;
+                    if ($catPts > $maxPts) $catPts = $maxPts;
+                    $scoringCategories[] = [
+                        'id' => (string)($cat['id'] ?? ('cat-' . bin2hex(random_bytes(2)))),
+                        'name' => (string)($cat['name'] ?? ''),
+                        'description' => (string)($cat['description'] ?? ''),
+                        'points' => round($catPts, 2)
                     ];
                 }
+            }
+
+            if (empty($scoringCategories)) {
+                $perCat = round($maxPts / 4, 2);
+                $scoringCategories = [
+                    ['id' => 'cat-1', 'name' => 'Difficulty & Variety', 'points' => $perCat, 'description' => 'Degree of difficulty, complexity, and choreographic variety.'],
+                    ['id' => 'cat-2', 'name' => 'Synchronization & Timing', 'points' => $perCat, 'description' => 'Precision, unison among performers, and beat alignment.'],
+                    ['id' => 'cat-3', 'name' => 'Technique & Form', 'points' => $perCat, 'description' => 'Body control, posture, execution lines, and cleanliness.'],
+                    ['id' => 'cat-4', 'name' => 'Staging & Transitions', 'points' => $perCat, 'description' => 'Spatial coverage, dynamic formations, and transition fluidity.']
+                ];
             }
 
             $critData = [
                 'id' => $idStr,
                 'title' => $doc['title'] ?? '',
                 'description' => $doc['description'] ?? '',
-                'max_points' => (int)($doc['max_points'] ?? 100),
+                'max_points' => $maxPts,
                 'percentage' => (int)($doc['percentage'] ?? 0),
-                'sub_criteria' => $subCriteria
+                'scoring_categories' => $scoringCategories,
+                'sub_criteria' => []
             ];
             $criteria[] = $critData;
             $criteriaMap[$idStr] = $critData;
@@ -152,13 +162,14 @@ if ($method === "GET") {
                         $sub = [];
                         if (!empty($cs['sub_scores'])) {
                             foreach ($cs['sub_scores'] as $k => $v) {
-                                $sub[(string)$k] = (int)$v;
+                                $sub[(string)$k] = (float)$v;
                             }
                         }
                         $formattedCriteriaScores[] = [
                             'criteria_id' => (string)($cs['criteria_id'] ?? ''),
                             'max' => (int)($cs['max'] ?? 100),
                             'score' => (float)($cs['score'] ?? 0),
+                            'category_id' => (string)($cs['category_id'] ?? ''),
                             'sub_scores' => (object)$sub
                         ];
                     }
@@ -224,7 +235,7 @@ if ($method === "GET") {
                     $sub = [];
                     if (!empty($cs['sub_scores'])) {
                         foreach ($cs['sub_scores'] as $k => $v) {
-                            $sub[(string)$k] = (int)$v;
+                            $sub[(string)$k] = (float)$v;
                         }
                     }
                     $formattedCriteriaScores[] = [
@@ -611,25 +622,18 @@ if ($method === "POST") {
             $scorePts = (float)($cs['score'] ?? 0);
             $subScores = isset($cs['sub_scores']) && (is_array($cs['sub_scores']) || is_object($cs['sub_scores'])) ? (array)$cs['sub_scores'] : [];
 
-            // If sub_scores are present and criterion has sub_criteria, calculate score accurately from 5-to-1 ratings
-            if (!empty($subScores) && !empty($criteriaMap[$critId]['sub_criteria'])) {
-                $subCriteria = (array)$criteriaMap[$critId]['sub_criteria'];
-                $subTotal = 0;
-                $validSubScores = [];
-                foreach ($subCriteria as $sc) {
-                    $scId = (string)($sc['id'] ?? '');
-                    if ($scId === '') continue;
-                    $rating = isset($subScores[$scId]) ? (int)$subScores[$scId] : 0;
-                    if ($rating < 1) $rating = 1;
-                    if ($rating > 5) $rating = 5;
-                    $validSubScores[$scId] = $rating;
-                    $subTotal += $rating;
+            // If sub_scores are present (scores inputted on each category card)
+            if (!empty($subScores)) {
+                $subTotal = 0.0;
+                $cleanedSub = [];
+                foreach ($subScores as $scId => $scVal) {
+                    $val = (float)$scVal;
+                    if ($val < 0) $val = 0;
+                    $cleanedSub[(string)$scId] = round($val, 2);
+                    $subTotal += $val;
                 }
-                $maxPossibleRating = count($subCriteria) * 5;
-                if ($maxPossibleRating > 0) {
-                    $scorePts = ($subTotal / $maxPossibleRating) * $maxPts;
-                }
-                $subScores = $validSubScores;
+                $scorePts = $subTotal;
+                $subScores = $cleanedSub;
             }
 
             if ($scorePts < 0) $scorePts = 0;
@@ -640,6 +644,9 @@ if ($method === "POST") {
                 'max' => (int)$maxPts,
                 'score' => round($scorePts, 2)
             ];
+            if (!empty($cs['category_id'])) {
+                $scoreEntry['category_id'] = (string)$cs['category_id'];
+            }
             if (!empty($subScores)) {
                 $scoreEntry['sub_scores'] = (object)$subScores;
             }
