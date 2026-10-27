@@ -37,7 +37,7 @@ $resetToken = htmlspecialchars($_GET['reset_token'] ?? $_GET['token'] ?? '');
                     <span class="font-medium text-slate-500 text-sm hidden sm:inline-block ms-1.5 border-l border-slate-300 ps-2">Digitalized Judging System</span>
                 </div>
             </div>
-            <a href="/auth/login.php" class="text-xs font-semibold text-buksu-navy hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+            <a href="/auth/login.php" class="text-xs font-semibold text-buksu-navy hover:text-buksu-navy-light transition-colors flex items-center gap-1.5">
                 <i class="fa-solid fa-arrow-left"></i> Back to Login
             </a>
         </div>
@@ -64,7 +64,7 @@ $resetToken = htmlspecialchars($_GET['reset_token'] ?? $_GET['token'] ?? '');
 
             <div class="my-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
                 <div id="reset-token-username-display" class="text-xs font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i> Verifying reset token...
+                    <i class="fa-solid fa-spinner fa-spin text-buksu-navy"></i> Verifying reset token...
                 </div>
             </div>
 
@@ -101,7 +101,7 @@ $resetToken = htmlspecialchars($_GET['reset_token'] ?? $_GET['token'] ?? '');
                     </div>
                 </div>
 
-                <button type="submit" id="completeResetBtn" disabled class="w-full py-3 px-4 bg-buksu-navy hover:bg-indigo-900 disabled:opacity-50 text-buksu-gold font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-2">
+                <button type="submit" id="completeResetBtn" disabled class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light disabled:opacity-50 text-buksu-gold font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-2">
                     <i class="fa-solid fa-check-circle"></i>
                     <span id="complete-reset-btn-text">Save New Password</span>
                 </button>

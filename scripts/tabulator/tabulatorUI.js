@@ -142,7 +142,7 @@ function renderTabulationBoard(data) {
         if (jStatus === 'In Progress') {
             judgingStatusEl.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse';
         } else if (jStatus === 'Finished') {
-            judgingStatusEl.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-300';
+            judgingStatusEl.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-800 border border-slate-300';
         } else {
             judgingStatusEl.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
         }
@@ -201,7 +201,7 @@ function renderTabulationBoard(data) {
     });
 
     theadHtml += `
-            <th class="py-3 px-4 text-center bg-indigo-50/60 text-indigo-900 rounded-tr-xl">Average Score</th>
+            <th class="py-3 px-4 text-center bg-slate-100 text-buksu-navy font-black rounded-tr-xl">Average Score</th>
         </tr>
     `;
     tableHead.innerHTML = theadHtml;
@@ -248,10 +248,10 @@ function renderTabulationBoard(data) {
                         <div>
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <h4 class="font-extrabold text-slate-800 text-xs">${escapeHtml(row.name)}</h4>
-                                ${row.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">Team</span>` : ''}
+                                ${row.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-buksu-navy border border-slate-200">Team</span>` : ''}
                             </div>
                             <p class="text-[11px] text-slate-500 font-normal">${escapeHtml(row.department_or_org || 'Independent')}</p>
-                            ${row.team_members && row.team_members.length > 0 ? `<p class="text-[10px] text-indigo-900/80 font-medium line-clamp-1"><i class="fa-solid fa-users text-indigo-500 me-1"></i>${escapeHtml(row.team_members.join(', '))}</p>` : ''}
+                            ${row.team_members && row.team_members.length > 0 ? `<p class="text-[10px] text-slate-600 font-medium line-clamp-1"><i class="fa-solid fa-users text-buksu-navy me-1"></i>${escapeHtml(row.team_members.join(', '))}</p>` : ''}
                             ${row.comments && row.comments.length > 0 ? `<div class="flex items-center gap-1 mt-0.5 flex-wrap">${row.comments.map(c => `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-300"><i class="fa-solid fa-award text-amber-600 me-0.5"></i>${escapeHtml(c.text)}</span>`).join('')}</div>` : ''}
                         </div>
                     </div>
@@ -314,11 +314,11 @@ function renderTabulationBoard(data) {
             methodBadges += `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 inline-block mb-1" title="Olympic Trimming Applied (Highest & Lowest judge score excluded)">Olympic Trimmed</span>`;
         }
         if (tabulationMethod === 'ordinal_ranking' && row.rank_sum !== undefined) {
-            methodBadges += `<div class="text-[10px] font-extrabold text-indigo-700 mb-0.5">Rank Sum: ${row.rank_sum}</div>`;
+            methodBadges += `<div class="text-[10px] font-extrabold text-buksu-navy mb-0.5">Rank Sum: ${row.rank_sum}</div>`;
         }
 
         tbodyHtml += `
-                <td class="py-3.5 px-4 text-center align-middle bg-indigo-50/40">
+                <td class="py-3.5 px-4 text-center align-middle bg-slate-50/70">
                     ${methodBadges}
                     <div class="text-sm font-black text-buksu-navy font-mono">
                         ${row.submitted_count > 0 ? `${parseFloat(row.average_score).toFixed(precision)}%` : '<span class="text-slate-400 font-normal text-xs">No submissions</span>'}

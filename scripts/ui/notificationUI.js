@@ -78,13 +78,13 @@ export async function loadNotifications() {
         const isUnread = !n.is_read;
         const isInvitation = n.type === 'event_invitation' && n.status === 'pending';
 
-        let icon = 'fa-bell text-indigo-500 bg-indigo-50 border-indigo-100';
+        let icon = 'fa-bell text-buksu-navy bg-slate-100 border-slate-200';
         if (n.type === 'event_invitation') icon = 'fa-envelope-open-text text-amber-600 bg-amber-50 border-amber-200';
         if (n.type === 'invitation_accepted') icon = 'fa-circle-check text-emerald-600 bg-emerald-50 border-emerald-200';
         if (n.type === 'invitation_declined') icon = 'fa-circle-xmark text-rose-600 bg-rose-50 border-rose-200';
 
         return `
-            <div class="p-3.5 hover:bg-slate-50 transition-colors flex items-start gap-3 ${isUnread ? 'bg-indigo-50/30' : ''}">
+            <div class="p-3.5 hover:bg-slate-50 transition-colors flex items-start gap-3 ${isUnread ? 'bg-amber-50/30' : ''}">
                 <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm border shrink-0 ${icon}">
                     <i class="fa-solid ${icon.split(' ')[0]}"></i>
                 </div>

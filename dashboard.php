@@ -14,7 +14,7 @@ $email = htmlspecialchars($_SESSION['email'] ?? '');
 $role = strtolower($_SESSION['role'] ?? 'user');
 
 $roleBadges = [
-    'admin' => ['title' => 'Administrator Dashboard', 'icon' => 'fa-user-shield', 'color' => 'bg-indigo-600'],
+    'admin' => ['title' => 'Administrator Dashboard', 'icon' => 'fa-user-shield', 'color' => 'bg-buksu-navy'],
     'judge' => ['title' => 'Official Judge Portal', 'icon' => 'fa-gavel', 'color' => 'bg-amber-600'],
     'tabulator' => ['title' => 'Tabulator Control Panel', 'icon' => 'fa-calculator', 'color' => 'bg-emerald-600']
 ];
@@ -178,19 +178,19 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <span>Events &amp; Competitions</span>
                     </button>
                     <button type="button" data-tab="assignments-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
-                        <i class="fa-solid fa-user-check text-indigo-500 w-4 text-center"></i>
+                        <i class="fa-solid fa-user-check text-slate-400 w-4 text-center"></i>
                         <span>Judge Assignments</span>
                     </button>
                     <button type="button" data-tab="users-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
-                        <i class="fa-solid fa-users-gear text-emerald-500 w-4 text-center"></i>
+                        <i class="fa-solid fa-users-gear text-slate-400 w-4 text-center"></i>
                         <span>User Invitations</span>
                     </button>
                     <button type="button" data-tab="logs-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
-                        <i class="fa-solid fa-clock-rotate-left text-slate-500 w-4 text-center"></i>
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400 w-4 text-center"></i>
                         <span>Audit Logs</span>
                     </button>
                     <button type="button" data-tab="settings-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
-                        <i class="fa-solid fa-sliders text-amber-500 w-4 text-center"></i>
+                        <i class="fa-solid fa-sliders text-slate-400 w-4 text-center"></i>
                         <span>System Settings</span>
                     </button>
                 </nav>
@@ -202,7 +202,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <span>Assigned Competitions</span>
                     </button>
                     <button type="button" data-tab="user-preferences-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
-                        <i class="fa-solid fa-sliders text-amber-500 w-4 text-center"></i>
+                        <i class="fa-solid fa-sliders text-slate-400 w-4 text-center"></i>
                         <span>Preferences</span>
                     </button>
                 </nav>
@@ -263,16 +263,16 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                     <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
                                 </button>
                                 <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                                    <i class="fa-solid fa-user-check me-1.5"></i> Judge Assignments
+                                    <i class="fa-solid fa-user-check me-1.5 text-slate-400"></i> Judge Assignments
                                 </button>
                                 <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                                    <i class="fa-solid fa-users-gear me-1.5"></i> User Invitations
+                                    <i class="fa-solid fa-users-gear me-1.5 text-slate-400"></i> User Invitations
                                 </button>
                                 <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                                    <i class="fa-solid fa-clock-rotate-left me-1.5"></i> Audit Logs
+                                    <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> Audit Logs
                                 </button>
                                 <button data-tab="settings-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                                    <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> System Settings
+                                    <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> System Settings
                                 </button>
                             </div>
                         </div>
@@ -284,7 +284,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                     <i class="fa-solid fa-clipboard-list me-1.5 text-buksu-gold"></i> Assigned Competitions
                                 </button>
                                 <button data-tab="user-preferences-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
-                                    <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> Preferences
+                                    <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences
                                 </button>
                             </div>
                         </div>
@@ -298,7 +298,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
                     <div>
                         <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-trophy text-amber-500"></i> Competitions &amp; Events
+                            <i class="fa-solid fa-trophy text-buksu-navy"></i> Competitions &amp; Events
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Manage scheduled competitions, update status, and archive completed events.</p>
                     </div>
@@ -330,7 +330,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-user-check text-indigo-500"></i> Judge &amp; Tabulator Assignments
+                            <i class="fa-solid fa-user-check text-buksu-navy"></i> Judge &amp; Tabulator Assignments
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Assign active Judges and Tabulators to specific competitions.</p>
                     </div>
@@ -344,7 +344,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <!-- TAB 3: USER INVITATIONS & ACCOUNTS -->
             <div id="users-tab" class="admin-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
                 <div class="flex items-center gap-3 mb-8 border-b border-slate-100 pb-6">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg">
+                    <div class="w-10 h-10 rounded-xl bg-buksu-navy text-white flex items-center justify-center text-lg">
                         <i class="fa-solid fa-users-gear"></i>
                     </div>
                     <div>
@@ -357,7 +357,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     <!-- Send Invitation Form -->
                     <div class="lg:col-span-2">
                         <h3 class="text-sm font-bold text-buksu-navy mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-paper-plane text-indigo-500"></i> Send Account Invitation
+                            <i class="fa-solid fa-paper-plane text-buksu-navy"></i> Send Account Invitation
                         </h3>
 
                         <div id="admin-create-notice-wrap" class="hidden mb-3">
@@ -404,7 +404,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     <div class="lg:col-span-3">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-sm font-bold text-buksu-navy flex items-center gap-2">
-                                <i class="fa-solid fa-list-ul text-indigo-500"></i> Existing Accounts
+                                <i class="fa-solid fa-list-ul text-buksu-navy"></i> Existing Accounts
                             </h3>
                             <button id="refreshAccountsBtn" class="text-xs text-slate-500 hover:text-buksu-navy transition-colors flex items-center gap-1.5 cursor-pointer">
                                 <i class="fa-solid fa-rotate-right"></i> Refresh
@@ -443,7 +443,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-slate-600"></i> System Audit Logs
+                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy"></i> System Audit Logs
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Chronological record of system actions, event creations, edits, archiving, and access updates.</p>
                     </div>
@@ -487,7 +487,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             </span>
                         </div>
                         <h2 class="text-xl sm:text-2xl font-black text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-sliders text-amber-500"></i> System Settings Hub
+                            <i class="fa-solid fa-sliders text-buksu-navy"></i> System Settings Hub
                         </h2>
                         <p class="text-xs text-slate-500 max-w-2xl">
                             Configure institutional identity &amp; branding, enforce judging &amp; tabulation rules, manage report signatories, and generate system data backups.
@@ -510,16 +510,16 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <i class="fa-solid fa-building-columns me-1.5 text-buksu-gold"></i> Institution &amp; Branding
                     </button>
                     <button type="button" data-subtab="settings-content-judging" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-scale-balanced me-1.5"></i> Judging &amp; Tabulation Rules
+                        <i class="fa-solid fa-scale-balanced me-1.5 text-slate-400"></i> Judging &amp; Tabulation Rules
                     </button>
                     <button type="button" data-subtab="settings-content-backup" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-database me-1.5"></i> Data Backup &amp; Diagnostics
+                        <i class="fa-solid fa-database me-1.5 text-slate-400"></i> Data Backup &amp; Diagnostics
                     </button>
                     <button type="button" data-subtab="settings-content-security" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-shield-halved me-1.5 text-emerald-500"></i> Authentication &amp; Security
+                        <i class="fa-solid fa-shield-halved me-1.5 text-slate-400"></i> Authentication &amp; Security
                     </button>
                     <button type="button" data-subtab="settings-content-preferences" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> Preferences &amp; UI
+                        <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences &amp; UI
                     </button>
                 </div>
 
@@ -624,7 +624,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
                                 <div class="flex items-center justify-between border-b border-slate-200/70 pb-3 flex-wrap gap-2">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                        <div class="w-8 h-8 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-xs font-bold shadow-2xs">
                                             <i class="fa-solid fa-signature"></i>
                                         </div>
                                         <div>
@@ -723,7 +723,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                 <!-- Rule 3: Tie-Breaker Rule -->
                                 <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+                                        <div class="w-8 h-8 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-black text-xs shadow-2xs">
                                             <i class="fa-solid fa-equals"></i>
                                         </div>
                                         <div>
@@ -974,7 +974,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
                     <div>
                         <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-clipboard-list text-amber-500"></i> Your Assigned Competitions
+                            <i class="fa-solid fa-clipboard-list text-buksu-navy"></i> Your Assigned Competitions
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Competitions and events where you are designated as an official <?= ucfirst($role) ?>.</p>
                     </div>
@@ -1007,7 +1007,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-calendar-plus text-indigo-600"></i> Create Competition
+                    <i class="fa-solid fa-calendar-plus text-buksu-navy"></i> Create Competition
                 </h3>
                 <button class="close-modal-btn text-slate-400 hover:text-slate-600 text-lg cursor-pointer">&times;</button>
             </div>
@@ -1041,7 +1041,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
                 <div class="pt-2 flex items-center justify-end gap-2">
                     <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl cursor-pointer">Cancel</button>
-                    <button type="submit" id="saveCreateEventBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer">Save Competition</button>
+                    <button type="submit" id="saveCreateEventBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow cursor-pointer">Save Competition</button>
                 </div>
             </form>
         </div>
@@ -1052,7 +1052,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-indigo-600"></i> Edit Competition Details
+                    <i class="fa-solid fa-pen-to-square text-buksu-navy"></i> Edit Competition Details
                 </h3>
                 <button class="close-modal-btn text-slate-400 hover:text-slate-600 text-lg cursor-pointer">&times;</button>
             </div>
@@ -1112,7 +1112,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </button>
                     <div class="flex items-center gap-2 ms-auto">
                         <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl cursor-pointer">Cancel</button>
-                        <button type="submit" id="saveEditEventBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer">Update Event</button>
+                        <button type="submit" id="saveEditEventBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow cursor-pointer">Update Event</button>
                     </div>
                 </div>
             </form>
@@ -1124,7 +1124,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-users-check text-indigo-600"></i> Assign Judges &amp; Tabulators
+                    <i class="fa-solid fa-users-check text-buksu-navy"></i> Assign Judges &amp; Tabulators
                 </h3>
                 <button class="close-modal-btn text-slate-400 hover:text-slate-600 text-lg cursor-pointer">&times;</button>
             </div>
@@ -1149,7 +1149,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
                 <div class="pt-2 flex items-center justify-end gap-2">
                     <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl cursor-pointer">Cancel</button>
-                    <button type="submit" id="saveAssignBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer">Save Assignments</button>
+                    <button type="submit" id="saveAssignBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow cursor-pointer">Save Assignments</button>
                 </div>
             </form>
         </div>
@@ -1178,10 +1178,10 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <!-- Tab Switcher -->
             <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <button type="button" class="setup-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer" data-tab="setup-contestants-tab">
-                    <i class="fa-solid fa-users me-1.5"></i> Contestant Records
+                    <i class="fa-solid fa-users me-1.5 text-buksu-gold"></i> Contestant Records
                 </button>
                 <button type="button" class="setup-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-100 hover:text-buksu-navy transition-all cursor-pointer" data-tab="setup-criteria-tab">
-                    <i class="fa-solid fa-list-check me-1.5"></i> Judging Criteria &amp; Weights
+                    <i class="fa-solid fa-list-check me-1.5 text-slate-400"></i> Judging Criteria &amp; Weights
                 </button>
             </div>
 
@@ -1212,43 +1212,43 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <form id="createContestantForm" onsubmit="return false;" class="space-y-3 text-xs">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Contestant Number</label>
-                                <input type="number" id="new-contestant-num" min="1" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="number" id="new-contestant-num" min="1" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1.5">Entry Type</label>
                                 <div class="grid grid-cols-2 gap-2">
                                     <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300">
-                                        <input type="radio" name="contestant_entry_type" value="individual" checked class="text-buksu-navy focus:ring-indigo-500">
+                                        <input type="radio" name="contestant_entry_type" value="individual" checked class="text-buksu-navy focus:ring-buksu-navy">
                                         <span class="font-bold text-xs text-slate-700"><i class="fa-solid fa-user me-1 text-slate-400"></i> Individual</span>
                                     </label>
                                     <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300">
-                                        <input type="radio" name="contestant_entry_type" value="team" class="text-buksu-navy focus:ring-indigo-500">
-                                        <span class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users-line me-1 text-indigo-500"></i> Team-based</span>
+                                        <input type="radio" name="contestant_entry_type" value="team" class="text-buksu-navy focus:ring-buksu-navy">
+                                        <span class="font-bold text-xs text-slate-700"><i class="fa-solid fa-users-line me-1 text-slate-400"></i> Team-based</span>
                                     </label>
                                 </div>
                             </div>
                             <div>
                                 <label id="new-contestant-name-label" class="block font-semibold text-slate-700 mb-1">Full Name / Entry Title</label>
-                                <input type="text" id="new-contestant-name" required placeholder="e.g. John Doe" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="new-contestant-name" required placeholder="e.g. John Doe" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div id="new-contestant-team-members-group" class="hidden">
                                 <div class="flex items-center justify-between mb-1">
                                     <label class="font-semibold text-slate-700">Team Members <span class="text-slate-400 font-normal">(Optional)</span></label>
                                     <span class="text-[10px] text-slate-400">Comma or line-separated</span>
                                 </div>
-                                <textarea id="new-contestant-members" rows="2" placeholder="e.g. Alice (Vocals), Bob (Keyboardist)&#10;or leave blank to register team name only" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                                <textarea id="new-contestant-members" rows="2" placeholder="e.g. Alice (Vocals), Bob (Keyboardist)&#10;or leave blank to register team name only" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Department / Organization</label>
-                                <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Special Citation / Note <span class="text-slate-400 font-normal">(Optional)</span></label>
-                                <input type="text" id="new-contestant-comment" placeholder="e.g. Best Keyboardist, Special Award note..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="new-contestant-comment" placeholder="e.g. Best Keyboardist, Special Award note..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Entry Info</label>
-                                <textarea id="new-contestant-desc" rows="2" placeholder="Brief notes or piece title..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                                <textarea id="new-contestant-desc" rows="2" placeholder="Brief notes or piece title..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                             </div>
                             <button type="submit" id="addContestantBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
                                 <i class="fa-solid fa-plus text-buksu-gold"></i> Add Contestant
@@ -1274,7 +1274,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                        <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-sliders"></i> Adjust All Weights
                         </button>
                     </div>
@@ -1302,29 +1302,22 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <form id="createCriterionForm" onsubmit="return false;" class="space-y-3 text-xs">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
-                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy font-bold text-slate-800">
                             </div>
 
                             <!-- 2 Choices of Scoring Selector in Quick Add -->
                             <div>
                                 <label class="block font-bold text-slate-700 mb-1">Scoring Choice</label>
                                 <div class="grid grid-cols-1 gap-2">
-                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-manual-card">
-                                        <input type="radio" name="quick_scoring_type" value="manual" class="mt-0.5 accent-indigo-600" checked>
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-500 bg-amber-50/40 cursor-pointer transition-all quick-scoring-type-label" id="quick-scoring-rubric-card">
+                                        <input type="radio" name="quick_scoring_type" value="rubric" class="mt-0.5 accent-amber-600" checked>
                                         <div class="leading-tight">
-                                            <span class="font-bold text-slate-800 text-xs block">Manual Scoring</span>
-                                            <span class="text-[10px] text-slate-500">The judge enters a numerical score within an allowed range.</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-rubric-card">
-                                        <input type="radio" name="quick_scoring_type" value="rubric" class="mt-0.5 accent-indigo-600">
-                                        <div class="leading-tight">
-                                            <span class="font-bold text-slate-800 text-xs block">Rubric-Based Scoring</span>
+                                            <span class="font-bold text-slate-800 text-xs block">Criteria-Based Scoring</span>
                                             <span class="text-[10px] text-slate-500">The judge selects a predefined rating with a fixed score and description.</span>
                                         </div>
                                     </label>
-                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-category-card">
-                                        <input type="radio" name="quick_scoring_type" value="category" class="mt-0.5 accent-indigo-600">
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-400 transition-all quick-scoring-type-label" id="quick-scoring-category-card">
+                                        <input type="radio" name="quick_scoring_type" value="category" class="mt-0.5 accent-buksu-navy">
                                         <div class="leading-tight">
                                             <span class="font-bold text-slate-800 text-xs block">Category-Based Scoring</span>
                                             <span class="text-[10px] text-slate-500">The judge scores individual sub-categories which sum up to the total score.</span>
@@ -1339,48 +1332,36 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                         <label class="block font-semibold text-slate-700">Weight (%)</label>
                                         <span id="new-criterion-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
                                     </div>
-                                    <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                                 </div>
                                 <div>
                                     <label class="block font-semibold text-slate-700 mb-1" id="new-criterion-max-label">Max Score (pts)</label>
-                                    <input type="number" id="new-criterion-max" min="1" value="100" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <input type="number" id="new-criterion-max" min="1" value="100" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                                 </div>
                             </div>
 
-                            <!-- Manual Score Min/Range fields (visible if manual) -->
-                            <div id="quick-manual-range-fields" class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Min Score (pts)</label>
-                                    <input type="number" id="new-criterion-min" min="0" value="0" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Score Step</label>
-                                    <input type="number" id="new-criterion-step" step="0.1" min="0.1" value="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                </div>
-                            </div>
-
-                            <!-- Rubric Quick Info (visible if rubric) -->
-                            <div id="quick-rubric-info-box" class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1 hidden">
-                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-list-check"></i> Rubric-Based Scoring</span>
-                                <p class="text-[10px] text-amber-700">Predefined ratings (e.g. Excellent, Very Good, Good, Fair) will be automatically generated from Max Points, or click below to customize each rating description.</p>
+                            <!-- Criteria-Based Quick Info (visible by default) -->
+                            <div id="quick-rubric-info-box" class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
+                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-list-check text-amber-600"></i> Criteria-Based Scoring</span>
+                                <p class="text-[10px] text-amber-700">Predefined ratings (e.g. Excellent, Very Good, Good, Fair) will be automatically generated from Max Points, or click "Customize Criteria &amp; Scoring" below to edit each rating.</p>
                             </div>
 
                             <!-- Category Quick Info (visible if category) -->
-                            <div id="quick-category-info-box" class="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-900 space-y-1 hidden">
-                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-layer-group text-purple-700"></i> Category-Based Scoring</span>
-                                <p class="text-[10px] text-purple-700">Will be created with 3 categories totaling your Max Score (e.g. 10 + 10 + 10 = 30 pts). You can click "Edit" on the criterion to customize each category's name, max points, and description.</p>
+                            <div id="quick-category-info-box" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-800 space-y-1 hidden">
+                                <span class="font-extrabold flex items-center gap-1 text-buksu-navy"><i class="fa-solid fa-layer-group text-buksu-navy"></i> Category-Based Scoring</span>
+                                <p class="text-[10px] text-slate-600">Will be created with 3 categories totaling your Max Score (e.g. 10 + 10 + 10 = 30 pts). You can click "Edit" on the criterion to customize each category's name, max points, and description.</p>
                             </div>
 
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Guidelines</label>
-                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging guidelines and instructions for judges..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging guidelines and instructions for judges..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                             </div>
 
                             <button type="submit" id="addCriterionBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
                                 <i class="fa-solid fa-plus text-buksu-gold"></i> Add Judging Criterion
                             </button>
-                            <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-sliders"></i> Open Advanced Scoring Setup
+                            <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-buksu-navy border border-slate-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-sliders text-buksu-navy"></i> Open Advanced Scoring Setup
                             </button>
                         </form>
                     </div>
@@ -1401,7 +1382,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                    <i class="fa-solid fa-scale-balanced text-indigo-600"></i> Configure Criteria Weights
+                    <i class="fa-solid fa-scale-balanced text-buksu-navy"></i> Configure Criteria Weights
                 </h3>
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-xl cursor-pointer leading-none">&times;</button>
             </div>
@@ -1411,7 +1392,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                 <div class="flex items-center justify-between text-xs">
                     <span class="font-extrabold text-slate-700 flex items-center gap-1.5">
-                        <i class="fa-solid fa-chart-pie text-indigo-600"></i> Total Weight:
+                        <i class="fa-solid fa-chart-pie text-buksu-navy"></i> Total Weight:
                     </span>
                     <span id="weights-modal-total-badge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                         100% / 100%
@@ -1433,7 +1414,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             </div>
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">Cancel</button>
-                <button type="button" id="saveWeightsBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5">
+                <button type="button" id="saveWeightsBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5">
                     <i class="fa-solid fa-check"></i> Save Weights
                 </button>
             </div>
@@ -1450,7 +1431,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </div>
                     <div>
                         <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; Scoring Method</h3>
-                        <p class="text-[11px] text-slate-500">Choose between Manual Numerical Scoring or Rubric-Based Predefined Ratings</p>
+                        <p class="text-[11px] text-slate-500">Choose between Criteria-Based (Predefined Ratings) or Category-Based Scoring</p>
                     </div>
                 </div>
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none">&times;</button>
@@ -1461,63 +1442,52 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
                 <!-- Criterion Basic Info -->
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                    <div class="sm:col-span-8">
+                    <div class="sm:col-span-6">
                         <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
-                        <input type="text" id="rubric-modal-title-input" required placeholder="e.g. Form &amp; Technique" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                        <input type="text" id="rubric-modal-title-input" required placeholder="e.g. Form &amp; Technique" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy font-bold text-slate-800">
                     </div>
-                    <div class="sm:col-span-4">
+                    <div class="sm:col-span-3">
                         <div class="flex items-center justify-between mb-1">
                             <label class="block font-semibold text-slate-700">Weight (%)</label>
                             <span id="rubric-modal-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
                         </div>
-                        <input type="number" id="rubric-modal-pct-input" min="0" max="100" placeholder="e.g. 25" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="number" id="rubric-modal-pct-input" min="0" max="100" placeholder="e.g. 25" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block font-semibold text-slate-700 mb-1">Max Score (pts)</label>
+                        <input type="number" id="rubric-modal-max-input" min="1" value="100" step="0.5" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                     </div>
                 </div>
 
-                <!-- 3 CHOICES OF SCORING: Segmented Option Cards -->
+                <!-- 2 CHOICES OF SCORING: Segmented Option Cards -->
                 <div class="space-y-1.5 pt-1">
                     <label class="block font-extrabold text-slate-700 text-xs uppercase tracking-wider">Select Scoring Method</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Choice 1: Manual Scoring -->
-                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-indigo-50/50 border-indigo-500 shadow-2xs" id="modal-scoring-card-manual">
-                            <input type="radio" name="modal_scoring_type" value="manual" id="modal-scoring-type-manual" class="mt-1 accent-indigo-600" checked>
-                            <div class="space-y-1 flex-1">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
-                                        <i class="fa-solid fa-calculator"></i>
-                                    </span>
-                                    <span class="font-extrabold text-slate-800 text-xs">Manual Scoring</span>
-                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase">Choice 1</span>
-                                </div>
-                                <p class="text-[11px] text-slate-600 leading-snug">The judge enters a numerical score within an allowed range.</p>
-                            </div>
-                        </label>
-
-                        <!-- Choice 2: Rubric-Based Scoring -->
-                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-white border-slate-200 hover:border-slate-300" id="modal-scoring-card-rubric">
-                            <input type="radio" name="modal_scoring_type" value="rubric" id="modal-scoring-type-rubric" class="mt-1 accent-indigo-600">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Choice 1: Criteria-Based Scoring -->
+                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-amber-50/50 border-amber-500 shadow-2xs" id="modal-scoring-card-rubric">
+                            <input type="radio" name="modal_scoring_type" value="rubric" id="modal-scoring-type-rubric" class="mt-1 accent-amber-600" checked>
                             <div class="space-y-1 flex-1">
                                 <div class="flex items-center gap-1.5">
                                     <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
                                         <i class="fa-solid fa-list-check"></i>
                                     </span>
-                                    <span class="font-extrabold text-slate-800 text-xs">Rubric-Based</span>
-                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-amber-100 text-amber-800 uppercase">Choice 2</span>
+                                    <span class="font-extrabold text-slate-800 text-xs">Criteria-Based</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-amber-100 text-amber-800 uppercase">Choice 1</span>
                                 </div>
                                 <p class="text-[11px] text-slate-600 leading-snug">The judge selects a predefined rating with a fixed score and description.</p>
                             </div>
                         </label>
 
-                        <!-- Choice 3: Category-Based Scoring -->
+                        <!-- Choice 2: Category-Based Scoring -->
                         <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-white border-slate-200 hover:border-slate-300" id="modal-scoring-card-category">
-                            <input type="radio" name="modal_scoring_type" value="category" id="modal-scoring-type-category" class="mt-1 accent-indigo-600">
+                            <input type="radio" name="modal_scoring_type" value="category" id="modal-scoring-type-category" class="mt-1 accent-buksu-navy">
                             <div class="space-y-1 flex-1">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
+                                    <span class="w-6 h-6 rounded-lg bg-slate-100 text-buksu-navy flex items-center justify-center text-xs">
                                         <i class="fa-solid fa-layer-group"></i>
                                     </span>
                                     <span class="font-extrabold text-slate-800 text-xs">Category-Based</span>
-                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-purple-100 text-purple-800 uppercase">Choice 3</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 text-slate-700 uppercase">Choice 2</span>
                                 </div>
                                 <p class="text-[11px] text-slate-600 leading-snug">The judge scores individual sub-categories which sum up to the total score.</p>
                             </div>
@@ -1525,44 +1495,8 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </div>
                 </div>
 
-                <!-- SECTION 1: MANUAL SCORING CONFIGURATION (Allowed Range) -->
-                <div id="modal-manual-config-section" class="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-200/80 space-y-3">
-                    <div class="flex items-center justify-between flex-wrap gap-2">
-                        <div class="flex items-center gap-2">
-                            <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs">
-                                <i class="fa-solid fa-arrows-left-right"></i>
-                            </span>
-                            <div>
-                                <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Manual Scoring Range</h4>
-                                <p class="text-[11px] text-slate-500">Configure the minimum and maximum allowed numerical score that judges can award.</p>
-                            </div>
-                        </div>
-                        <span id="manual-range-summary-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            Allowed Range: 0.0 - 100.0 pts
-                        </span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                        <div>
-                            <label class="block font-semibold text-slate-700 mb-1">Minimum Allowed Score</label>
-                            <input type="number" id="rubric-modal-min-input" min="0" value="0" step="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <span class="text-[10px] text-slate-400 mt-0.5 block">Lowest score a judge can input</span>
-                        </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 mb-1">Maximum Allowed Score</label>
-                            <input type="number" id="rubric-modal-max-input" min="1" value="100" step="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <span class="text-[10px] text-slate-400 mt-0.5 block">Highest score a judge can input</span>
-                        </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 mb-1">Score Step / Increment</label>
-                            <input type="number" id="rubric-modal-step-input" min="0.1" value="0.5" step="0.1" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <span class="text-[10px] text-slate-400 mt-0.5 block">e.g. 0.5 or 1 point increments</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SECTION 2: RUBRIC-BASED SCORING CONFIGURATION (Predefined Ratings) -->
-                <div id="modal-rubric-config-section" class="space-y-3 pt-1 hidden">
+                <!-- SECTION: CRITERIA-BASED SCORING CONFIGURATION (Predefined Ratings) -->
+                <div id="modal-rubric-config-section" class="space-y-3 pt-1">
                     <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
                         <div>
                             <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
@@ -1594,21 +1528,21 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
                         <div>
                             <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="fa-solid fa-layer-group text-purple-600"></i> Score Categories &amp; Max Points
+                                <i class="fa-solid fa-layer-group text-buksu-navy"></i> Score Categories &amp; Max Points
                             </h4>
                             <p class="text-[10px] text-slate-500">The judge inputs scores for each category (up to its max). The sum of all category max scores determines the total criterion score.</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span id="category-sum-total-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-purple-100 text-purple-900 border border-purple-300">
+                            <span id="category-sum-total-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-slate-100 text-slate-800 border border-slate-300">
                                 Total: 30 pts (3 Categories)
                             </span>
                             <button type="button" id="categoryLoadStylePresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load Style Example (Stance uniqueness 10pts, Pose preference 10pts, Crowd impact 10pts)">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-purple-600"></i> Style Example (30 pts)
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-buksu-navy"></i> Style Example (30 pts)
                             </button>
                             <button type="button" id="categoryLoad4TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-purple-600"></i> 4 Standard Categories
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-buksu-navy"></i> 4 Standard Categories
                             </button>
-                            <button type="button" id="categoryAddRowBtn" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-purple-200">
+                            <button type="button" id="categoryAddRowBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-slate-200">
                                 <i class="fa-solid fa-plus text-xs"></i> Add Category
                             </button>
                         </div>
@@ -1623,7 +1557,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <!-- Shared Description / Guidelines -->
                 <div>
                     <label class="block font-semibold text-slate-700 mb-1">Description / Core Objective &amp; Judging Guidelines</label>
-                    <textarea id="rubric-modal-desc-input" rows="2" placeholder="Describe the evaluation guidelines and instructions for judges..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    <textarea id="rubric-modal-desc-input" rows="2" placeholder="Describe the evaluation guidelines and instructions for judges..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                 </div>
 
                 <!-- Modal Actions -->
@@ -1659,13 +1593,13 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <div id="contestant-modal-team-section" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 hidden">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <i class="fa-solid fa-users text-indigo-600"></i> Team Members
+                        <i class="fa-solid fa-users text-buksu-navy"></i> Team Members
                     </span>
-                    <button type="button" id="saveContestantMembersBtn" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer">
+                    <button type="button" id="saveContestantMembersBtn" class="text-[11px] font-bold text-buksu-navy hover:text-buksu-navy-light cursor-pointer">
                         <i class="fa-solid fa-check me-1"></i> Update Members
                     </button>
                 </div>
-                <textarea id="contestant-modal-members-input" rows="2" placeholder="List member names (e.g. John Doe - Vocals, Jane Smith - Keyboardist)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <textarea id="contestant-modal-members-input" rows="2" placeholder="List member names (e.g. John Doe - Vocals, Jane Smith - Keyboardist)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
             </div>
 
             <!-- Add Citation / Comment Form -->
@@ -1732,7 +1666,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             </form>
 
             <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                <button type="button" id="resendSecurityOtpBtn" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer flex items-center gap-1">
+                <button type="button" id="resendSecurityOtpBtn" class="font-bold text-buksu-navy hover:text-buksu-navy-light transition-colors cursor-pointer flex items-center gap-1">
                     <i class="fa-solid fa-rotate-right text-[11px]"></i> Resend Code
                 </button>
                 <button type="button" id="closeSecurityModalBtn" class="font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
@@ -1817,7 +1751,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <!-- Print Header (Official Institution Banner for window.print) -->
             <div id="tab-print-header" class="hidden print-only mb-6 border-b-2 border-slate-900 pb-4">
                 <div class="flex items-center justify-between gap-4">
-                    <img src="/assets/icons/BukSU-Logo.png" alt="BukSU Logo" class="w-16 h-16 object-contain shrink-0">
+                    <img src="/assets/logo/DJS Logo.png" alt="Logo" class="w-16 h-16 object-contain shrink-0" onerror="this.style.display='none'">
                     <div class="text-center flex-1">
                         <h2 id="tab-print-institution" class="text-lg font-black uppercase tracking-wider text-slate-900">Bukidnon State University</h2>
                         <p class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Office of Student Affairs & Services &bull; Tabulation Committee</p>
@@ -1913,7 +1847,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <!-- Details Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                    <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-buksu-navy text-sm shrink-0">
                         <i class="fa-regular fa-clock"></i>
                     </div>
                     <div>
@@ -1923,7 +1857,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 </div>
 
                 <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                    <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-buksu-navy text-sm shrink-0">
                         <i class="fa-solid fa-location-dot"></i>
                     </div>
                     <div>
@@ -1933,7 +1867,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 </div>
 
                 <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3 sm:col-span-2">
-                    <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-buksu-navy text-sm shrink-0">
+                    <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-buksu-navy text-sm shrink-0">
                         <i class="fa-solid fa-tasks"></i>
                     </div>
                     <div>

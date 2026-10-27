@@ -37,7 +37,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
                     <span class="font-medium text-slate-500 text-sm hidden sm:inline-block ms-1.5 border-l border-slate-300 ps-2">Digitalized Judging System</span>
                 </div>
             </div>
-            <a href="/auth/login.php" class="text-xs font-semibold text-buksu-navy hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+            <a href="/auth/login.php" class="text-xs font-semibold text-buksu-navy hover:text-buksu-navy-light transition-colors flex items-center gap-1.5">
                 <i class="fa-solid fa-arrow-left"></i> Back to Login
             </a>
         </div>
@@ -49,8 +49,8 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
         <!-- ACCEPT INVITATION CARD -->
         <div id="accept-invitation-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300">
             <div class="flex items-center justify-between mb-6">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold tracking-wide border border-indigo-200">
-                    <i class="fa-solid fa-envelope-open-text text-indigo-500"></i> Account Invitation
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-buksu-navy text-xs font-semibold tracking-wide border border-slate-200">
+                    <i class="fa-solid fa-envelope-open-text text-buksu-navy"></i> Account Invitation
                 </span>
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-800">
                     <i class="fa-solid fa-key"></i> Set Password
@@ -64,7 +64,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
 
             <div class="my-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
                 <div id="invite-username-display" class="text-xs font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i> Verifying invitation token...
+                    <i class="fa-solid fa-spinner fa-spin text-buksu-navy"></i> Verifying invitation token...
                 </div>
                 <div id="invite-role-display" class="text-[11px] text-slate-500">
                     Please wait while we validate your token.
@@ -104,7 +104,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
                     </div>
                 </div>
 
-                <button type="submit" id="acceptInviteBtn" disabled class="w-full py-3 px-4 bg-buksu-navy hover:bg-indigo-900 disabled:opacity-50 text-buksu-gold font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-2">
+                <button type="submit" id="acceptInviteBtn" disabled class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light disabled:opacity-50 text-buksu-gold font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-2">
                     <i class="fa-solid fa-check-circle"></i>
                     <span id="invite-btn-text">Save Password & Activate Account</span>
                 </button>

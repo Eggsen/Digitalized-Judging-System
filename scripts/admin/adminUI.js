@@ -51,7 +51,7 @@ async function loadAccounts() {
             <td class="px-4 py-3 text-center align-middle">
                 <div class="flex items-center justify-center gap-1.5">
                     ${account.status === 'pending' && account.invite_link
-                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold transition-colors cursor-pointer border border-indigo-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1"></i>Copy Link</button>`
+                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-slate-100 text-buksu-navy hover:bg-slate-200 font-bold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1 text-buksu-navy"></i>Copy Link</button>`
                         : ''
                     }
                     ${account.is_active
@@ -164,7 +164,7 @@ function initAdminPanel() {
                     <div class="text-[11px] font-normal mb-2 text-slate-600">Send this invitation link to the user so they can set their password:</div>
                     <div class="flex items-center gap-1.5">
                         <input type="text" readonly value="${res.invite_link}" id="new-invite-link-input" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono text-slate-800 focus:outline-none" />
-                        <button type="button" id="copy-new-invite-btn" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0">
+                        <button type="button" id="copy-new-invite-btn" class="px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0">
                             <i class="fa-solid fa-copy"></i> Copy
                         </button>
                     </div>
