@@ -1,5 +1,5 @@
 import { loginUser, registerAdmin } from "./auth/authAPI.js";
-import { showNotice, togglePasswordVisibility } from "./utils/index.js";
+import { showNotice, togglePasswordVisibility, getRecaptchaResponse, resetRecaptchaWidget } from "./utils/index.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("loginForm");
@@ -20,13 +20,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
+            const recaptchaToken = getRecaptchaResponse('login-recaptcha');
+            if (window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
+                showNotice(noticeText, "Please verify that you are not a robot.", "warning");
+                return;
+            }
+
             // Disable submit button during request
             const submitBtn = loginForm.querySelector("button[type='submit']");
             if (submitBtn) submitBtn.disabled = true;
 
             showNotice(noticeText, "Signing in...", "info");
 
-            const response = await loginUser({ identifier, password });
+            const response = await loginUser({ identifier, password, recaptcha_response: recaptchaToken });
 
             if (submitBtn) submitBtn.disabled = false;
 
@@ -36,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.location.href = response.redirect || "/dashboard.php";
                 }, 700);
             } else {
+                resetRecaptchaWidget('login-recaptcha');
                 showNotice(noticeText, response ? response.message : "Authentication failed.", "error");
             }
         });
@@ -68,6 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
+            const recaptchaToken = getRecaptchaResponse('register-recaptcha');
+            if (window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
+                showNotice(regNoticeText, "Please verify that you are not a robot.", "warning");
+                return;
+            }
+
             const regBtn = document.getElementById("registerAdminBtn");
             const regBtnText = document.getElementById("reg-btn-text");
             if (regBtn) regBtn.disabled = true;
@@ -75,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showNotice(regNoticeText, "Creating Admin account...", "info");
 
-            const response = await registerAdmin({ username, email, password, confirm_password: confirmPassword });
+            const response = await registerAdmin({ username, email, password, confirm_password: confirmPassword, recaptcha_response: recaptchaToken });
 
             if (regBtn) regBtn.disabled = false;
             if (regBtnText) regBtnText.textContent = "Register Admin Account";
@@ -96,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }, 1200);
             } else {
+                resetRecaptchaWidget('register-recaptcha');
                 showNotice(regNoticeText, response ? response.message : "Registration failed.", "error");
             }
         });

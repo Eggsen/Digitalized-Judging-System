@@ -10,6 +10,9 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
     exit;
 }
 
+require_once __DIR__ . '/../backend/database/config.php';
+$recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -19,6 +22,10 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
     <link rel="icon" href="/assets/logo/DJS Logo.png">
+    <script>
+        window.RECAPTCHA_SITE_KEY = <?= json_encode($recaptchaSiteKey) ?>;
+    </script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaApiReady&render=explicit" async defer></script>
     <script type="module" src="/scripts/ui/authUI.js"></script>
     <script type="module" src="/scripts/ui/resetUI.js"></script>
     <script type="module" src="/scripts/app.js"></script>
@@ -103,6 +110,11 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
                         <span>Remember me</span>
                     </label>
                     <a href="#" id="forgot-password-link" class="font-semibold text-buksu-navy hover:text-buksu-gold transition-colors">Forgot password?</a>
+                </div>
+
+                <!-- Google reCAPTCHA v2 Widget -->
+                <div class="flex justify-center pt-2 overflow-hidden">
+                    <div id="login-recaptcha"></div>
                 </div>
 
                 <button type="submit" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl hover:shadow-buksu-navy/30 transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
@@ -204,6 +216,11 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
                     </div>
                 </div>
 
+                <!-- Google reCAPTCHA v2 Widget -->
+                <div class="flex justify-center pt-2 overflow-hidden">
+                    <div id="register-recaptcha"></div>
+                </div>
+
                 <button type="submit" id="registerAdminBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">
                     <i class="fa-solid fa-user-plus text-buksu-gold"></i>
                     <span id="reg-btn-text">Register Admin Account</span>
@@ -244,6 +261,11 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
                         </div>
                         <input type="text" id="reset-identifier-input" placeholder="Enter registered email or username" class="w-full ps-9 pe-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
                     </div>
+                </div>
+
+                <!-- Google reCAPTCHA v2 Widget -->
+                <div class="flex justify-center pt-2 overflow-hidden">
+                    <div id="reset-recaptcha"></div>
                 </div>
 
                 <button type="submit" id="resetRequestBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">

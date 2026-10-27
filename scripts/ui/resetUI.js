@@ -1,4 +1,5 @@
 import { resetPassword } from "/scripts/auth/authAPI.js";
+import { renderRecaptchaWidget, getRecaptchaResponse, resetRecaptchaWidget } from "/scripts/utils/index.js";
 
 initResetUI();
 
@@ -24,6 +25,7 @@ function showForgotPasswordCard() {
     if (forgotCard) {
         forgotCard.classList.remove('hidden');
         forgotCard.classList.add('animate-fade-in');
+        renderRecaptchaWidget('reset-recaptcha');
     }
 }
 
@@ -51,12 +53,19 @@ async function handleResetRequestSubmit() {
         return;
     }
 
+    const recaptchaToken = getRecaptchaResponse('reset-recaptcha');
+    if (window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
+        showResetNotice('warning', 'Please verify that you are not a robot.');
+        return;
+    }
+
     if (btn) btn.disabled = true;
     if (btnText) btnText.textContent = 'Sending Reset Link...';
 
     const res = await resetPassword({
         action: 'request_reset',
-        identifier
+        identifier,
+        recaptcha_response: recaptchaToken
     });
 
     if (btn) btn.disabled = false;
@@ -78,6 +87,7 @@ async function handleResetRequestSubmit() {
             noticeWrap.classList.remove('hidden');
         }
     } else {
+        resetRecaptchaWidget('reset-recaptcha');
         showResetNotice('error', res.message || 'Failed to send reset link.');
     }
 }

@@ -1,4 +1,4 @@
-import { clearLoginForm, togglePasswordVisibility, showNotice } from "../utils/index.js";
+import { clearLoginForm, togglePasswordVisibility, showNotice, renderRecaptchaWidget } from "../utils/index.js";
 import { verifyInviteToken, acceptInvitation, resetPassword } from "../auth/authAPI.js";
 
 // Module scripts are deferred — DOM is ready by the time this runs
@@ -347,6 +347,7 @@ function showRegisterAdminCard() {
         loginCard.classList.add('hidden');
         registerCard.classList.remove('hidden');
         registerCard.classList.add('animate-fade-in');
+        renderRecaptchaWidget('register-recaptcha');
     }
 }
 

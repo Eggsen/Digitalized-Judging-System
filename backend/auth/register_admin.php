@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== "POST") {
 }
 
 require_once __DIR__ . "/../database/config.php";
+require_once __DIR__ . "/recaptcha.php";
 
 $rawJson = file_get_contents("php://input");
 $data = json_decode($rawJson, true);
@@ -23,6 +24,16 @@ if (!$data) {
     echo json_encode([
         "success" => false,
         "message" => "Invalid JSON payload."
+    ]);
+    exit;
+}
+
+$recaptchaToken = trim($data['recaptcha_response'] ?? $data['g-recaptcha-response'] ?? "");
+$captchaCheck = verifyRecaptcha($recaptchaToken);
+if (!$captchaCheck['success']) {
+    echo json_encode([
+        "success" => false,
+        "message" => $captchaCheck['message']
     ]);
     exit;
 }
