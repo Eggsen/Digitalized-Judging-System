@@ -6,6 +6,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . "/../database/config.php";
 
+$settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+$googleAuthEnabled = $settingsDoc['security']['googleAuthEnabled'] ?? true;
+if (!$googleAuthEnabled) {
+    header("Location: /auth/login.php?error=oauth_disabled");
+    exit;
+}
+
 // Check if Google returned an error or if the user cancelled
 if (!empty($_GET['error'])) {
     $error = htmlspecialchars($_GET['error']);

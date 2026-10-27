@@ -72,3 +72,49 @@ export async function resetSettingsDefaults() {
         return { success: false, message: "Unable to reset settings." };
     }
 }
+
+export async function requestSecurityChange(securityData) {
+    try {
+        const response = await fetch("/backend/crud/settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "request_security_change", ...securityData }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Request Security Change API Error: ", error);
+        return { success: false, message: "Unable to request security change." };
+    }
+}
+
+export async function confirmSecurityChange(code) {
+    try {
+        const response = await fetch("/backend/crud/settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "confirm_security_change", code }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Confirm Security Change API Error: ", error);
+        return { success: false, message: "Unable to confirm security code." };
+    }
+}
+
+export async function resendSecurityCode() {
+    try {
+        const response = await fetch("/backend/crud/settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "resend_security_code" }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Resend Security Code API Error: ", error);
+        return { success: false, message: "Unable to resend confirmation code." };
+    }
+}
+

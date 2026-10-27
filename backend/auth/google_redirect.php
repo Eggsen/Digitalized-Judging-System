@@ -12,6 +12,13 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
 
 require_once __DIR__ . "/../database/config.php";
 
+$settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+$googleAuthEnabled = $settingsDoc['security']['googleAuthEnabled'] ?? true;
+if (!$googleAuthEnabled) {
+    header("Location: /auth/login.php?error=oauth_disabled");
+    exit;
+}
+
 $clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? '';
 $redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? 'http://localhost:8000/backend/auth/google_callback.php';
 

@@ -1,4 +1,13 @@
-import { getSettings, saveSettings, exportBackup, clearLogs, resetSettingsDefaults } from "/scripts/admin/settingsAPI.js";
+import { 
+    getSettings, 
+    saveSettings, 
+    exportBackup, 
+    clearLogs, 
+    resetSettingsDefaults,
+    requestSecurityChange,
+    confirmSecurityChange,
+    resendSecurityCode
+} from "/scripts/admin/settingsAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 
 const userRole = document.body.dataset.role;
@@ -84,6 +93,21 @@ function populateSettingsForm(settings) {
         lastBackupEl.textContent = backup.lastBackupAt ? `Last Backup: ${backup.lastBackupAt}` : 'No backups recorded yet';
     }
 
+    // Security controls
+    const security = settings.security || {};
+    const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
+    const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+
+    if (googleAuthToggle) {
+        googleAuthToggle.checked = (security.googleAuthEnabled !== false);
+        updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
+    }
+
+    if (recaptchaToggle) {
+        recaptchaToggle.checked = (security.recaptchaEnabled !== false);
+        updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+    }
+
     // Update live banner preview
     updateBrandingPreview(branding);
 }
@@ -122,6 +146,7 @@ function populateDiagnostics(diag) {
 export function initSettingsPanel() {
     initSubTabs();
     initSettingsForm();
+    initSecuritySettings();
     initBackupAndMaintenance();
 }
 
@@ -312,4 +337,219 @@ function initBackupAndMaintenance() {
             showToast("Reset Failed", res.message || "Failed to reset settings.", "error");
         }
     });
+}
+
+function updateSecurityToggleBadge(badgeId, isEnabled) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+    if (isEnabled) {
+        badge.textContent = 'Active';
+        badge.className = 'inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800';
+    } else {
+        badge.textContent = 'Disabled';
+        badge.className = 'inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800';
+    }
+}
+
+function initSecuritySettings() {
+    const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
+    const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+    const applyBtn = document.getElementById('applySecurityTogglesBtn');
+
+    if (googleAuthToggle) {
+        googleAuthToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
+        });
+    }
+
+    if (recaptchaToggle) {
+        recaptchaToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+        });
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', handleApplySecurityChanges);
+    }
+
+    // Modal controls
+    const confirmForm = document.getElementById('securityConfirmForm');
+    const resendBtn = document.getElementById('resendSecurityOtpBtn');
+    const closeBtn = document.getElementById('closeSecurityModalBtn');
+
+    if (confirmForm) {
+        confirmForm.addEventListener('submit', handleConfirmSecurityOtp);
+    }
+
+    if (resendBtn) {
+        resendBtn.addEventListener('click', handleResendSecurityOtp);
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeSecurityConfirmModal);
+    }
+}
+
+async function handleApplySecurityChanges() {
+    const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
+    const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+    const applyBtn = document.getElementById('applySecurityTogglesBtn');
+
+    const newGoogleAuth = googleAuthToggle ? googleAuthToggle.checked : true;
+    const newRecaptcha = recaptchaToggle ? recaptchaToggle.checked : true;
+
+    const currSec = cachedSettings?.security || { googleAuthEnabled: true, recaptchaEnabled: true };
+    const currGoogle = currSec.googleAuthEnabled !== false;
+    const currRecaptcha = currSec.recaptchaEnabled !== false;
+
+    if (newGoogleAuth === currGoogle && newRecaptcha === currRecaptcha) {
+        showToast("Notice", "No changes were made to security controls.", "info");
+        return;
+    }
+
+    if (applyBtn) {
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Sending Verification Email...';
+    }
+
+    const res = await requestSecurityChange({
+        googleAuthEnabled: newGoogleAuth,
+        recaptchaEnabled: newRecaptcha
+    });
+
+    if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-emerald-200"></i> Update Security Controls';
+    }
+
+    if (res.success && res.requires_confirmation) {
+        openSecurityConfirmModal(res.masked_email, {
+            currGoogle,
+            newGoogleAuth,
+            currRecaptcha,
+            newRecaptcha
+        });
+    } else if (res.success) {
+        showToast("Success", res.message || "Security settings updated.", "success");
+    } else {
+        showToast("Error", res.message || "Failed to initiate security changes.", "error");
+    }
+}
+
+function openSecurityConfirmModal(maskedEmail, diff) {
+    const modal = document.getElementById('security-confirm-modal');
+    const emailEl = document.getElementById('security-modal-masked-email');
+    const diffList = document.getElementById('security-modal-diff-list');
+    const noticeEl = document.getElementById('security-confirm-notice');
+    const otpInput = document.getElementById('security-otp-input');
+
+    if (emailEl) emailEl.textContent = maskedEmail || "your admin email";
+    if (noticeEl) noticeEl.className = 'hidden';
+
+    if (diffList) {
+        diffList.innerHTML = `
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                <span>Google OAuth 2.0:</span>
+                <span class="font-bold">${diff.currGoogle ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newGoogleAuth ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+            <div class="flex items-center justify-between py-1">
+                <span>Google reCAPTCHA v2:</span>
+                <span class="font-bold">${diff.currRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+        `;
+    }
+
+    if (otpInput) {
+        otpInput.value = '';
+    }
+
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (otpInput) setTimeout(() => otpInput.focus(), 150);
+    }
+}
+
+function closeSecurityConfirmModal() {
+    const modal = document.getElementById('security-confirm-modal');
+    if (modal) modal.classList.add('hidden');
+
+    // Reset toggles to cached state
+    if (cachedSettings?.security) {
+        const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
+        const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+        if (googleAuthToggle) {
+            googleAuthToggle.checked = (cachedSettings.security.googleAuthEnabled !== false);
+            updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
+        }
+        if (recaptchaToggle) {
+            recaptchaToggle.checked = (cachedSettings.security.recaptchaEnabled !== false);
+            updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+        }
+    }
+}
+
+async function handleConfirmSecurityOtp(e) {
+    e.preventDefault();
+    const otpInput = document.getElementById('security-otp-input');
+    const noticeEl = document.getElementById('security-confirm-notice');
+    const submitBtn = document.getElementById('confirmSecurityOtpBtn');
+    const btnText = document.getElementById('confirm-otp-btn-text');
+
+    const code = otpInput?.value.trim() || '';
+    if (code.length !== 6) {
+        if (noticeEl) {
+            noticeEl.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 block';
+            noticeEl.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1"></i> Please enter the full 6-digit confirmation code.';
+        }
+        return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (btnText) btnText.textContent = "Verifying...";
+
+    const res = await confirmSecurityChange(code);
+
+    if (submitBtn) submitBtn.disabled = false;
+    if (btnText) btnText.textContent = "Verify & Apply Changes";
+
+    if (res.success) {
+        if (cachedSettings) {
+            cachedSettings.security = res.security;
+        }
+        const modal = document.getElementById('security-confirm-modal');
+        if (modal) modal.classList.add('hidden');
+        showToast("Success", res.message || "Security settings updated successfully!", "success");
+    } else {
+        if (noticeEl) {
+            noticeEl.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 block';
+            noticeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ${res.message || 'Verification failed.'}`;
+        }
+    }
+}
+
+async function handleResendSecurityOtp() {
+    const resendBtn = document.getElementById('resendSecurityOtpBtn');
+    const noticeEl = document.getElementById('security-confirm-notice');
+
+    if (resendBtn) {
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[11px]"></i> Resending...';
+    }
+
+    const res = await resendSecurityCode();
+
+    if (resendBtn) {
+        resendBtn.disabled = false;
+        resendBtn.innerHTML = '<i class="fa-solid fa-rotate-right text-[11px]"></i> Resend Code';
+    }
+
+    if (noticeEl) {
+        if (res.success) {
+            noticeEl.className = 'p-2.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 block';
+            noticeEl.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> ${res.message || 'New code sent.'}`;
+        } else {
+            noticeEl.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 block';
+            noticeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> ${res.message || 'Failed to resend code.'}`;
+        }
+    }
 }

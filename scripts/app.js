@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const recaptchaToken = getRecaptchaResponse('login-recaptcha');
-            if (window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
+            if (window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_ENABLED !== false && !recaptchaToken) {
                 showNotice(noticeText, "Please verify that you are not a robot.", "warning");
                 return;
             }
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const recaptchaToken = getRecaptchaResponse('register-recaptcha');
-            if (window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
+            if (window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_ENABLED !== false && !recaptchaToken) {
                 showNotice(regNoticeText, "Please verify that you are not a robot.", "warning");
                 return;
             }

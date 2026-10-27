@@ -11,7 +11,10 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['username'])) {
 }
 
 require_once __DIR__ . '/../backend/database/config.php';
-$recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
+$settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+$googleAuthEnabled = $settingsDoc['security']['googleAuthEnabled'] ?? true;
+$recaptchaEnabled = $settingsDoc['security']['recaptchaEnabled'] ?? true;
+$recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : '';
 
 ?>
 <!DOCTYPE html>
@@ -23,9 +26,12 @@ $recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
     <link rel="stylesheet" href="/frontend/css/output.css">
     <link rel="icon" href="/assets/logo/DJS Logo.png">
     <script>
+        window.RECAPTCHA_ENABLED = <?= json_encode((bool)$recaptchaEnabled) ?>;
         window.RECAPTCHA_SITE_KEY = <?= json_encode($recaptchaSiteKey) ?>;
     </script>
+    <?php if ($recaptchaEnabled): ?>
     <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaApiReady&render=explicit" async defer></script>
+    <?php endif; ?>
     <script type="module" src="/scripts/ui/authUI.js"></script>
     <script type="module" src="/scripts/ui/resetUI.js"></script>
     <script type="module" src="/scripts/app.js"></script>
@@ -112,16 +118,19 @@ $recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
                     <a href="#" id="forgot-password-link" class="font-semibold text-buksu-navy hover:text-buksu-gold transition-colors">Forgot password?</a>
                 </div>
 
+                <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
                 <div class="flex justify-center pt-2 overflow-hidden">
                     <div id="login-recaptcha"></div>
                 </div>
+                <?php endif; ?>
 
                 <button type="submit" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-buksu-navy/25 hover:shadow-xl hover:shadow-buksu-navy/30 transition-all flex items-center justify-center gap-2 group cursor-pointer border border-buksu-gold/30">
                     <span id="login-btn-text">Sign In</span>
                     <i class="fa-solid fa-right-to-bracket text-buksu-gold group-hover:translate-x-0.5 transition-transform"></i>
                 </button>
 
+                <?php if ($googleAuthEnabled): ?>
                 <div class="relative flex items-center justify-center pt-2">
                     <div class="w-full border-t border-slate-200"></div>
                     <span class="absolute bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">or</span>
@@ -136,6 +145,7 @@ $recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
                     </svg>
                     <span>Sign in with Google</span>
                 </a>
+                <?php endif; ?>
             </form>
 
             <div id="register-admin-wrap" class="mt-4 mx-3 pt-3 border-t border-slate-100 text-center text-xs text-slate-500">
@@ -216,10 +226,12 @@ $recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
                     </div>
                 </div>
 
+                <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
                 <div class="flex justify-center pt-2 overflow-hidden">
                     <div id="register-recaptcha"></div>
                 </div>
+                <?php endif; ?>
 
                 <button type="submit" id="registerAdminBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">
                     <i class="fa-solid fa-user-plus text-buksu-gold"></i>
@@ -263,10 +275,12 @@ $recaptchaSiteKey = $_ENV['RECAPTCHA_SITE_KEY'] ?? '';
                     </div>
                 </div>
 
+                <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
                 <div class="flex justify-center pt-2 overflow-hidden">
                     <div id="reset-recaptcha"></div>
                 </div>
+                <?php endif; ?>
 
                 <button type="submit" id="resetRequestBtn" class="w-full mt-2 py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-buksu-gold/30">
                     <i class="fa-solid fa-paper-plane text-buksu-gold"></i>

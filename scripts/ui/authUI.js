@@ -60,6 +60,9 @@ function initLandingPage() {
             case 'account_disabled':
                 errorMsg = 'Your account has been disabled. Please contact the administrator.';
                 break;
+            case 'oauth_disabled':
+                errorMsg = 'Google Sign-In is currently disabled by the system administrator.';
+                break;
             case 'oauth_denied':
                 errorMsg = 'Google sign-in was cancelled or access was denied.';
                 break;

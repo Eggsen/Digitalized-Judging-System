@@ -20,9 +20,11 @@ window.onRecaptchaApiReady = function () {
  * @param {string} containerId 
  */
 export function renderRecaptchaWidget(containerId) {
+    if (window.RECAPTCHA_ENABLED === false) {
+        return;
+    }
     const siteKey = window.RECAPTCHA_SITE_KEY;
     if (!siteKey) {
-        console.warn("reCAPTCHA Warning: RECAPTCHA_SITE_KEY is not set on window.");
         return;
     }
 

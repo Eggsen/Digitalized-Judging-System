@@ -7,6 +7,21 @@
  * @return array ['success' => bool, 'message' => string]
  */
 function verifyRecaptcha(?string $token): array {
+    global $settingsCollection;
+    if (isset($settingsCollection)) {
+        try {
+            $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+            if (isset($settingsDoc['security']['recaptchaEnabled']) && $settingsDoc['security']['recaptchaEnabled'] === false) {
+                return [
+                    'success' => true,
+                    'message' => 'reCAPTCHA verification skipped (disabled by administrator).'
+                ];
+            }
+        } catch (Throwable $e) {
+            // Proceed to verify if query fails
+        }
+    }
+
     $secretKey = $_ENV['RECAPTCHA_SECRET_KEY'] ?? '';
 
     if (empty($secretKey)) {
