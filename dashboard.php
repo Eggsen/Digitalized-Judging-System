@@ -1208,8 +1208,37 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <form id="createCriterionForm" onsubmit="return false;" class="space-y-3 text-xs">
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
-                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
                             </div>
+
+                            <!-- 2 Choices of Scoring Selector in Quick Add -->
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Scoring Choice</label>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-manual-card">
+                                        <input type="radio" name="quick_scoring_type" value="manual" class="mt-0.5 accent-indigo-600" checked>
+                                        <div class="leading-tight">
+                                            <span class="font-bold text-slate-800 text-xs block">Manual Scoring</span>
+                                            <span class="text-[10px] text-slate-500">The judge enters a numerical score within an allowed range.</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-rubric-card">
+                                        <input type="radio" name="quick_scoring_type" value="rubric" class="mt-0.5 accent-indigo-600">
+                                        <div class="leading-tight">
+                                            <span class="font-bold text-slate-800 text-xs block">Rubric-Based Scoring</span>
+                                            <span class="text-[10px] text-slate-500">The judge selects a predefined rating with a fixed score and description.</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-indigo-400 transition-all quick-scoring-type-label" id="quick-scoring-category-card">
+                                        <input type="radio" name="quick_scoring_type" value="category" class="mt-0.5 accent-indigo-600">
+                                        <div class="leading-tight">
+                                            <span class="font-bold text-slate-800 text-xs block">Category-Based Scoring</span>
+                                            <span class="text-[10px] text-slate-500">The judge scores individual sub-categories which sum up to the total score.</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
@@ -1219,19 +1248,45 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                     <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 </div>
                                 <div>
-                                    <label class="block font-semibold text-slate-700 mb-1">Max Points</label>
+                                    <label class="block font-semibold text-slate-700 mb-1" id="new-criterion-max-label">Max Score (pts)</label>
                                     <input type="number" id="new-criterion-max" min="1" value="100" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 </div>
                             </div>
+
+                            <!-- Manual Score Min/Range fields (visible if manual) -->
+                            <div id="quick-manual-range-fields" class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Min Score (pts)</label>
+                                    <input type="number" id="new-criterion-min" min="0" value="0" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Score Step</label>
+                                    <input type="number" id="new-criterion-step" step="0.1" min="0.1" value="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+
+                            <!-- Rubric Quick Info (visible if rubric) -->
+                            <div id="quick-rubric-info-box" class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1 hidden">
+                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-list-check"></i> Rubric-Based Scoring</span>
+                                <p class="text-[10px] text-amber-700">Predefined ratings (e.g. Excellent, Very Good, Good, Fair) will be automatically generated from Max Points, or click below to customize each rating description.</p>
+                            </div>
+
+                            <!-- Category Quick Info (visible if category) -->
+                            <div id="quick-category-info-box" class="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-900 space-y-1 hidden">
+                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-layer-group text-purple-700"></i> Category-Based Scoring</span>
+                                <p class="text-[10px] text-purple-700">Will be created with 3 categories totaling your Max Score (e.g. 10 + 10 + 10 = 30 pts). You can click "Edit" on the criterion to customize each category's name, max points, and description.</p>
+                            </div>
+
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Guidelines</label>
-                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging rubrics and guidelines..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging guidelines and instructions for judges..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                             </div>
+
                             <button type="submit" id="addCriterionBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-plus text-buksu-gold"></i> Quick Add Criterion
+                                <i class="fa-solid fa-plus text-buksu-gold"></i> Add Judging Criterion
                             </button>
                             <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-layer-group"></i> Build Custom Scoring Rubric
+                                <i class="fa-solid fa-sliders"></i> Open Advanced Scoring Setup
                             </button>
                         </form>
                     </div>
@@ -1291,17 +1346,17 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         </div>
     </div>
 
-    <!-- MODAL: EDIT CRITERION & SCORING RUBRIC BUILDER -->
+    <!-- MODAL: EDIT CRITERION & SCORING METHOD BUILDER -->
     <div id="criterion-rubric-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full p-6 sm:p-8 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold text-sm shadow-xs border border-buksu-gold/30">
-                        <i class="fa-solid fa-list-check"></i>
+                        <i class="fa-solid fa-sliders"></i>
                     </div>
                     <div>
-                        <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; Scoring Rubric</h3>
-                        <p class="text-[11px] text-slate-500">Define customizable scoring categories and point thresholds for judges</p>
+                        <h3 id="rubric-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Configure Criterion &amp; Scoring Method</h3>
+                        <p class="text-[11px] text-slate-500">Choose between Manual Numerical Scoring or Rubric-Based Predefined Ratings</p>
                     </div>
                 </div>
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none">&times;</button>
@@ -1310,58 +1365,178 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <form id="criterionRubricForm" onsubmit="return false;" class="space-y-4 text-xs">
                 <input type="hidden" id="rubric-modal-crit-id" value="">
 
+                <!-- Criterion Basic Info -->
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                    <div class="sm:col-span-6">
+                    <div class="sm:col-span-8">
                         <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
                         <input type="text" id="rubric-modal-title-input" required placeholder="e.g. Form &amp; Technique" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
                     </div>
-                    <div class="sm:col-span-3">
+                    <div class="sm:col-span-4">
                         <div class="flex items-center justify-between mb-1">
                             <label class="block font-semibold text-slate-700">Weight (%)</label>
                             <span id="rubric-modal-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
                         </div>
                         <input type="number" id="rubric-modal-pct-input" min="0" max="100" placeholder="e.g. 25" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                    <div class="sm:col-span-3">
-                        <label class="block font-semibold text-slate-700 mb-1">Max Points</label>
-                        <input type="number" id="rubric-modal-max-input" min="1" value="50" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <!-- 3 CHOICES OF SCORING: Segmented Option Cards -->
+                <div class="space-y-1.5 pt-1">
+                    <label class="block font-extrabold text-slate-700 text-xs uppercase tracking-wider">Select Scoring Method</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <!-- Choice 1: Manual Scoring -->
+                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-indigo-50/50 border-indigo-500 shadow-2xs" id="modal-scoring-card-manual">
+                            <input type="radio" name="modal_scoring_type" value="manual" id="modal-scoring-type-manual" class="mt-1 accent-indigo-600" checked>
+                            <div class="space-y-1 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+                                        <i class="fa-solid fa-calculator"></i>
+                                    </span>
+                                    <span class="font-extrabold text-slate-800 text-xs">Manual Scoring</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase">Choice 1</span>
+                                </div>
+                                <p class="text-[11px] text-slate-600 leading-snug">The judge enters a numerical score within an allowed range.</p>
+                            </div>
+                        </label>
+
+                        <!-- Choice 2: Rubric-Based Scoring -->
+                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-white border-slate-200 hover:border-slate-300" id="modal-scoring-card-rubric">
+                            <input type="radio" name="modal_scoring_type" value="rubric" id="modal-scoring-type-rubric" class="mt-1 accent-indigo-600">
+                            <div class="space-y-1 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </span>
+                                    <span class="font-extrabold text-slate-800 text-xs">Rubric-Based</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-amber-100 text-amber-800 uppercase">Choice 2</span>
+                                </div>
+                                <p class="text-[11px] text-slate-600 leading-snug">The judge selects a predefined rating with a fixed score and description.</p>
+                            </div>
+                        </label>
+
+                        <!-- Choice 3: Category-Based Scoring -->
+                        <label class="modal-scoring-choice-card cursor-pointer relative p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 bg-white border-slate-200 hover:border-slate-300" id="modal-scoring-card-category">
+                            <input type="radio" name="modal_scoring_type" value="category" id="modal-scoring-type-category" class="mt-1 accent-indigo-600">
+                            <div class="space-y-1 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
+                                        <i class="fa-solid fa-layer-group"></i>
+                                    </span>
+                                    <span class="font-extrabold text-slate-800 text-xs">Category-Based</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black bg-purple-100 text-purple-800 uppercase">Choice 3</span>
+                                </div>
+                                <p class="text-[11px] text-slate-600 leading-snug">The judge scores individual sub-categories which sum up to the total score.</p>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
+                <!-- SECTION 1: MANUAL SCORING CONFIGURATION (Allowed Range) -->
+                <div id="modal-manual-config-section" class="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-200/80 space-y-3">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs">
+                                <i class="fa-solid fa-arrows-left-right"></i>
+                            </span>
+                            <div>
+                                <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Manual Scoring Range</h4>
+                                <p class="text-[11px] text-slate-500">Configure the minimum and maximum allowed numerical score that judges can award.</p>
+                            </div>
+                        </div>
+                        <span id="manual-range-summary-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            Allowed Range: 0.0 - 100.0 pts
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Minimum Allowed Score</label>
+                            <input type="number" id="rubric-modal-min-input" min="0" value="0" step="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span class="text-[10px] text-slate-400 mt-0.5 block">Lowest score a judge can input</span>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Maximum Allowed Score</label>
+                            <input type="number" id="rubric-modal-max-input" min="1" value="100" step="0.5" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span class="text-[10px] text-slate-400 mt-0.5 block">Highest score a judge can input</span>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Score Step / Increment</label>
+                            <input type="number" id="rubric-modal-step-input" min="0.1" value="0.5" step="0.1" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span class="text-[10px] text-slate-400 mt-0.5 block">e.g. 0.5 or 1 point increments</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: RUBRIC-BASED SCORING CONFIGURATION (Predefined Ratings) -->
+                <div id="modal-rubric-config-section" class="space-y-3 pt-1 hidden">
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-check text-amber-600"></i> Predefined Ratings &amp; Fixed Scores
+                            </h4>
+                            <p class="text-[10px] text-slate-500">Judges select one of these predefined ratings during scoring. The fixed score is awarded automatically.</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" id="rubricLoad4TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load standard 4-tier rubric (Excellent, Good, Fair, Poor)">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-amber-500"></i> 4-Level Preset
+                            </button>
+                            <button type="button" id="rubricLoad5TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load 5-tier rubric (Superior, Excellent, Good, Fair, Poor)">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-amber-500"></i> 5-Level Preset
+                            </button>
+                            <button type="button" id="rubricAddRatingBtn" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-amber-200">
+                                <i class="fa-solid fa-plus text-xs"></i> Add Predefined Rating
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Container for Predefined Ratings -->
+                    <div id="rubric-ratings-container" class="space-y-3 max-h-[38vh] overflow-y-auto pr-1">
+                        <!-- Populated dynamically with predefined rating cards -->
+                    </div>
+                </div>
+
+                <!-- SECTION 3: CATEGORY-BASED SCORING CONFIGURATION (Sub-Categories Sum) -->
+                <div id="modal-category-config-section" class="space-y-3 pt-1 hidden">
+                    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-layer-group text-purple-600"></i> Score Categories &amp; Max Points
+                            </h4>
+                            <p class="text-[10px] text-slate-500">The judge inputs scores for each category (up to its max). The sum of all category max scores determines the total criterion score.</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span id="category-sum-total-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-purple-100 text-purple-900 border border-purple-300">
+                                Total: 30 pts (3 Categories)
+                            </span>
+                            <button type="button" id="categoryLoadStylePresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load Style Example (Stance uniqueness 10pts, Pose preference 10pts, Crowd impact 10pts)">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-purple-600"></i> Style Example (30 pts)
+                            </button>
+                            <button type="button" id="categoryLoad4TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-purple-600"></i> 4 Standard Categories
+                            </button>
+                            <button type="button" id="categoryAddRowBtn" class="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-purple-200">
+                                <i class="fa-solid fa-plus text-xs"></i> Add Category
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Container for Score Categories -->
+                    <div id="category-rows-container" class="space-y-3 max-h-[38vh] overflow-y-auto pr-1">
+                        <!-- Populated dynamically with category rows -->
+                    </div>
+                </div>
+
+                <!-- Shared Description / Guidelines -->
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Description / Core Objective</label>
-                    <textarea id="rubric-modal-desc-input" rows="2" placeholder="Describe the evaluation guidelines and scope of this criterion..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-
-                <!-- Scoring Categories Builder Header -->
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                        <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-layer-group text-buksu-navy"></i> Customizable Scoring Categories
-                        </h4>
-                        <p class="text-[10px] text-slate-400">Judges input scores on each of these category cards. The total max points (<span id="rubric-max-points-badge" class="font-bold text-indigo-600">50 pts</span>) is divided among them.</p>
-                    </div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span id="rubric-categories-sum-indicator" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200"></span>
-                        <button type="button" id="rubricAutoDistributeBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Divide max score evenly across current categories">
-                            <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i> Auto-Divide by Max Score
-                        </button>
-                        <button type="button" id="rubricAddCategoryBtn" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
-                            <i class="fa-solid fa-plus text-xs"></i> Add Score Category
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Dynamic Container for Scoring Categories -->
-                <div id="rubric-categories-container" class="space-y-3 max-h-[44vh] overflow-y-auto pr-1">
-                    <!-- Populated dynamically -->
+                    <label class="block font-semibold text-slate-700 mb-1">Description / Core Objective &amp; Judging Guidelines</label>
+                    <textarea id="rubric-modal-desc-input" rows="2" placeholder="Describe the evaluation guidelines and instructions for judges..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 </div>
 
                 <!-- Modal Actions -->
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                     <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">Cancel</button>
                     <button type="submit" id="saveRubricCriterionBtn" class="px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
-                        <i class="fa-solid fa-check text-buksu-gold"></i> Save Criterion &amp; Rubric
+                        <i class="fa-solid fa-check text-buksu-gold"></i> Save Criterion &amp; Scoring Setup
                     </button>
                 </div>
             </form>

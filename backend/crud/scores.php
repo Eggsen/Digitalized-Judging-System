@@ -114,17 +114,69 @@ if ($method === "GET") {
                 ];
             }
 
+            $scoringType = trim($doc['scoring_type'] ?? '');
+            if ($scoringType !== 'manual' && $scoringType !== 'rubric' && $scoringType !== 'category') {
+                if (!empty($doc['rubric_ratings'])) {
+                    $scoringType = 'rubric';
+                } elseif (!empty($doc['scoring_categories'])) {
+                    $scoringType = 'category';
+                } else {
+                    $scoringType = 'manual';
+                }
+            }
+
+            if ($scoringType === 'category' && !empty($scoringCategories)) {
+                $catTotal = 0.0;
+                foreach ($scoringCategories as $sc) {
+                    $catTotal += (float)($sc['points'] ?? 0);
+                }
+                if ($catTotal > 0) {
+                    $maxPts = (int)round($catTotal);
+                }
+            }
+
+            $rubricRatings = [];
+            if (!empty($doc['rubric_ratings'])) {
+                foreach ($doc['rubric_ratings'] as $r) {
+                    $rubricRatings[] = [
+                        'id' => (string)($r['id'] ?? ('rating-' . bin2hex(random_bytes(2)))),
+                        'name' => (string)($r['name'] ?? ''),
+                        'score' => (float)($r['score'] ?? 0),
+                        'description' => (string)($r['description'] ?? '')
+                    ];
+                }
+            } else if ($scoringType === 'rubric') {
+                $rubricRatings = [
+                    ['id' => 'rating-1', 'name' => 'Excellent / Outstanding', 'score' => (float)$maxPts, 'description' => 'Exemplary performance, flawless execution.'],
+                    ['id' => 'rating-2', 'name' => 'Very Good / Proficient', 'score' => round($maxPts * 0.75, 2), 'description' => 'Strong performance with minimal errors.'],
+                    ['id' => 'rating-3', 'name' => 'Good / Competent', 'score' => round($maxPts * 0.50, 2), 'description' => 'Satisfactory performance; noticeable areas to improve.'],
+                    ['id' => 'rating-4', 'name' => 'Fair / Needs Improvement', 'score' => round($maxPts * 0.25, 2), 'description' => 'Below standard; technical lapses.']
+                ];
+            }
+
+            $minPts = (float)($doc['min_points'] ?? 0.0);
+            $scoreStep = (float)($doc['score_step'] ?? 0.5);
+            $instructions = (string)($doc['instructions'] ?? '');
+
             $critData = [
                 'id' => $idStr,
                 'title' => $doc['title'] ?? '',
                 'description' => $doc['description'] ?? '',
+                'scoring_type' => $scoringType,
+                'min_points' => $minPts,
                 'max_points' => $maxPts,
+                'score_step' => $scoreStep,
+                'instructions' => $instructions,
                 'percentage' => (int)($doc['percentage'] ?? 0),
+                'rubric_ratings' => $rubricRatings,
                 'scoring_categories' => $scoringCategories,
                 'sub_criteria' => []
             ];
             $criteria[] = $critData;
             $criteriaMap[$idStr] = $critData;
+            if (!empty($doc['id'])) {
+                $criteriaMap[(string)$doc['id']] = $critData;
+            }
         }
 
         // Fetch contestants for this event
@@ -606,12 +658,16 @@ if ($method === "POST") {
         $criteriaCursor = $criteriaCollection->find(['event_id' => $eventId]);
         $criteriaMap = [];
         foreach ($criteriaCursor as $doc) {
-            $criteriaMap[(string)$doc['_id']] = [
+            $critItem = [
                 'title' => $doc['title'] ?? '',
                 'max_points' => (int)($doc['max_points'] ?? 100),
                 'percentage' => (int)($doc['percentage'] ?? 0),
                 'sub_criteria' => (array)($doc['sub_criteria'] ?? [])
             ];
+            $criteriaMap[(string)$doc['_id']] = $critItem;
+            if (!empty($doc['id'])) {
+                $criteriaMap[(string)$doc['id']] = $critItem;
+            }
         }
 
         // Sanitize criteria scores
@@ -644,6 +700,12 @@ if ($method === "POST") {
                 'max' => (int)$maxPts,
                 'score' => round($scorePts, 2)
             ];
+            if (!empty($cs['rating_id'])) {
+                $scoreEntry['rating_id'] = (string)$cs['rating_id'];
+            }
+            if (!empty($cs['rating_name'])) {
+                $scoreEntry['rating_name'] = (string)$cs['rating_name'];
+            }
             if (!empty($cs['category_id'])) {
                 $scoreEntry['category_id'] = (string)$cs['category_id'];
             }

@@ -115,9 +115,15 @@ async function loadJudgeEventData() {
                 matchedCriteriaScore = existingScore.criteria_scores.find(cs => String(cs.criteria_id) === String(cr.id));
             }
 
+            const rawScore = matchedCriteriaScore ? parseFloat(matchedCriteriaScore.score) : 0;
+            const hasScore = matchedCriteriaScore && (matchedCriteriaScore.score !== undefined && matchedCriteriaScore.score !== null && matchedCriteriaScore.score !== '');
+
             contestantScoresState[c.id][cr.id] = {
-                score: matchedCriteriaScore ? (parseFloat(matchedCriteriaScore.score) || 0) : 0,
+                score: !isNaN(rawScore) ? rawScore : 0,
+                rating_id: matchedCriteriaScore?.rating_id || '',
+                rating_name: matchedCriteriaScore?.rating_name || '',
                 category_id: matchedCriteriaScore?.category_id || '',
+                is_scored: Boolean(hasScore && (rawScore > 0 || matchedCriteriaScore?.rating_id)),
                 sub_scores: matchedCriteriaScore?.sub_scores ? { ...matchedCriteriaScore.sub_scores } : {}
             };
         });
@@ -259,7 +265,7 @@ function renderScoringSheet() {
 
     criteriaList.forEach(cr => {
         const critState = contestantScores[cr.id];
-        if (critState && critState.score > 0) {
+        if (critState && (critState.score > 0 || critState.rating_id || critState.is_scored)) {
             completedCriteriaCount++;
         }
     });
@@ -275,7 +281,7 @@ function renderScoringSheet() {
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-[10px] uppercase font-bold tracking-wider text-buksu-gold">Evaluating Contestant</span>
                         ${contestant.entry_type === 'team' ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30"><i class="fa-solid fa-users-line me-1"></i> Team-Based</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-white/10 text-slate-300 border border-white/20"><i class="fa-solid fa-user me-1"></i> Individual</span>`}
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${completedCriteriaCount === criteriaList.length ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                        <span id="judge-header-criteria-count" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${completedCriteriaCount === criteriaList.length ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
                             ${completedCriteriaCount} / ${criteriaList.length} Criteria Scored
                         </span>
                     </div>
@@ -384,8 +390,15 @@ function renderScoringSheet() {
                 ${criteriaList.map((cr) => {
                     const isActive = String(cr.id) === String(activeCriterionId);
                     const critState = contestantScores[cr.id] || { score: 0, category_id: '' };
-                    const isComplete = (critState.score > 0);
+                    const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
                     const weightedScore = (critState.score / cr.max_points) * cr.percentage;
+                    const isCategory = (cr.scoring_type === 'category');
+                    const isRubric = (cr.scoring_type === 'rubric') || (!isCategory && Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0 && cr.scoring_type !== 'manual');
+
+                    const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
+                        ? cr.scoring_categories
+                        : (isCategory ? getDefaultScoringCategories(cr.max_points) : []);
+                    const scoredCatsCount = isCategory ? Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length : 0;
 
                     return `
                         <div class="criterion-deck-card p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between h-full ${
@@ -393,37 +406,59 @@ function renderScoringSheet() {
                                 ? 'bg-white dark:bg-amber-950/30 border-2 border-buksu-gold shadow-md ring-2 ring-buksu-gold/30 text-slate-800 dark:text-slate-100' 
                                 : 'bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs hover:border-slate-300 dark:hover:border-slate-600'
                         }" data-crit-id="${cr.id}">
-                            <div class="space-y-1">
-                                <div class="flex items-center justify-between gap-1.5 mb-1">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black ${
-                                        isActive 
-                                            ? 'bg-buksu-navy text-buksu-gold font-black shadow-2xs' 
-                                            : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between gap-1.5 mb-1 flex-wrap">
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black ${
+                                            isActive 
+                                                ? 'bg-buksu-navy text-buksu-gold font-black shadow-2xs' 
+                                                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                                        }">
+                                            ${cr.percentage}% Weight
+                                        </span>
+                                        ${isCategory ? `
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-0.5">
+                                                <i class="fa-solid fa-layer-group text-[8px]"></i> Category
+                                            </span>
+                                        ` : isRubric ? `
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-0.5">
+                                                <i class="fa-solid fa-table-list text-[8px]"></i> Rubric
+                                            </span>
+                                        ` : `
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-0.5">
+                                                <i class="fa-solid fa-calculator text-[8px]"></i> Manual
+                                            </span>
+                                        `}
+                                    </div>
+                                    <span class="deck-crit-status-badge px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 shrink-0 ${
+                                        isComplete 
+                                            ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                                     }">
-                                        ${cr.percentage}% Weight
+                                        ${isComplete ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed' : '<i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> Pending Score'}
                                     </span>
-                                    ${isComplete ? `
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 shrink-0">
-                                            <i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed
-                                        </span>
-                                    ` : `
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shrink-0">
-                                            <i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> Pending Score
-                                        </span>
-                                    `}
                                 </div>
                                 <h4 class="font-extrabold text-sm truncate ${isActive ? 'text-buksu-navy dark:text-buksu-gold' : 'text-slate-800 dark:text-slate-100'}">
                                     ${escapeHtml(cr.title)}
                                 </h4>
+                                ${isCategory ? `
+                                    <div class="deck-crit-category-pill ${scoredCatsCount > 0 ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[10px] font-bold">
+                                        <i class="fa-solid fa-layer-group text-purple-600"></i> <span class="deck-category-count-text">${scoredCatsCount}/${categories.length} Categories Scored</span>
+                                    </div>
+                                ` : `
+                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[10px] font-bold">
+                                        <i class="fa-solid fa-award text-purple-600"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
+                                    </div>
+                                `}
                                 <p class="text-[11px] truncate ${isActive ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-400'}">
-                                    ${escapeHtml(cr.description || 'Evaluation rubrics')}
+                                    ${escapeHtml(cr.description || (isCategory ? `${categories.length} Categories (${scoredCatsCount}/${categories.length} scored)` : isRubric ? 'Predefined rubric rating' : `Range: ${cr.min_points || 0} - ${cr.max_points} pts`))}
                                 </p>
                             </div>
 
                             <div class="mt-3 pt-2.5 border-t ${isActive ? 'border-amber-200/80 dark:border-amber-800/60' : 'border-slate-100 dark:border-slate-700'} flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-1.5 min-w-0">
                                     <span class="deck-crit-score text-sm font-black text-buksu-navy dark:text-buksu-gold leading-none">
-                                        ${critState.score > 0 ? critState.score.toFixed(1) : '0.0'}
+                                        ${critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0')}
                                     </span>
                                     <span class="text-[11px] font-bold text-slate-400 leading-none">/ ${cr.max_points} pts</span>
                                     <span class="deck-weighted-pill text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800/60 leading-none">
@@ -431,7 +466,7 @@ function renderScoringSheet() {
                                     </span>
                                 </div>
                                 <span class="text-[10px] font-bold flex items-center gap-1 shrink-0 ${isActive ? 'text-amber-800 dark:text-amber-400 font-extrabold' : 'text-slate-400'}">
-                                    ${isActive ? '<i class="fa-solid fa-eye text-amber-600 dark:text-amber-400"></i> Active Rubric' : 'Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>'}
+                                    ${isActive ? `<i class="fa-solid fa-eye text-amber-600 dark:text-amber-400"></i> ${isCategory ? 'Active Category' : isRubric ? 'Active Rubric' : 'Active Console'}` : 'Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>'}
                                 </span>
                             </div>
                         </div>
@@ -528,16 +563,199 @@ function renderActiveRubricSection() {
     });
 }
 
+function getDefaultRubricRatingsList(maxPoints = 40) {
+    const max = parseFloat(maxPoints) || 40;
+    return [
+        { id: 'rate-5', name: 'Outstanding', score: max, description: 'Exemplary performance exceeding all standards with exceptional mastery and creativity.' },
+        { id: 'rate-4', name: 'Very Good', score: Math.round(max * 0.8 * 10) / 10, description: 'Strong and consistent execution meeting standards with commendable precision.' },
+        { id: 'rate-3', name: 'Good', score: Math.round(max * 0.6 * 10) / 10, description: 'Competent and adequate performance meeting core criteria with minor inconsistencies.' },
+        { id: 'rate-2', name: 'Fair', score: Math.round(max * 0.4 * 10) / 10, description: 'Incomplete or inconsistent execution requiring noticeable improvement.' },
+        { id: 'rate-1', name: 'Poor', score: Math.round(max * 0.2 * 10) / 10, description: 'Lacks fundamental execution, coherence, or technique.' }
+    ];
+}
+
 function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
     if (isInputsDisabled) return;
 
     const critId = activeCriterion.id;
-    const maxPts = activeCriterion.max_points;
-    const categories = (Array.isArray(activeCriterion.scoring_categories) && activeCriterion.scoring_categories.length > 0)
-        ? activeCriterion.scoring_categories
-        : getDefaultScoringCategories(maxPts);
+    const maxPts = parseFloat(activeCriterion.max_points) || 100;
+    const minPts = parseFloat(activeCriterion.min_points) || 0;
+    const isCategory = (activeCriterion.scoring_type === 'category');
+    const isRubric = (activeCriterion.scoring_type === 'rubric') || (!isCategory && Array.isArray(activeCriterion.rubric_ratings) && activeCriterion.rubric_ratings.length > 0 && activeCriterion.scoring_type !== 'manual');
 
-    const updateFromCardInput = (catId, rawVal) => {
+    if (isCategory) {
+        // CHOICE 3: Category-Based Scoring — Bind Sub-Category Inputs & Steppers
+        const categories = (Array.isArray(activeCriterion.scoring_categories) && activeCriterion.scoring_categories.length > 0)
+            ? activeCriterion.scoring_categories
+            : getDefaultScoringCategories(maxPts);
+
+        const updateCategorySubScore = (catId, rawVal) => {
+            if (!selectedContestantId) return;
+            if (!contestantScoresState[selectedContestantId]) {
+                contestantScoresState[selectedContestantId] = {};
+            }
+            if (!contestantScoresState[selectedContestantId][critId]) {
+                contestantScoresState[selectedContestantId][critId] = { score: 0, sub_scores: {} };
+            }
+
+            const critState = contestantScoresState[selectedContestantId][critId];
+            if (!critState.sub_scores) critState.sub_scores = {};
+
+            const cat = categories.find(c => String(c.id) === String(catId));
+            const catMax = cat ? (parseFloat(cat.points ?? cat.max_score) || 10) : 10;
+
+            let val = parseFloat(rawVal);
+            if (isNaN(val)) val = 0;
+            if (val < 0) val = 0;
+            if (val > catMax) val = catMax;
+            val = Math.round(val * 10) / 10;
+
+            critState.sub_scores[catId] = val;
+
+            // Recalculate total score as sum of sub_scores
+            let sum = 0;
+            categories.forEach(c => {
+                const cVal = parseFloat(critState.sub_scores[c.id]);
+                if (!isNaN(cVal)) sum += cVal;
+            });
+            sum = Math.min(maxPts, Math.round(sum * 10) / 10);
+            critState.score = sum;
+            critState.rating_id = '';
+            critState.rating_name = '';
+            critState.is_scored = true;
+
+            // Update DOM element for this category card
+            const catCard = container.querySelector(`.category-scoring-card[data-cat-id="${catId}"]`);
+            if (catCard) {
+                const input = catCard.querySelector('.category-score-input');
+                if (input && document.activeElement !== input) {
+                    input.value = val;
+                }
+                const statusBadge = catCard.querySelector('.cat-card-status');
+                if (statusBadge) {
+                    statusBadge.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #9333ea; margin-right: 3px;"></i> ${val.toFixed(1)} pts`;
+                    statusBadge.style.color = '#7e22ce';
+                }
+            }
+
+            // Update live category sum header in active card
+            const liveSumDisplay = container.querySelector('#gc-category-live-sum');
+            if (liveSumDisplay) {
+                liveSumDisplay.textContent = sum.toFixed(1);
+            }
+
+            // Update footer text
+            const footerScoreText = document.getElementById('gc-footer-score-text');
+            if (footerScoreText) {
+                footerScoreText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 me-1"></i> Sub-scores total: <strong>${sum.toFixed(1)}</strong> / ${maxPts} pts`;
+            }
+
+            updateLiveDisplays();
+        };
+
+        container.querySelectorAll('.category-score-input').forEach(input => {
+            input.addEventListener('input', () => updateCategorySubScore(input.dataset.catId, input.value));
+            input.addEventListener('change', () => {
+                updateCategorySubScore(input.dataset.catId, input.value);
+                const critState = contestantScoresState[selectedContestantId]?.[critId];
+                if (critState?.sub_scores?.[input.dataset.catId] !== undefined) {
+                    input.value = critState.sub_scores[input.dataset.catId];
+                }
+            });
+            input.addEventListener('blur', () => {
+                const critState = contestantScoresState[selectedContestantId]?.[critId];
+                if (critState?.sub_scores?.[input.dataset.catId] !== undefined) {
+                    input.value = critState.sub_scores[input.dataset.catId];
+                }
+            });
+        });
+
+        container.querySelectorAll('.cat-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const catId = btn.dataset.catId;
+                const targetVal = parseFloat(btn.dataset.val) || 0;
+                updateCategorySubScore(catId, targetVal);
+            });
+        });
+
+        return;
+    }
+
+    if (isRubric) {
+        // CHOICE 2: Rubric-Based Scoring — Bind Rating Cards
+        container.querySelectorAll('.rubric-rating-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const ratingId = card.dataset.ratingId;
+                const ratingScore = parseFloat(card.dataset.ratingScore) || 0;
+                const ratingName = card.dataset.ratingName || '';
+
+                if (!selectedContestantId) return;
+                if (!contestantScoresState[selectedContestantId]) {
+                    contestantScoresState[selectedContestantId] = {};
+                }
+                if (!contestantScoresState[selectedContestantId][critId]) {
+                    contestantScoresState[selectedContestantId][critId] = { score: 0, sub_scores: {} };
+                }
+
+                const critState = contestantScoresState[selectedContestantId][critId];
+                critState.score = ratingScore;
+                critState.rating_id = ratingId;
+                critState.rating_name = ratingName;
+                critState.is_scored = true;
+
+                // Visual update on all rating cards
+                container.querySelectorAll('.rubric-rating-card').forEach(c => {
+                    const isSelected = String(c.dataset.ratingId) === String(ratingId);
+                    if (isSelected) {
+                        c.classList.add('border-purple-600', 'bg-purple-50/90', 'dark:bg-purple-950/50', 'ring-4', 'ring-purple-500/20', 'shadow-md', '-translate-y-0.5');
+                        c.classList.remove('border-slate-200/90', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800/90', 'shadow-2xs');
+                        const icon = c.querySelector('.rubric-radio-icon');
+                        if (icon) icon.className = 'rubric-radio-icon fa-solid fa-circle-check text-purple-600 text-base';
+                        const badge = c.querySelector('.rubric-score-badge');
+                        if (badge) badge.className = 'rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 bg-purple-600 text-white shadow-xs';
+                        const status = c.querySelector('.rubric-card-status');
+                        if (status) {
+                            status.innerHTML = '<i class="fa-solid fa-check-double text-purple-600 me-1"></i> Selected Rating';
+                            status.className = 'rubric-card-status text-[11px] font-bold text-purple-700 dark:text-purple-300';
+                        }
+                    } else {
+                        c.classList.remove('border-purple-600', 'bg-purple-50/90', 'dark:bg-purple-950/50', 'ring-4', 'ring-purple-500/20', 'shadow-md', '-translate-y-0.5');
+                        c.classList.add('border-slate-200/90', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800/90', 'shadow-2xs');
+                        const icon = c.querySelector('.rubric-radio-icon');
+                        if (icon) icon.className = 'rubric-radio-icon fa-regular fa-circle text-slate-300 text-base';
+                        const badge = c.querySelector('.rubric-score-badge');
+                        if (badge) badge.className = 'rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300';
+                        const status = c.querySelector('.rubric-card-status');
+                        if (status) {
+                            status.innerHTML = '<i class="fa-regular fa-hand-pointer text-slate-400 me-1"></i> Tap to select';
+                            status.className = 'rubric-card-status text-[11px] font-bold text-slate-400';
+                        }
+                    }
+                });
+
+                const awardedBadge = container.querySelector('#gc-rubric-awarded-badge');
+                if (awardedBadge) {
+                    awardedBadge.textContent = ratingName;
+                    awardedBadge.className = 'px-2.5 py-0.5 rounded-md text-xs font-black bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300';
+                }
+
+                const footerScoreText = document.getElementById('gc-footer-score-text');
+                if (footerScoreText) {
+                    footerScoreText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 me-1"></i> Selected rating: <strong>${escapeHtml(ratingName)}</strong> (${ratingScore.toFixed(1)} / ${maxPts} pts)`;
+                }
+
+                updateLiveDisplays();
+            });
+        });
+        return;
+    }
+
+    // CHOICE 1: Manual Scoring — Bind Input, Slider, Step & Preset Buttons
+    const manualInput = container.querySelector('#manual-score-input');
+    const manualSlider = container.querySelector('#manual-score-slider');
+
+    const updateFromManualInput = (rawVal) => {
         if (!selectedContestantId) return;
         if (!contestantScoresState[selectedContestantId]) {
             contestantScoresState[selectedContestantId] = {};
@@ -545,145 +763,92 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
         if (!contestantScoresState[selectedContestantId][critId]) {
             contestantScoresState[selectedContestantId][critId] = { score: 0, sub_scores: {} };
         }
-        if (!contestantScoresState[selectedContestantId][critId].sub_scores) {
-            contestantScoresState[selectedContestantId][critId].sub_scores = {};
-        }
 
         const critState = contestantScoresState[selectedContestantId][critId];
-        const catObj = categories.find(c => String(c.id) === String(catId));
-        const catMax = catObj ? (parseFloat(catObj.points) || (maxPts / categories.length)) : maxPts;
-
         let val = parseFloat(rawVal);
-        if (isNaN(val)) val = 0;
-        if (val < 0) val = 0;
-        if (val > catMax) val = catMax;
+        if (isNaN(val)) val = minPts;
+        if (val < minPts) val = minPts;
+        if (val > maxPts) val = maxPts;
+        val = Math.round(val * 100) / 100;
 
-        critState.sub_scores[catId] = val;
+        critState.score = val;
+        critState.rating_id = '';
+        critState.rating_name = '';
+        critState.is_scored = true;
 
-        // Calculate criterion score as sum of category scores
-        let totalSum = 0;
-        categories.forEach(c => {
-            const sc = parseFloat(critState.sub_scores[c.id]) || 0;
-            totalSum += sc;
-        });
-        critState.score = Math.min(maxPts, Math.round(totalSum * 100) / 100);
-
-        // Update card visual
-        const card = container.querySelector(`.gc-category-card[data-cat-id="${catId}"]`);
-        if (card) {
-            const input = card.querySelector('.cat-score-input');
-            if (input && document.activeElement !== input) {
-                input.value = val;
-            }
-            const valDisplay = card.querySelector('.cat-score-val');
-            if (valDisplay) valDisplay.textContent = val;
-
-            const isScored = val > 0;
-            const statusEl = card.querySelector('.cat-score-status');
-            const fractionEl = card.querySelector('.cat-score-fraction');
-            if (statusEl) {
-                statusEl.innerHTML = isScored 
-                    ? '<i class="fa-solid fa-circle-check text-xs me-1"></i> Recorded' 
-                    : '<i class="fa-regular fa-circle text-xs me-1"></i> Not Scored';
-                statusEl.className = `cat-score-status text-[11px] font-semibold ${isScored ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`;
-            }
-            if (fractionEl) {
-                fractionEl.className = `cat-score-fraction font-black text-xs ${isScored ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-400'}`;
-            }
-            if (isScored) {
-                card.classList.add('border-indigo-400', 'dark:border-indigo-500', 'ring-2', 'ring-indigo-500/20');
-                card.classList.remove('border-slate-200/90', 'dark:border-slate-700');
-            } else {
-                card.classList.remove('border-indigo-400', 'dark:border-indigo-500', 'ring-2', 'ring-indigo-500/20');
-                card.classList.add('border-slate-200/90', 'dark:border-slate-700');
-            }
+        if (manualInput && document.activeElement !== manualInput) {
+            manualInput.value = val;
+        }
+        if (manualSlider && document.activeElement !== manualSlider) {
+            manualSlider.value = val;
         }
 
-        // Update categories scored count badge
-        let scoredCount = 0;
-        categories.forEach(c => {
-            if (parseFloat(critState.sub_scores[c.id]) > 0) scoredCount++;
-        });
-        const scoredCountBadge = document.getElementById('gc-categories-scored-count');
-        if (scoredCountBadge) scoredCountBadge.textContent = `${scoredCount} / ${categories.length}`;
+        const sliderHint = container.querySelector('#manual-slider-val-hint');
+        if (sliderHint) sliderHint.textContent = `${val.toFixed(1)} pts`;
 
-        // Update footer current score text
+        const statusEl = container.querySelector('#manual-score-status');
+        if (statusEl) {
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 me-1"></i> Numerical score recorded: <strong>${val.toFixed(1)}</strong> / ${maxPts} pts`;
+            statusEl.className = 'text-xs font-black text-emerald-600 dark:text-emerald-400';
+        }
+
         const footerScoreText = document.getElementById('gc-footer-score-text');
         if (footerScoreText) {
-            footerScoreText.innerHTML = critState.score > 0 
-                ? `<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400 me-1"></i> Current score: ${critState.score.toFixed(1)} / ${maxPts} pts` 
-                : 'No score entered for this criterion';
+            footerScoreText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 me-1"></i> Score entered: <strong>${val.toFixed(1)}</strong> / ${maxPts} pts`;
         }
 
-        // Update overall live displays
         updateLiveDisplays();
     };
 
-    // 1. Text input change / typing
-    container.querySelectorAll('.cat-score-input').forEach(input => {
-        input.addEventListener('input', () => {
-            updateFromCardInput(input.dataset.catId, input.value);
-        });
-    });
-
-    // 2. Stepper buttons (+1 / -1)
-    container.querySelectorAll('.cat-step-btn').forEach(btn => {
+    if (manualInput) {
+        manualInput.addEventListener('input', () => updateFromManualInput(manualInput.value));
+        manualInput.addEventListener('change', () => updateFromManualInput(manualInput.value));
+    }
+    if (manualSlider) {
+        manualSlider.addEventListener('input', () => updateFromManualInput(manualSlider.value));
+    }
+    container.querySelectorAll('.manual-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const catId = btn.dataset.catId;
-            const input = container.querySelector(`.cat-score-input[data-cat-id="${catId}"]`);
-            if (!input) return;
-            const currentVal = parseFloat(input.value) || 0;
             const step = parseFloat(btn.dataset.step) || 0;
-            const newVal = currentVal + step;
-            input.value = newVal;
-            updateFromCardInput(catId, newVal);
+            const currentVal = parseFloat(manualInput?.value) || minPts;
+            updateFromManualInput(currentVal + step);
         });
     });
-
-    // 3. Preset buttons (0, Half, Max)
-    container.querySelectorAll('.cat-preset-btn').forEach(btn => {
+    container.querySelectorAll('.manual-preset-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const catId = btn.dataset.catId;
-            const input = container.querySelector(`.cat-score-input[data-cat-id="${catId}"]`);
-            if (!input) return;
-            const targetVal = parseFloat(btn.dataset.val) || 0;
-            input.value = targetVal;
-            updateFromCardInput(catId, targetVal);
+            const targetVal = parseFloat(btn.dataset.val) || minPts;
+            updateFromManualInput(targetVal);
         });
     });
 }
 
-function getDefaultScoringCategories(maxPoints = 40) {
-    const max = parseFloat(maxPoints) || 40;
-    const count = 4;
-    const perCat = Math.round((max / count) * 10) / 10;
+function getDefaultScoringCategories(totalMax = 30) {
+    const max = parseFloat(totalMax) || 30;
+    const perCat = Math.round((max / 3) * 10) / 10;
+    const remainder = Math.round((max - (perCat * 2)) * 10) / 10;
     return [
-        { id: 'cat-1', name: 'Difficulty & Variety', points: perCat, description: 'Complexity, variety of movements, and creative staging variations.' },
-        { id: 'cat-2', name: 'Synchronization & Timing', points: perCat, description: 'Precision, unison among dancers, and micro-timing accuracy.' },
-        { id: 'cat-3', name: 'Technique & Form', points: perCat, description: 'Body control, posture, execution lines, and cleanliness.' },
-        { id: 'cat-4', name: 'Transitions & Staging', points: perCat, description: 'Fluidity between routine sections, formations, and spatial coverage.' }
+        { id: 'cat-1', name: 'Stance uniqueness', points: perCat, max_score: perCat, description: 'Beautiful stance and unique positioning' },
+        { id: 'cat-2', name: 'Pose preference', points: perCat, max_score: perCat, description: 'Wonderful preference, alignment, and visual poise' },
+        { id: 'cat-3', name: 'Crowd impact', points: remainder, max_score: remainder, description: 'Crowds shout continuously, powerful audience connection' }
     ];
 }
 
 function renderActiveRubricCard(cr, isInputsDisabled) {
     const contestantScores = contestantScoresState[selectedContestantId] || {};
-    const critState = contestantScores[cr.id] || { score: 0, sub_scores: {} };
+    const critState = contestantScores[cr.id] || { score: 0, rating_id: '', rating_name: '', sub_scores: {} };
     if (!critState.sub_scores) critState.sub_scores = {};
 
     const critIndex = criteriaList.findIndex(c => String(c.id) === String(cr.id));
-    const weightedScore = (critState.score / cr.max_points) * cr.percentage;
-    const isComplete = critState.score > 0;
+    const maxPts = parseFloat(cr.max_points) || 100;
+    const minPts = parseFloat(cr.min_points) || 0;
+    const scoreStep = parseFloat(cr.score_step) || 0.5;
+    const weightedScore = (critState.score / maxPts) * cr.percentage;
+    const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
 
-    const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
-        ? cr.scoring_categories
-        : getDefaultScoringCategories(cr.max_points);
-
-    let scoredCategoriesCount = 0;
-    categories.forEach(c => {
-        if (parseFloat(critState.sub_scores[c.id]) > 0) scoredCategoriesCount++;
-    });
+    const isCategory = (cr.scoring_type === 'category');
+    const isRubric = (cr.scoring_type === 'rubric') || (!isCategory && Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0 && cr.scoring_type !== 'manual');
 
     let cardHtml = `
         <div id="gc-active-rubric-card" class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 shadow-md space-y-6 animate-fade-in relative">
@@ -697,9 +862,19 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                         <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                             ${cr.percentage}% Weight
                         </span>
-                        <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                            Max ${cr.max_points} pts
-                        </span>
+                        ${isCategory ? `
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+                                <i class="fa-solid fa-layer-group"></i> Category-Based Scoring (${maxPts} pts total)
+                            </span>
+                        ` : isRubric ? `
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                <i class="fa-solid fa-table-list"></i> Rubric-Based Scoring
+                            </span>
+                        ` : `
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
+                                <i class="fa-solid fa-calculator"></i> Manual Scoring (${minPts} - ${maxPts} pts)
+                            </span>
+                        `}
                         <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
                             ${isComplete ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Evaluated' : 'Pending Evaluation'}
                         </span>
@@ -708,113 +883,128 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                         ${escapeHtml(cr.title)}
                     </h3>
                     ${cr.description ? `<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">${escapeHtml(cr.description)}</p>` : ''}
+                    ${cr.instructions ? `
+                        <div class="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2 mt-2">
+                            <i class="fa-solid fa-lightbulb text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+                            <div>
+                                <span class="font-bold">Guidelines for Judges:</span> ${escapeHtml(cr.instructions)}
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="text-right shrink-0 bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs">
                     <span class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Criterion Total</span>
                     <div class="inline-flex items-baseline gap-1 mt-0.5">
-                        <span id="gc-crit-pts-display" class="text-2xl font-black text-buksu-navy dark:text-buksu-gold">${critState.score > 0 ? critState.score.toFixed(1) : '0.0'}</span>
-                        <span class="text-xs font-bold text-slate-400">/ ${cr.max_points} pts</span>
+                        <span id="gc-crit-pts-display" class="text-2xl font-black text-buksu-navy dark:text-buksu-gold">${critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0')}</span>
+                        <span class="text-xs font-bold text-slate-400">/ ${maxPts} pts</span>
                     </div>
                     <span class="block text-[11px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5">
                         <span id="gc-crit-weighted-display">${formatScore(weightedScore)}</span>% toward final
                     </span>
                 </div>
             </div>
+    `;
 
-            <!-- Scoring Categories Section -->
+    if (isCategory) {
+        // CHOICE 3: CATEGORY-BASED SCORING — Score each sub-category
+        const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
+            ? cr.scoring_categories
+            : getDefaultScoringCategories(maxPts);
+
+        cardHtml += `
             <div class="space-y-4">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h5 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> Scoring Categories (${categories.length} Categories)
+                            <i class="fa-solid fa-layer-group text-purple-600"></i> Score Categories (${categories.length} Categories &bull; Total ${maxPts} pts)
                         </h5>
-                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Input scores directly on each category card below. The criterion total will be automatically calculated.</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Score each individual category up to its configured max score. Sub-scores dynamically sum to form this criterion's score.</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">Categories Scored:</span>
-                        <span id="gc-categories-scored-count" class="px-2.5 py-0.5 rounded-md text-xs font-black bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-300">
-                            ${scoredCategoriesCount} / ${categories.length}
+                        <span style="display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 800; background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe;">
+                            Category Total:&nbsp;<span id="gc-category-live-sum" style="font-weight: 900;">${critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0')}</span>&nbsp;/ ${maxPts} pts
                         </span>
                     </div>
                 </div>
 
-                <!-- Category Cards Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-${Math.min(categories.length, 3)} lg:grid-cols-${Math.min(categories.length, 4)} gap-3.5">
+                <div class="grid grid-cols-1 md:grid-cols-${Math.min(categories.length, 3)} gap-4">
                     ${categories.map((cat, idx) => {
-                        const catMax = parseFloat(cat.points) || (Math.round((cr.max_points / categories.length) * 10) / 10);
-                        const rawCatScore = critState.sub_scores[cat.id];
-                        const catScore = (typeof rawCatScore !== 'undefined' && rawCatScore !== null && rawCatScore !== '') ? parseFloat(rawCatScore) : null;
-                        const isScored = catScore !== null && !isNaN(catScore) && catScore > 0;
+                        const catId = cat.id || ('cat-' + (idx + 1));
+                        const catMax = parseFloat(cat.points ?? cat.max_score) || 10;
+                        const subScore = critState.sub_scores?.[catId] !== undefined ? parseFloat(critState.sub_scores[catId]) : null;
+                        const hasSubScore = (subScore !== null && !isNaN(subScore));
+                        const currentVal = hasSubScore ? subScore : '';
+                        const halfVal = Math.round((catMax / 2) * 10) / 10;
 
                         return `
-                            <div class="gc-category-card p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 bg-white dark:bg-slate-800/90 shadow-2xs ${
-                                isScored 
-                                    ? 'border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-500/20' 
-                                    : 'border-slate-200/90 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                            }" data-cat-id="${cat.id}" data-max="${catMax}">
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-700">
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                                            Category ${idx + 1}
-                                        </span>
-                                        <span class="px-2.5 py-1 rounded-lg text-xs font-black tracking-tight bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            <div class="category-scoring-card p-4 sm:p-5 rounded-2xl border-2 border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800/90 hover:border-purple-300 transition-all flex flex-col justify-between space-y-3.5 shadow-2xs ${
+                                isInputsDisabled ? 'opacity-60 pointer-events-none' : ''
+                            }" data-cat-id="${catId}">
+                                <div class="space-y-2">
+                                    <div class="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-700/80">
+                                        <div class="space-y-0.5 flex-1">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="w-5 h-5 rounded-md bg-purple-600 text-white flex items-center justify-center font-black text-[10px] shrink-0">
+                                                    #${idx + 1}
+                                                </span>
+                                                <h6 class="font-black text-sm text-slate-800 dark:text-slate-100 leading-tight">
+                                                    ${escapeHtml(cat.name)}
+                                                </h6>
+                                            </div>
+                                        </div>
+                                        <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: 800; background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe;">
                                             Max ${catMax} pts
                                         </span>
                                     </div>
-                                    <h6 class="font-black text-sm text-slate-800 dark:text-slate-100 pt-1">
-                                        ${escapeHtml(cat.name)}
-                                    </h6>
                                     ${cat.description ? `
-                                        <p class="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed line-clamp-3">
+                                        <p class="text-xs text-slate-600 dark:text-slate-300 font-normal leading-relaxed">
                                             ${escapeHtml(cat.description)}
                                         </p>
                                     ` : ''}
                                 </div>
 
-                                <div class="pt-2 border-t border-slate-100 dark:border-slate-700 space-y-2">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <label class="text-[11px] font-extrabold text-slate-600 dark:text-slate-300">Score:</label>
-                                        <div class="flex items-center gap-1.5">
-                                            <button type="button" class="cat-step-btn px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="-1" data-cat-id="${cat.id}">
-                                                -1
+                                <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+                                    <!-- Direct Clean User Input for Category Score -->
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                            <span style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">
+                                                Enter Score
+                                            </span>
+                                            <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">
+                                                0 &ndash; ${catMax} pts
+                                            </span>
+                                        </div>
+                                        <input type="number" 
+                                            step="any" 
+                                            min="0" 
+                                            max="${catMax}" 
+                                            class="category-score-input"
+                                            style="display: block; width: 100%; height: 46px; padding: 0 16px; font-size: 18px; font-weight: 800; color: #0f172a; background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; outline: none; text-align: center; box-sizing: border-box; transition: all 0.2s ease;"
+                                            onfocus="this.style.borderColor='#9333ea'; this.style.boxShadow='0 0 0 3px rgba(147, 51, 234, 0.15)';"
+                                            onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';"
+                                            placeholder="0 - ${catMax}" 
+                                            value="${currentVal}" 
+                                            data-cat-id="${catId}"
+                                            ${isInputsDisabled ? 'disabled' : ''}>
+                                    </div>
+
+                                    <!-- Quick Presets & Status -->
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 2px;">
+                                        <div style="display: flex; align-items: center; gap: 6px;">
+                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="0" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer; transition: background 0.15s ease;" title="Score 0">
+                                                0
                                             </button>
-                                            <input type="number" 
-                                                class="cat-score-input w-20 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-center font-black text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                min="0"
-                                                max="${catMax}"
-                                                step="0.5"
-                                                placeholder="0 - ${catMax}"
-                                                data-crit-id="${cr.id}"
-                                                data-cat-id="${cat.id}"
-                                                data-max="${catMax}"
-                                                value="${catScore !== null ? catScore : ''}"
-                                                ${isInputsDisabled ? 'disabled' : ''}>
-                                            <button type="button" class="cat-step-btn px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-black cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="1" data-cat-id="${cat.id}">
-                                                +1
+                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="${halfVal}" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer; transition: background 0.15s ease;" title="Half score">
+                                                Half (${halfVal})
+                                            </button>
+                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="${catMax}" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; cursor: pointer; transition: background 0.15s ease;" title="Max score">
+                                                Max (${catMax})
                                             </button>
                                         </div>
-                                    </div>
-
-                                    <div class="flex items-center justify-between text-xs pt-1">
-                                        <span class="cat-score-status text-[11px] font-semibold ${isScored ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">
-                                            ${isScored ? '<i class="fa-solid fa-circle-check text-xs me-1"></i> Recorded' : '<i class="fa-regular fa-circle text-xs me-1"></i> Not Scored'}
+                                        <span class="cat-card-status" style="font-size: 11px; font-weight: 800; color: ${hasSubScore ? '#7e22ce' : '#94a3b8'};">
+                                            ${hasSubScore ? `<i class="fa-solid fa-circle-check" style="color: #9333ea; margin-right: 3px;"></i> ${subScore.toFixed(1)} pts` : '<i class="fa-regular fa-circle" style="color: #cbd5e1; margin-right: 3px;"></i> Pending'}
                                         </span>
-                                        <span class="cat-score-fraction font-black text-xs ${isScored ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-400'}">
-                                            <span class="cat-score-val">${catScore !== null ? catScore : 0}</span> / ${catMax} pts
-                                        </span>
-                                    </div>
-
-                                    <div class="flex items-center gap-1 pt-1 justify-end flex-wrap">
-                                        <button type="button" class="cat-preset-btn px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 dark:text-slate-300 cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-cat-id="${cat.id}" data-val="0">
-                                            0
-                                        </button>
-                                        <button type="button" class="cat-preset-btn px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 dark:text-slate-300 cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-cat-id="${cat.id}" data-val="${Math.round(catMax * 0.5 * 10) / 10}">
-                                            Half (${Math.round(catMax * 0.5 * 10) / 10})
-                                        </button>
-                                        <button type="button" class="cat-preset-btn px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 dark:text-slate-300 cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-cat-id="${cat.id}" data-val="${catMax}">
-                                            Max (${catMax})
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -822,7 +1012,194 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                     }).join('')}
                 </div>
             </div>
-    `;
+        `;
+    } else if (isRubric) {
+        // CHOICE 2: RUBRIC-BASED SCORING — Select predefined rating with fixed score and description
+        const ratings = (Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0)
+            ? cr.rubric_ratings
+            : getDefaultRubricRatingsList(maxPts);
+
+        cardHtml += `
+            <div class="space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                            <i class="fa-solid fa-table-list text-purple-600"></i> Predefined Ratings (${ratings.length} Rating Levels)
+                        </h5>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Select one predefined rating below. The fixed score is awarded automatically.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">Awarded Rating:</span>
+                        <span id="gc-rubric-awarded-badge" class="px-2.5 py-0.5 rounded-md text-xs font-black ${critState.rating_name ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}">
+                            ${escapeHtml(critState.rating_name || 'None Selected')}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(ratings.length, 4)} gap-3.5">
+                    ${ratings.map(r => {
+                        const rScore = parseFloat(r.score) || 0;
+                        const isSelected = String(critState.rating_id) === String(r.id) || (!critState.rating_id && critState.score === rScore && rScore > 0);
+
+                        return `
+                            <div class="rubric-rating-card p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                                isInputsDisabled ? 'opacity-60 pointer-events-none' : ''
+                            } ${
+                                isSelected 
+                                    ? 'border-purple-600 bg-purple-50/90 dark:bg-purple-950/50 ring-4 ring-purple-500/20 shadow-md transform -translate-y-0.5' 
+                                    : 'border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800/90 hover:border-purple-300 hover:bg-purple-50/30 shadow-2xs'
+                            }" data-rating-id="${r.id}" data-rating-score="${rScore}" data-rating-name="${escapeHtml(r.name)}">
+                                <div class="space-y-2">
+                                    <div class="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/80">
+                                        <div class="flex items-center gap-2">
+                                            <i class="rubric-radio-icon fa-${isSelected ? 'solid fa-circle-check text-purple-600' : 'regular fa-circle text-slate-300'} text-base"></i>
+                                            <h6 class="font-black text-sm text-slate-800 dark:text-slate-100 leading-tight">
+                                                ${escapeHtml(r.name)}
+                                            </h6>
+                                        </div>
+                                        <span class="rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 ${
+                                            isSelected ? 'bg-purple-600 text-white shadow-xs' : 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300'
+                                        }">
+                                            ${rScore.toFixed(1)} pts
+                                        </span>
+                                    </div>
+                                    ${r.description ? `
+                                        <p class="text-xs text-slate-600 dark:text-slate-300 font-normal leading-relaxed">
+                                            ${escapeHtml(r.description)}
+                                        </p>
+                                    ` : ''}
+                                </div>
+
+                                <div class="pt-2 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between text-xs">
+                                    <span class="rubric-card-status text-[11px] font-bold ${isSelected ? 'text-purple-700 dark:text-purple-300' : 'text-slate-400'}">
+                                        ${isSelected ? '<i class="fa-solid fa-check-double text-purple-600 me-1"></i> Selected Rating' : '<i class="fa-regular fa-hand-pointer text-slate-400 me-1"></i> Tap to select'}
+                                    </span>
+                                    <span class="text-[10px] font-extrabold text-slate-400">
+                                        Fixed: ${rScore} pts
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    } else {
+        // CHOICE 1: MANUAL SCORING — The judge enters a numerical score within an allowed range
+        const currentVal = critState.score !== undefined && critState.score !== null ? parseFloat(critState.score) : 0;
+        const midScore = Math.round(((minPts + maxPts) / 2) * 10) / 10;
+        const q1Score = Math.round((minPts + (maxPts - minPts) * 0.25) * 10) / 10;
+        const q3Score = Math.round((minPts + (maxPts - minPts) * 0.75) * 10) / 10;
+
+        cardHtml += `
+            <div class="space-y-5">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h5 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-blue-600"></i> Manual Score Console
+                        </h5>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                            Enter any numerical score between <strong>${minPts}</strong> and <strong>${maxPts}</strong> points.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-xl text-xs font-black bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            Allowed Range: ${minPts} &mdash; ${maxPts} pts (Step: ${scoreStep})
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Interactive Manual Scoring Console Box -->
+                <div class="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-700 space-y-5">
+                    <!-- Big Score Input and Adjustment Controls -->
+                    <div class="flex items-center justify-center flex-wrap gap-4 sm:gap-6">
+                        <!-- Decrement Step Buttons -->
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="-5">
+                                -5
+                            </button>
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="-1">
+                                -1
+                            </button>
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="-${scoreStep}">
+                                -${scoreStep}
+                            </button>
+                        </div>
+
+                        <!-- Numeric Score Input Field -->
+                        <div class="flex items-center gap-2">
+                            <input type="number" 
+                                id="manual-score-input"
+                                min="${minPts}"
+                                max="${maxPts}"
+                                step="${scoreStep}"
+                                value="${currentVal > 0 ? currentVal : ''}"
+                                placeholder="${minPts} - ${maxPts}"
+                                class="w-36 sm:w-44 px-4 py-3 bg-white dark:bg-slate-800 border-2 border-indigo-500 rounded-2xl text-center font-black text-2xl sm:text-3xl text-slate-800 dark:text-slate-100 shadow-inner focus:outline-none focus:ring-4 focus:ring-indigo-500/20"
+                                ${isInputsDisabled ? 'disabled' : ''}>
+                            <span class="text-sm font-bold text-slate-400">/ ${maxPts} pts</span>
+                        </div>
+
+                        <!-- Increment Step Buttons -->
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="${scoreStep}">
+                                +${scoreStep}
+                            </button>
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="1">
+                                +1
+                            </button>
+                            <button type="button" class="manual-step-btn px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-step="5">
+                                +5
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Range Slider -->
+                    <div class="max-w-xl mx-auto space-y-1.5">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
+                            <span>Min: ${minPts} pts</span>
+                            <span id="manual-slider-val-hint" class="text-indigo-600 dark:text-indigo-400 font-extrabold">${currentVal > 0 ? `${currentVal.toFixed(1)} pts` : 'Slide or type'}</span>
+                            <span>Max: ${maxPts} pts</span>
+                        </div>
+                        <input type="range" 
+                            id="manual-score-slider"
+                            min="${minPts}"
+                            max="${maxPts}"
+                            step="${scoreStep}"
+                            value="${currentVal || minPts}"
+                            class="w-full accent-buksu-navy dark:accent-buksu-gold cursor-pointer ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}">
+                    </div>
+
+                    <!-- Quick Preset Buttons -->
+                    <div class="flex items-center justify-center gap-2 flex-wrap pt-2 border-t border-slate-200/80 dark:border-slate-700">
+                        <span class="text-xs font-bold text-slate-400 mr-1">Quick Presets:</span>
+                        <button type="button" class="manual-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-val="${minPts}">
+                            Min (${minPts})
+                        </button>
+                        <button type="button" class="manual-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-val="${q1Score}">
+                            25% (${q1Score})
+                        </button>
+                        <button type="button" class="manual-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-val="${midScore}">
+                            Mid (${midScore})
+                        </button>
+                        <button type="button" class="manual-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-val="${q3Score}">
+                            75% (${q3Score})
+                        </button>
+                        <button type="button" class="manual-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs ${isInputsDisabled ? 'opacity-50 pointer-events-none' : ''}" data-val="${maxPts}">
+                            Max (${maxPts})
+                        </button>
+                    </div>
+
+                    <!-- Status Text -->
+                    <div class="text-center">
+                        <span id="manual-score-status" class="text-xs font-bold ${currentVal > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">
+                            ${currentVal > 0 ? `<i class="fa-solid fa-circle-check me-1"></i> Numerical score recorded: <strong>${currentVal.toFixed(1)}</strong> / ${maxPts} pts` : '<i class="fa-regular fa-circle text-slate-400 me-1"></i> Enter a numerical score above'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     // Navigation Controls within the Card
     const hasPrev = critIndex > 0;
@@ -841,7 +1218,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                 </button>
 
                 <span id="gc-footer-score-text" class="text-xs text-slate-400 font-semibold">
-                    ${isComplete ? `<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400 me-1"></i> Current score: ${critState.score.toFixed(1)} / ${cr.max_points} pts` : 'No score entered for this criterion'}
+                    ${isComplete ? `<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400 me-1"></i> Current score: ${critState.score.toFixed(1)} / ${maxPts} pts` : 'No score entered for this criterion'}
                 </span>
 
                 <button type="button" id="gcNextCriterionBtn" 
@@ -894,7 +1271,7 @@ function updateLiveDisplays() {
             const weightedDisplay = document.getElementById('gc-crit-weighted-display');
             const weightedScore = (critState.score / activeCrit.max_points) * activeCrit.percentage;
 
-            if (ptsDisplay) ptsDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : '0.0';
+            if (ptsDisplay) ptsDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0');
             if (weightedDisplay) weightedDisplay.textContent = formatScore(weightedScore);
         }
     }
@@ -908,11 +1285,61 @@ function updateLiveDisplays() {
             const weightedScore = (critState.score / activeCrit.max_points) * activeCrit.percentage;
 
             const scoreDisplay = deckCard.querySelector('.deck-crit-score') || deckCard.querySelector('.text-sm.font-black');
-            if (scoreDisplay) scoreDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : '0.0';
+            if (scoreDisplay) scoreDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0');
 
             const weightedPill = deckCard.querySelector('.deck-weighted-pill') || deckCard.querySelector('.text-\\[10px\\].font-extrabold');
             if (weightedPill) weightedPill.textContent = `(${formatScore(weightedScore)}%)`;
+
+            // Update rating pill if present
+            const ratingPill = deckCard.querySelector('.deck-crit-rating-pill');
+            if (ratingPill) {
+                if (critState.rating_name) {
+                    ratingPill.innerHTML = `<i class="fa-solid fa-award text-purple-600"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name)}</span>`;
+                    ratingPill.classList.remove('hidden');
+                } else {
+                    ratingPill.classList.add('hidden');
+                }
+            }
+
+            // Update category pill if present
+            const categoryPill = deckCard.querySelector('.deck-crit-category-pill');
+            if (categoryPill && activeCrit?.scoring_type === 'category') {
+                const categories = (Array.isArray(activeCrit.scoring_categories) && activeCrit.scoring_categories.length > 0)
+                    ? activeCrit.scoring_categories
+                    : getDefaultScoringCategories(activeCrit.max_points);
+                const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length;
+                if (scoredCats > 0) {
+                    categoryPill.innerHTML = `<i class="fa-solid fa-layer-group text-purple-600"></i> <span class="deck-category-count-text">${scoredCats}/${categories.length} Categories Scored</span>`;
+                    categoryPill.classList.remove('hidden');
+                } else {
+                    categoryPill.classList.add('hidden');
+                }
+            }
+
+            // Update status badge
+            const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
+            const statusBadge = deckCard.querySelector('.deck-crit-status-badge');
+            if (statusBadge) {
+                statusBadge.innerHTML = isComplete 
+                    ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed'
+                    : '<i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> Pending Score';
+                statusBadge.className = `deck-crit-status-badge px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 shrink-0 ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
+            }
         }
+    }
+
+    // 4. Update criteria scored count in contestant header banner
+    let completedCriteriaCount = 0;
+    criteriaList.forEach(cr => {
+        const cs = contestantScores[cr.id];
+        if (cs && (cs.score > 0 || cs.rating_id || cs.is_scored)) {
+            completedCriteriaCount++;
+        }
+    });
+    const headerCountBadge = document.getElementById('judge-header-criteria-count');
+    if (headerCountBadge) {
+        headerCountBadge.textContent = `${completedCriteriaCount} / ${criteriaList.length} Criteria Scored`;
+        headerCountBadge.className = `px-2 py-0.5 rounded-full text-[10px] font-extrabold ${completedCriteriaCount === criteriaList.length ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`;
     }
 }
 
@@ -936,21 +1363,38 @@ async function handleSaveScore(action) {
 
     for (const cr of criteriaList) {
         const critState = contestantScores[cr.id] || { score: 0, sub_scores: {} };
+        const isCategory = (cr.scoring_type === 'category');
+        let isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
 
-        if ((!critState.score || critState.score <= 0) && !firstIncompleteCrit) {
+        if (isCategory && action === 'submit') {
+            const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
+                ? cr.scoring_categories
+                : getDefaultScoringCategories(cr.max_points);
+            const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '');
+            if (scoredCats.length < categories.length) {
+                isComplete = false;
+            }
+        }
+
+        if (!isComplete && !firstIncompleteCrit) {
             firstIncompleteCrit = cr;
         }
 
         criteriaScoresPayload.push({
             criteria_id: cr.id,
             max: cr.max_points,
-            score: critState.score,
+            score: critState.score || 0,
+            rating_id: critState.rating_id || '',
+            rating_name: critState.rating_name || '',
             sub_scores: critState.sub_scores || {}
         });
     }
 
     if (firstIncompleteCrit && action === 'submit') {
-        showToast(`Please complete the scoring rubric for "${firstIncompleteCrit.title}" before submitting.`, 'warning');
+        const isCategory = (firstIncompleteCrit.scoring_type === 'category');
+        const isRubric = (firstIncompleteCrit.scoring_type === 'rubric') || (!isCategory && Array.isArray(firstIncompleteCrit.rubric_ratings) && firstIncompleteCrit.rubric_ratings.length > 0 && firstIncompleteCrit.scoring_type !== 'manual');
+        const actionPrompt = isCategory ? 'score all categories' : isRubric ? 'select a rubric rating' : 'enter a score within the allowed range';
+        showToast(`Please ${actionPrompt} for "${firstIncompleteCrit.title}" before submitting.`, 'warning');
         activeCriterionId = firstIncompleteCrit.id;
         renderScoringSheet();
         document.getElementById('gc-active-rubric-card')?.scrollIntoView({ behavior: 'smooth' });

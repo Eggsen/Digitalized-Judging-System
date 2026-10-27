@@ -35,13 +35,39 @@ if ($method === "GET") {
             $totalWeight += $pct;
             $maxPoints = (int)($doc['max_points'] ?? 100);
 
+            $scoringType = trim($doc['scoring_type'] ?? '');
+            if ($scoringType !== 'manual' && $scoringType !== 'rubric' && $scoringType !== 'category') {
+                if (!empty($doc['rubric_ratings'])) {
+                    $scoringType = 'rubric';
+                } elseif (!empty($doc['scoring_categories'])) {
+                    $scoringType = 'category';
+                } else {
+                    $scoringType = 'manual';
+                }
+            }
+
+            $rubricRatings = [];
+            if ($scoringType === 'rubric') {
+                if (!empty($doc['rubric_ratings'])) {
+                    $rubricRatings = sanitizeRubricRatings($doc['rubric_ratings'], $maxPoints);
+                } else {
+                    $rubricRatings = getDefaultRubricRatings($maxPoints);
+                }
+            }
+
+            $minPoints = (float)($doc['min_points'] ?? 0.0);
+            $scoreStep = (float)($doc['score_step'] ?? 0.5);
+            $instructions = (string)($doc['instructions'] ?? '');
+
             $scoringCategories = [];
-            if (!empty($doc['scoring_categories'])) {
-                $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints);
-            } else if (!empty($doc['sub_criteria'])) {
-                $scoringCategories = getDefaultScoringCategories($maxPoints);
-            } else {
-                $scoringCategories = getDefaultScoringCategories($maxPoints);
+            if ($scoringType === 'category') {
+                if (!empty($doc['scoring_categories'])) {
+                    $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints, true);
+                } else {
+                    $scoringCategories = getDefaultScoringCategories($maxPoints);
+                }
+            } elseif (!empty($doc['scoring_categories'])) {
+                $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints, false);
             }
 
             $criteria[] = [
@@ -49,8 +75,13 @@ if ($method === "GET") {
                 'title' => $doc['title'] ?? '',
                 'description' => $doc['description'] ?? '',
                 'event_id' => (int)($doc['event_id'] ?? $eventId),
+                'scoring_type' => $scoringType,
+                'min_points' => $minPoints,
                 'max_points' => $maxPoints,
+                'score_step' => $scoreStep,
+                'instructions' => $instructions,
                 'percentage' => $pct,
+                'rubric_ratings' => $rubricRatings,
                 'scoring_categories' => $scoringCategories,
                 'sub_criteria' => [],
                 'created_at' => isset($doc['created_at']) ? (string)$doc['created_at'] : ''
@@ -69,43 +100,129 @@ if ($method === "GET") {
     }
 }
 
-// Helper to provide default scoring categories scaled to maxPoints
-function getDefaultScoringCategories($maxPoints) {
+// Helper to provide default predefined rubric ratings scaled to maxPoints
+function getDefaultRubricRatings($maxPoints) {
     $maxPts = (float)$maxPoints;
     if ($maxPts <= 0) $maxPts = 100.0;
-    $count = 4;
+
+    return [
+        [
+            'id' => 'rating-1',
+            'name' => 'Excellent / Outstanding',
+            'score' => round($maxPts * 1.0, 2),
+            'description' => 'Exemplary performance, flawless execution, and superior technical mastery.'
+        ],
+        [
+            'id' => 'rating-2',
+            'name' => 'Very Good / Proficient',
+            'score' => round($maxPts * 0.75, 2),
+            'description' => 'High-level proficiency with solid technique and only minor, isolated errors.'
+        ],
+        [
+            'id' => 'rating-3',
+            'name' => 'Good / Competent',
+            'score' => round($maxPts * 0.50, 2),
+            'description' => 'Meets standard expectations; demonstrated ability with noticeable room for improvement.'
+        ],
+        [
+            'id' => 'rating-4',
+            'name' => 'Fair / Needs Improvement',
+            'score' => round($maxPts * 0.25, 2),
+            'description' => 'Below standard; frequent inconsistencies, technical flaws, or lack of refinement.'
+        ]
+    ];
+}
+
+// Helper to sanitize predefined rubric ratings array
+function sanitizeRubricRatings($rawRatings, &$maxPoints) {
+    if ($rawRatings instanceof Traversable) {
+        $rawRatings = iterator_to_array($rawRatings);
+    } elseif (is_object($rawRatings)) {
+        $rawRatings = (array)$rawRatings;
+    }
+
+    if (!is_array($rawRatings) || empty($rawRatings)) {
+        return getDefaultRubricRatings($maxPoints);
+    }
+
+    $sanitized = [];
+    $highestScore = 0.0;
+    foreach ($rawRatings as $idx => $r) {
+        if ($r instanceof Traversable) {
+            $r = iterator_to_array($r);
+        } elseif (is_object($r)) {
+            $r = (array)$r;
+        }
+
+        $name = trim($r['name'] ?? '');
+        if ($name === '') {
+            $name = 'Rating Tier ' . ($idx + 1);
+        }
+        $id = trim($r['id'] ?? ('rating-' . ($idx + 1) . '-' . bin2hex(random_bytes(2))));
+        $desc = trim($r['description'] ?? '');
+        $score = (float)($r['score'] ?? 0);
+        if ($score < 0) $score = 0;
+
+        if ($score > $highestScore) {
+            $highestScore = $score;
+        }
+
+        $sanitized[] = [
+            'id' => $id,
+            'name' => $name,
+            'score' => round($score, 2),
+            'description' => $desc
+        ];
+    }
+
+    if (empty($sanitized)) {
+        return getDefaultRubricRatings($maxPoints);
+    }
+
+    // Sort descending by score
+    usort($sanitized, function($a, $b) {
+        if ($a['score'] === $b['score']) return 0;
+        return ($a['score'] < $b['score']) ? 1 : -1;
+    });
+
+    if ($highestScore > 0) {
+        $maxPoints = (int)ceil($highestScore);
+    }
+
+    return $sanitized;
+}
+
+// Helper to provide default scoring categories scaled to maxPoints
+function getDefaultScoringCategories($maxPoints = 30) {
+    $maxPts = (float)$maxPoints;
+    if ($maxPts <= 0) $maxPts = 30.0;
+    $count = 3;
     $perCat = round($maxPts / $count, 2);
 
     return [
         [
             'id' => 'cat-1',
-            'name' => 'Difficulty & Variety',
-            'description' => 'Degree of difficulty, complexity, and choreographic variety.',
+            'name' => 'Stance uniqueness',
+            'description' => 'Beautiful stance, stability, and posture.',
             'points' => $perCat
         ],
         [
             'id' => 'cat-2',
-            'name' => 'Synchronization & Timing',
-            'description' => 'Precision, unison among performers, and beat alignment.',
+            'name' => 'Pose preference',
+            'description' => 'Wonderful preference, angle, and dynamic execution.',
             'points' => $perCat
         ],
         [
             'id' => 'cat-3',
-            'name' => 'Technique & Form',
-            'description' => 'Body control, posture, execution lines, and cleanliness.',
-            'points' => $perCat
-        ],
-        [
-            'id' => 'cat-4',
-            'name' => 'Staging & Transitions',
-            'description' => 'Spatial coverage, dynamic formations, and transition fluidity.',
-            'points' => $perCat
+            'name' => 'Crowd impact',
+            'description' => 'Crowds shout continuously; overall audience engagement and energy.',
+            'points' => round($maxPts - ($perCat * 2), 2)
         ]
     ];
 }
 
 // Helper to sanitize customizable scoring categories array
-function sanitizeScoringCategories($rawCategories, $maxPoints) {
+function sanitizeScoringCategories($rawCategories, &$maxPoints, $isCategoryDriven = false) {
     if ($rawCategories instanceof Traversable) {
         $rawCategories = iterator_to_array($rawCategories);
     } elseif (is_object($rawCategories)) {
@@ -116,10 +233,8 @@ function sanitizeScoringCategories($rawCategories, $maxPoints) {
         return getDefaultScoringCategories($maxPoints);
     }
 
-    $maxPts = (float)$maxPoints;
-    if ($maxPts <= 0) $maxPts = 100.0;
-
     $sanitized = [];
+    $totalCatPts = 0.0;
     foreach ($rawCategories as $index => $cat) {
         if ($cat instanceof Traversable) {
             $cat = iterator_to_array($cat);
@@ -129,13 +244,12 @@ function sanitizeScoringCategories($rawCategories, $maxPoints) {
 
         $name = trim($cat['name'] ?? '');
         if ($name === '') {
-            $name = 'Score Tier ' . ($index + 1);
+            $name = 'Score Category ' . ($index + 1);
         }
         $id = trim($cat['id'] ?? ('cat-' . ($index + 1) . '-' . bin2hex(random_bytes(2))));
         $desc = trim($cat['description'] ?? '');
         $pts = (float)($cat['points'] ?? 0);
         if ($pts < 0) $pts = 0;
-        if ($pts > $maxPts) $pts = $maxPts;
 
         $sanitized[] = [
             'id' => $id,
@@ -143,10 +257,15 @@ function sanitizeScoringCategories($rawCategories, $maxPoints) {
             'description' => $desc,
             'points' => round($pts, 2)
         ];
+        $totalCatPts += $pts;
     }
 
     if (empty($sanitized)) {
         return getDefaultScoringCategories($maxPoints);
+    }
+
+    if ($isCategoryDriven && $totalCatPts > 0) {
+        $maxPoints = (int)round($totalCatPts);
     }
 
     return $sanitized;
@@ -180,6 +299,16 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
+        $scoringType = trim($data['scoring_type'] ?? 'manual');
+        if ($scoringType !== 'rubric' && $scoringType !== 'manual' && $scoringType !== 'category') {
+            $scoringType = 'manual';
+        }
+
+        $minPoints = (float)($data['min_points'] ?? 0.0);
+        if ($minPoints < 0) $minPoints = 0.0;
+        $scoreStep = (float)($data['score_step'] ?? 0.5);
+        if ($scoreStep <= 0) $scoreStep = 0.5;
+        $instructions = trim($data['instructions'] ?? '');
 
         if ($eventId <= 0 || $title === '') {
             echo json_encode(["success" => false, "message" => "Criterion title and valid event_id are required."]);
@@ -209,27 +338,47 @@ if ($method === "POST") {
                 exit;
             }
 
-            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? [], $maxPoints);
+            $rubricRatings = [];
+            if ($scoringType === 'rubric') {
+                $rubricRatings = sanitizeRubricRatings($data['rubric_ratings'] ?? [], $maxPoints);
+            }
+
+            $isCategoryDriven = ($scoringType === 'category');
+            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? [], $maxPoints, $isCategoryDriven);
+
             $newId = "criteria-" . bin2hex(random_bytes(6));
             $doc = [
                 '_id' => $newId,
                 'title' => $title,
                 'description' => $description,
                 'event_id' => $eventId,
+                'scoring_type' => $scoringType,
+                'min_points' => $minPoints,
                 'max_points' => $maxPoints,
+                'score_step' => $scoreStep,
+                'instructions' => $instructions,
                 'percentage' => $percentage,
+                'rubric_ratings' => $rubricRatings,
                 'scoring_categories' => $scoringCategories,
                 'created_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];
 
             $criteriaCollection->insertOne($doc);
 
+            if ($scoringType === 'rubric') {
+                $typeLabel = "Rubric-Based (" . count($rubricRatings) . " predefined ratings)";
+            } elseif ($scoringType === 'category') {
+                $typeLabel = "Category-Based (" . count($scoringCategories) . " score categories, {$maxPoints} pts total)";
+            } else {
+                $typeLabel = "Manual Scoring ({$minPoints}-{$maxPoints} pts)";
+            }
+
             logSystemAction(
                 $_SESSION['user_id'],
                 $_SESSION['username'],
                 $_SESSION['role'],
                 'CREATE_CRITERIA',
-                "Added criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts, " . count($scoringCategories) . " score categories) for event ID: {$eventId}."
+                "Added criterion '{$title}' ({$percentage}%, {$typeLabel}) for event ID: {$eventId}."
             );
 
             echo json_encode([
@@ -240,8 +389,13 @@ if ($method === "POST") {
                     'title' => $title,
                     'description' => $description,
                     'event_id' => $eventId,
+                    'scoring_type' => $scoringType,
+                    'min_points' => $minPoints,
                     'max_points' => $maxPoints,
+                    'score_step' => $scoreStep,
+                    'instructions' => $instructions,
                     'percentage' => $percentage,
+                    'rubric_ratings' => $rubricRatings,
                     'scoring_categories' => $scoringCategories
                 ]
             ]);
@@ -259,6 +413,16 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
+        $scoringType = trim($data['scoring_type'] ?? 'manual');
+        if ($scoringType !== 'rubric' && $scoringType !== 'manual' && $scoringType !== 'category') {
+            $scoringType = 'manual';
+        }
+
+        $minPoints = (float)($data['min_points'] ?? 0.0);
+        if ($minPoints < 0) $minPoints = 0.0;
+        $scoreStep = (float)($data['score_step'] ?? 0.5);
+        if ($scoreStep <= 0) $scoreStep = 0.5;
+        $instructions = trim($data['instructions'] ?? '');
 
         if ($id === '' || $title === '') {
             echo json_encode(["success" => false, "message" => "Criterion ID and title are required."]);
@@ -303,29 +467,47 @@ if ($method === "POST") {
                 exit;
             }
 
+            $rubricRatings = [];
+            if ($scoringType === 'rubric') {
+                $rubricRatings = sanitizeRubricRatings($data['rubric_ratings'] ?? [], $maxPoints);
+            }
+
+            $isCategoryDriven = ($scoringType === 'category');
+            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? ($existing['scoring_categories'] ?? []), $maxPoints, $isCategoryDriven);
+
             $updateFields = [
                 'title' => $title,
                 'description' => $description,
+                'scoring_type' => $scoringType,
+                'min_points' => $minPoints,
                 'max_points' => $maxPoints,
+                'score_step' => $scoreStep,
+                'instructions' => $instructions,
                 'percentage' => $percentage,
+                'rubric_ratings' => $rubricRatings,
+                'scoring_categories' => $scoringCategories,
                 'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];
-
-            if (isset($data['scoring_categories']) && is_array($data['scoring_categories'])) {
-                $updateFields['scoring_categories'] = sanitizeScoringCategories($data['scoring_categories'], $maxPoints);
-            }
 
             $criteriaCollection->updateOne(
                 ['_id' => $existing['_id']],
                 ['$set' => $updateFields]
             );
 
+            if ($scoringType === 'rubric') {
+                $typeLabel = "Rubric-Based (" . count($rubricRatings) . " predefined ratings)";
+            } elseif ($scoringType === 'category') {
+                $typeLabel = "Category-Based (" . count($scoringCategories) . " score categories, {$maxPoints} pts total)";
+            } else {
+                $typeLabel = "Manual Scoring ({$minPoints}-{$maxPoints} pts)";
+            }
+
             logSystemAction(
                 $_SESSION['user_id'],
                 $_SESSION['username'],
                 $_SESSION['role'],
                 'EDIT_CRITERIA',
-                "Updated criterion '{$title}' ({$percentage}%, Max {$maxPoints} pts) (ID: {$id})."
+                "Updated criterion '{$title}' ({$percentage}%, {$typeLabel}) (ID: {$id})."
             );
 
             echo json_encode([

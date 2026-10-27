@@ -61,31 +61,87 @@ export function initContestantsCriteriaUI() {
     // Form: Create Criterion
     document.getElementById('createCriterionForm')?.addEventListener('submit', handleAddCriterion);
 
+    // Quick Add: Scoring Choice Radio Toggle (Manual, Rubric-Based, Category-Based)
+    document.querySelectorAll('input[name="quick_scoring_type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const rangeFields = document.getElementById('quick-manual-range-fields');
+            const rubricBox = document.getElementById('quick-rubric-info-box');
+            const categoryBox = document.getElementById('quick-category-info-box');
+            const manualCard = document.getElementById('quick-scoring-manual-card');
+            const rubricCard = document.getElementById('quick-scoring-rubric-card');
+            const categoryCard = document.getElementById('quick-scoring-category-card');
+            const maxLabel = document.getElementById('new-criterion-max-label');
+
+            if (val === 'manual') {
+                rangeFields?.classList.remove('hidden');
+                rubricBox?.classList.add('hidden');
+                categoryBox?.classList.add('hidden');
+                manualCard?.classList.add('border-indigo-500', 'bg-indigo-50/40');
+                rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/40');
+                categoryCard?.classList.remove('border-purple-500', 'bg-purple-50/40');
+                if (maxLabel) maxLabel.textContent = 'Max Score (pts)';
+            } else if (val === 'rubric') {
+                rangeFields?.classList.add('hidden');
+                rubricBox?.classList.remove('hidden');
+                categoryBox?.classList.add('hidden');
+                rubricCard?.classList.add('border-amber-500', 'bg-amber-50/40');
+                manualCard?.classList.remove('border-indigo-500', 'bg-indigo-50/40');
+                categoryCard?.classList.remove('border-purple-500', 'bg-purple-50/40');
+                if (maxLabel) maxLabel.textContent = 'Top Rating Score (pts)';
+            } else {
+                // Category-Based
+                rangeFields?.classList.add('hidden');
+                rubricBox?.classList.add('hidden');
+                categoryBox?.classList.remove('hidden');
+                categoryCard?.classList.add('border-purple-500', 'bg-purple-50/40');
+                manualCard?.classList.remove('border-indigo-500', 'bg-indigo-50/40');
+                rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/40');
+                if (maxLabel) maxLabel.textContent = 'Total Category Points (pts)';
+            }
+        });
+    });
+
     // Open Weights Modal
     document.getElementById('openConfigureWeightsBtn')?.addEventListener('click', openAdjustWeightsModal);
 
-    // Open Rubric Builder for New Criterion
+    // Open Rubric / Scoring Builder for New Criterion
     document.getElementById('openNewCriterionRubricBtn')?.addEventListener('click', () => openCriterionRubricModal());
     document.getElementById('openCustomRubricBuilderBtn')?.addEventListener('click', () => openCriterionRubricModal());
 
     // Form: Configure Weights Modal
     document.getElementById('saveWeightsBtn')?.addEventListener('click', handleSaveWeights);
 
-    // Rubric Modal: Add Category Button
-    document.getElementById('rubricAddCategoryBtn')?.addEventListener('click', () => {
-        addCategoryRow();
+    // Modal: Scoring Method Radio Toggle (Manual vs Rubric-Based vs Category-Based)
+    document.querySelectorAll('input[name="modal_scoring_type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            setModalScoringType(e.target.value);
+        });
     });
-    document.getElementById('rubricAddIndicatorBtn')?.addEventListener('click', () => {
-        addCategoryRow();
-    });
 
-    // Rubric Modal: Auto Distribute Points Button
-    document.getElementById('rubricAutoDistributeBtn')?.addEventListener('click', autoDistributeCategoryPoints);
+    // Modal: Manual Range Inputs Live Summary
+    const updateManualRangeSummary = () => {
+        const minVal = parseFloat(document.getElementById('rubric-modal-min-input')?.value) || 0;
+        const maxVal = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
+        const badge = document.getElementById('manual-range-summary-badge');
+        if (badge) {
+            badge.textContent = `Allowed Range: ${minVal} - ${maxVal} pts`;
+        }
+    };
+    document.getElementById('rubric-modal-min-input')?.addEventListener('input', updateManualRangeSummary);
+    document.getElementById('rubric-modal-max-input')?.addEventListener('input', updateManualRangeSummary);
 
-    // Rubric Modal: Max points input change listener (scale categories)
-    document.getElementById('rubric-modal-max-input')?.addEventListener('input', handleRubricMaxPointsChange);
+    // Modal: Rubric Rating Buttons
+    document.getElementById('rubricAddRatingBtn')?.addEventListener('click', () => addRatingRow());
+    document.getElementById('rubricLoad4TierPresetBtn')?.addEventListener('click', load4TierPreset);
+    document.getElementById('rubricLoad5TierPresetBtn')?.addEventListener('click', load5TierPreset);
 
-    // Form: Save Criterion & Rubric
+    // Modal: Category-Based Buttons
+    document.getElementById('categoryAddRowBtn')?.addEventListener('click', () => addCategoryRow());
+    document.getElementById('categoryLoadStylePresetBtn')?.addEventListener('click', loadStyleCategoryPreset);
+    document.getElementById('categoryLoad4TierPresetBtn')?.addEventListener('click', load4CategoryPreset);
+
+    // Form: Save Criterion & Scoring Setup
     document.getElementById('criterionRubricForm')?.addEventListener('submit', handleSaveRubricCriterion);
 
     // Live validation: Quick Add Weight input (cannot exceed remaining to 100%)
@@ -732,10 +788,15 @@ async function loadCriteriaList() {
     }
 
     container.innerHTML = cachedCriteria.map(cr => {
-        const categories = Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0 
-            ? cr.scoring_categories 
-            : (Array.isArray(cr.sub_criteria) && cr.sub_criteria.length > 0 ? getDefaultScoringCategories(cr.max_points) : []);
-        const catCount = categories.length;
+        const isCategory = (cr.scoring_type === 'category');
+        const isRubric = (cr.scoring_type === 'rubric');
+        const rubricRatings = Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0 
+            ? cr.rubric_ratings 
+            : (isRubric ? getDefaultRubricRatings(cr.max_points) : []);
+        const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
+            ? cr.scoring_categories
+            : (isCategory ? getDefaultScoringCategories(cr.max_points) : []);
+        const minPts = typeof cr.min_points !== 'undefined' ? parseFloat(cr.min_points) : 0;
 
         return `
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-all space-y-3">
@@ -749,22 +810,22 @@ async function loadCriteriaList() {
                         <div class="flex items-center gap-2 flex-wrap">
                             <h5 class="font-extrabold text-slate-800 text-sm leading-tight">${escapeHtml(cr.title)}</h5>
                             <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/70 text-slate-700 shrink-0">Max: ${cr.max_points} pts</span>
-                            ${catCount > 0 
-                                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0"><i class="fa-solid fa-layer-group me-1"></i>${catCount} Score Categories</span>` 
-                                : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">No Categories</span>'}
+                            ${isCategory
+                                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-purple-50 text-purple-800 border border-purple-200 shrink-0 flex items-center gap-1"><i class="fa-solid fa-layer-group"></i> Category-Based (${categories.length} Categories, ${cr.max_points} pts total)</span>`
+                                : isRubric 
+                                    ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shrink-0 flex items-center gap-1"><i class="fa-solid fa-list-check"></i> Rubric-Based (${rubricRatings.length} Ratings)</span>` 
+                                    : `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 flex items-center gap-1"><i class="fa-solid fa-calculator"></i> Manual Scoring (${minPts} — ${cr.max_points} pts)</span>`}
                         </div>
                         ${cr.description ? `<p class="text-xs text-slate-500 font-normal leading-relaxed line-clamp-2">${escapeHtml(cr.description)}</p>` : ''}
                     </div>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    ${catCount > 0 ? `
-                        <button type="button" class="toggle-rubric-view-btn px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] cursor-pointer transition-colors flex items-center gap-1" data-id="${cr.id}">
-                            <i class="fa-solid fa-eye text-xs"></i> <span>View Rubric</span>
-                        </button>
-                    ` : ''}
+                    <button type="button" class="toggle-rubric-view-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-bold text-[11px] cursor-pointer transition-colors flex items-center gap-1" data-id="${cr.id}">
+                        <i class="fa-solid fa-eye text-xs"></i> <span>View Details</span>
+                    </button>
                     <button class="edit-criterion-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-buksu-navy hover:text-buksu-gold text-slate-700 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1" 
                         data-id="${cr.id}" 
-                        title="Edit Criterion & Scoring Rubric">
+                        title="Edit Criterion & Scoring Setup">
                         <i class="fa-solid fa-pen text-xs"></i> <span>Edit</span>
                     </button>
                     <button class="delete-criterion-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
@@ -776,28 +837,61 @@ async function loadCriteriaList() {
                 </div>
             </div>
 
-            <!-- Collapsible Rubric Categories Matrix Preview -->
-            ${catCount > 0 ? `
-                <div id="rubric-preview-${cr.id}" class="hidden pt-3 border-t border-slate-200/70 space-y-2.5 text-xs">
+            <!-- Collapsible Scoring Details Preview -->
+            <div id="rubric-preview-${cr.id}" class="hidden pt-3 border-t border-slate-200/70 space-y-2.5 text-xs">
+                ${isCategory ? `
                     <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                        <span>Scoring Rubric (${catCount} categories)</span>
-                        <span class="text-indigo-600 font-bold normal-case">Scores scale to ${cr.max_points} pts</span>
+                        <span>Score Categories (${categories.length} Categories &bull; Total ${cr.max_points} pts)</span>
+                        <span class="text-purple-700 font-bold normal-case">Each sub-category scored up to its configured max score</span>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(catCount, 4)} gap-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(categories.length, 4)} gap-2">
                         ${categories.map(cat => `
                             <div class="p-3 rounded-xl bg-white border border-slate-200/80 space-y-1 shadow-2xs">
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(cat.name)}</span>
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
-                                        Max: ${cat.points} pts
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-50 text-purple-800 border border-purple-200 shrink-0">
+                                        Max ${cat.points || cat.max_score} pts
                                     </span>
                                 </div>
                                 ${cat.description ? `<p class="text-[11px] text-slate-500 font-normal leading-tight mt-1 line-clamp-3">${escapeHtml(cat.description)}</p>` : ''}
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            ` : ''}
+                ` : isRubric ? `
+                    <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                        <span>Predefined Rubric Ratings (${rubricRatings.length} options)</span>
+                        <span class="text-amber-700 font-bold normal-case">Judge selects one predefined rating</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(rubricRatings.length, 4)} gap-2">
+                        ${rubricRatings.map(r => `
+                            <div class="p-3 rounded-xl bg-white border border-slate-200/80 space-y-1 shadow-2xs">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(r.name)}</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                                        ${r.score} pts
+                                    </span>
+                                </div>
+                                ${r.description ? `<p class="text-[11px] text-slate-500 font-normal leading-tight mt-1 line-clamp-3">${escapeHtml(r.description)}</p>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                        <span>Manual Scoring Setup</span>
+                        <span class="text-indigo-600 font-bold normal-case">Judge enters a numerical score</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 space-y-2">
+                        <div class="flex items-center gap-3 text-xs flex-wrap">
+                            <span class="font-bold text-slate-700">Allowed Score Range:</span>
+                            <span class="font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-200">
+                                ${minPts} — ${cr.max_points} pts
+                            </span>
+                            <span class="text-slate-400 font-semibold text-[11px]">(Step: ${cr.score_step || 0.5} pts)</span>
+                        </div>
+                        <p class="text-xs text-slate-600 font-normal leading-relaxed">${escapeHtml(cr.description || cr.instructions || 'The judge enters any numerical score within the allowed range.')}</p>
+                    </div>
+                `}
+            </div>
         </div>
         `;
     }).join('');
@@ -814,12 +908,12 @@ function bindCriteriaRowActions() {
             if (preview) {
                 preview.classList.toggle('hidden');
                 const span = btn.querySelector('span');
-                if (span) span.textContent = preview.classList.contains('hidden') ? 'View Rubric' : 'Hide Rubric';
+                if (span) span.textContent = preview.classList.contains('hidden') ? 'View Details' : 'Hide Details';
             }
         });
     });
 
-    // Edit criterion & rubric modal
+    // Edit criterion & scoring setup modal
     document.querySelectorAll('.edit-criterion-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             openCriterionRubricModal(btn.dataset.id);
@@ -845,6 +939,317 @@ function bindCriteriaRowActions() {
     });
 }
 
+export function setModalScoringType(type) {
+    const isManual = (type === 'manual');
+    const isRubric = (type === 'rubric');
+    const isCategory = (type === 'category');
+
+    const manualRadio = document.getElementById('modal-scoring-type-manual');
+    const rubricRadio = document.getElementById('modal-scoring-type-rubric');
+    const categoryRadio = document.getElementById('modal-scoring-type-category');
+
+    const manualCard = document.getElementById('modal-scoring-card-manual');
+    const rubricCard = document.getElementById('modal-scoring-card-rubric');
+    const categoryCard = document.getElementById('modal-scoring-card-category');
+
+    const manualSection = document.getElementById('modal-manual-config-section');
+    const rubricSection = document.getElementById('modal-rubric-config-section');
+    const categorySection = document.getElementById('modal-category-config-section');
+
+    if (manualRadio && rubricRadio && categoryRadio) {
+        manualRadio.checked = isManual;
+        rubricRadio.checked = isRubric;
+        categoryRadio.checked = isCategory;
+    }
+
+    if (isManual) {
+        manualSection?.classList.remove('hidden');
+        rubricSection?.classList.add('hidden');
+        categorySection?.classList.add('hidden');
+
+        manualCard?.classList.add('border-indigo-500', 'bg-indigo-50/50', 'shadow-2xs');
+        manualCard?.classList.remove('border-slate-200', 'bg-white');
+        rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
+        rubricCard?.classList.add('border-slate-200', 'bg-white');
+        categoryCard?.classList.remove('border-purple-500', 'bg-purple-50/50', 'shadow-2xs');
+        categoryCard?.classList.add('border-slate-200', 'bg-white');
+    } else if (isRubric) {
+        manualSection?.classList.add('hidden');
+        rubricSection?.classList.remove('hidden');
+        categorySection?.classList.add('hidden');
+
+        rubricCard?.classList.add('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
+        rubricCard?.classList.remove('border-slate-200', 'bg-white');
+        manualCard?.classList.remove('border-indigo-500', 'bg-indigo-50/50', 'shadow-2xs');
+        manualCard?.classList.add('border-slate-200', 'bg-white');
+        categoryCard?.classList.remove('border-purple-500', 'bg-purple-50/50', 'shadow-2xs');
+        categoryCard?.classList.add('border-slate-200', 'bg-white');
+
+        // If ratings container is empty, populate default ratings
+        const container = document.getElementById('rubric-ratings-container');
+        if (container && container.querySelectorAll('.rubric-rating-item').length === 0) {
+            const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
+            const defaults = getDefaultRubricRatings(maxPts);
+            defaults.forEach((r, idx) => addRatingRow(r, idx));
+        }
+    } else {
+        // isCategory
+        manualSection?.classList.add('hidden');
+        rubricSection?.classList.add('hidden');
+        categorySection?.classList.remove('hidden');
+
+        categoryCard?.classList.add('border-purple-500', 'bg-purple-50/50', 'shadow-2xs');
+        categoryCard?.classList.remove('border-slate-200', 'bg-white');
+        manualCard?.classList.remove('border-indigo-500', 'bg-indigo-50/50', 'shadow-2xs');
+        manualCard?.classList.add('border-slate-200', 'bg-white');
+        rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
+        rubricCard?.classList.add('border-slate-200', 'bg-white');
+
+        // If category container is empty, load style preset
+        const container = document.getElementById('category-rows-container');
+        if (container && container.querySelectorAll('.category-row-item').length === 0) {
+            loadStyleCategoryPreset();
+        } else {
+            updateCategorySum();
+        }
+    }
+}
+
+export function updateCategorySum() {
+    const container = document.getElementById('category-rows-container');
+    const badge = document.getElementById('category-sum-total-badge');
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    if (!container) return 0;
+
+    const items = container.querySelectorAll('.category-row-item');
+    let sum = 0;
+    items.forEach(item => {
+        const pts = parseFloat(item.querySelector('.cat-points-input')?.value) || 0;
+        sum += pts;
+    });
+
+    sum = Math.round(sum * 10) / 10;
+
+    if (badge) {
+        badge.textContent = `Total: ${sum} pts (${items.length} Categories)`;
+    }
+    if (maxInput) {
+        maxInput.value = sum;
+    }
+    return sum;
+}
+
+export function addCategoryRow(category = null, index = null) {
+    const container = document.getElementById('category-rows-container');
+    if (!container) return;
+
+    const existingRows = container.querySelectorAll('.category-row-item');
+    const nextIdx = index !== null ? index : existingRows.length;
+
+    const cId = category?.id || ('cat-' + Math.random().toString(36).substring(2, 7));
+    const cName = category?.name || (nextIdx === 0 ? 'Stance uniqueness' : nextIdx === 1 ? 'Pose preference' : nextIdx === 2 ? 'Crowd impact' : 'Execution quality');
+    const cPoints = (category && (category.points !== undefined || category.max_score !== undefined))
+        ? parseFloat(category.points ?? category.max_score)
+        : 10;
+    const cDesc = category?.description || '';
+
+    const row = document.createElement('div');
+    row.className = 'category-row-item p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5 transition-all hover:border-slate-300 shadow-2xs';
+    row.dataset.catId = cId;
+
+    row.innerHTML = `
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2">
+            <div class="flex items-center gap-2 flex-1 flex-wrap sm:flex-nowrap">
+                <span class="cat-index-badge w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                    #${nextIdx + 1}
+                </span>
+                <div class="flex-1 min-w-[160px]">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Category Name / Aspect</label>
+                    <input type="text" class="cat-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. Stance uniqueness, Pose preference..." value="${escapeHtml(cName)}" required>
+                </div>
+                <div class="shrink-0">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Max Points (pts)</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" step="0.5" min="0.5" class="cat-points-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500" value="${cPoints}" required>
+                        <span class="text-xs font-bold text-slate-500">pts</span>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="remove-cat-btn px-2 py-1 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl text-xs cursor-pointer font-bold flex items-center gap-1 transition-colors" title="Remove Category">
+                <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Delete</span>
+            </button>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-0.5">Category Description &amp; Performance Standards</label>
+            <textarea class="cat-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 font-normal leading-relaxed" rows="2" placeholder="e.g. Beautiful stance and positioning, flawless poise...">${escapeHtml(cDesc)}</textarea>
+        </div>
+    `;
+
+    // Live update sum when points change
+    row.querySelector('.cat-points-input')?.addEventListener('input', updateCategorySum);
+
+    // Remove button handler
+    row.querySelector('.remove-cat-btn')?.addEventListener('click', () => {
+        const remaining = container.querySelectorAll('.category-row-item');
+        if (remaining.length <= 2) {
+            showToast('A category-based criterion must have at least 2 categories.', 'warning');
+            return;
+        }
+        row.remove();
+        container.querySelectorAll('.category-row-item').forEach((item, idx) => {
+            const badge = item.querySelector('.cat-index-badge');
+            if (badge) badge.textContent = `#${idx + 1}`;
+        });
+        updateCategorySum();
+    });
+
+    container.appendChild(row);
+    updateCategorySum();
+}
+
+export function loadStyleCategoryPreset() {
+    const container = document.getElementById('category-rows-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const stylePresets = [
+        { id: 'cat-1', name: 'Stance uniqueness', points: 10, max_score: 10, description: 'Beautiful stance, unique positioning, and expressive balance' },
+        { id: 'cat-2', name: 'Pose preference', points: 10, max_score: 10, description: 'Wonderful preference, alignment, and visual poise' },
+        { id: 'cat-3', name: 'Crowd impact', points: 10, max_score: 10, description: 'Crowds shout continuously, powerful audience connection and charisma' }
+    ];
+    stylePresets.forEach((p, idx) => addCategoryRow(p, idx));
+    updateCategorySum();
+    showToast('Loaded Style Example (30 pts)', 'info');
+}
+
+export function load4CategoryPreset() {
+    const container = document.getElementById('category-rows-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const presets = [
+        { id: 'cat-1', name: 'Execution & Technique', points: 10, max_score: 10, description: 'Precision, posture, body control, and clean technical execution' },
+        { id: 'cat-2', name: 'Artistry & Musicality', points: 10, max_score: 10, description: 'Rhythm adherence, emotional nuance, musical interpretation' },
+        { id: 'cat-3', name: 'Difficulty & Variety', points: 10, max_score: 10, description: 'Complex combinations, diverse transitions, and movement variety' },
+        { id: 'cat-4', name: 'Overall Stage Presence', points: 10, max_score: 10, description: 'Audience connection, confidence, projection, and performance energy' }
+    ];
+    presets.forEach((p, idx) => addCategoryRow(p, idx));
+    updateCategorySum();
+    showToast('Loaded 4 Standard Categories (40 pts)', 'info');
+}
+
+export function addRatingRow(rating = null, index = null) {
+    const container = document.getElementById('rubric-ratings-container');
+    if (!container) return;
+
+    const existingRows = container.querySelectorAll('.rubric-rating-item');
+    const nextIdx = index !== null ? index : existingRows.length;
+
+    const rId = rating?.id || ('rate-' + Math.random().toString(36).substring(2, 7));
+    const rName = rating?.name || (nextIdx === 0 ? 'Excellent' : nextIdx === 1 ? 'Very Good' : nextIdx === 2 ? 'Good' : 'Needs Improvement');
+    const rScore = (rating && typeof rating.score !== 'undefined') ? parseFloat(rating.score) : Math.max(0, 100 - (nextIdx * 25));
+    const rDesc = rating?.description || '';
+
+    const row = document.createElement('div');
+    row.className = 'rubric-rating-item p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5 transition-all hover:border-slate-300 shadow-2xs';
+    row.dataset.rateId = rId;
+
+    row.innerHTML = `
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2">
+            <div class="flex items-center gap-2 flex-1 flex-wrap sm:flex-nowrap">
+                <span class="rating-index-badge w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                    #${nextIdx + 1}
+                </span>
+                <div class="flex-1 min-w-[160px]">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Rating Label / Title</label>
+                    <input type="text" class="rate-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="e.g. Excellent, Very Good, Fair..." value="${escapeHtml(rName)}" required>
+                </div>
+                <div class="shrink-0">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Fixed Score (pts)</label>
+                    <div class="flex items-center gap-1.5">
+                        <input type="number" step="0.5" min="0" class="rate-score-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500" value="${rScore}" required>
+                        <span class="text-xs font-bold text-slate-500">pts</span>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="remove-rating-btn px-2 py-1 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl text-xs cursor-pointer font-bold flex items-center gap-1 transition-colors" title="Remove Rating Option">
+                <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Delete</span>
+            </button>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-0.5">Description &amp; Performance Standard</label>
+            <textarea class="rate-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 font-normal leading-relaxed" rows="2" placeholder="Specific observable characteristics and criteria required to earn this rating...">${escapeHtml(rDesc)}</textarea>
+        </div>
+    `;
+
+    // Remove button handler
+    row.querySelector('.remove-rating-btn')?.addEventListener('click', () => {
+        const remaining = container.querySelectorAll('.rubric-rating-item');
+        if (remaining.length <= 2) {
+            showToast('A rubric-based criterion must have at least 2 predefined ratings.', 'warning');
+            return;
+        }
+        row.remove();
+        container.querySelectorAll('.rubric-rating-item').forEach((item, idx) => {
+            const badge = item.querySelector('.rating-index-badge');
+            if (badge) badge.textContent = `#${idx + 1}`;
+        });
+    });
+
+    container.appendChild(row);
+}
+
+export function load4TierPreset() {
+    const container = document.getElementById('rubric-ratings-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
+    const presets = getDefaultRubricRatings(maxPts);
+    presets.forEach((p, idx) => addRatingRow(p, idx));
+    showToast('Loaded 4-tier rubric preset.', 'info');
+}
+
+export function load5TierPreset() {
+    const container = document.getElementById('rubric-ratings-container');
+    if (!container) return;
+    container.innerHTML = '';
+    const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
+    const presets = [
+        { id: 'rate-1', name: 'Superior / Masterful', score: roundScore(maxPts * 1.0), description: 'Extraordinary artistry, flawless technique, and innovative stage presence.' },
+        { id: 'rate-2', name: 'Excellent / High Distinction', score: roundScore(maxPts * 0.8), description: 'Superior execution with remarkable precision and minimal errors.' },
+        { id: 'rate-3', name: 'Proficient / Above Average', score: roundScore(maxPts * 0.6), description: 'Well-executed with solid timing and commendable choreography.' },
+        { id: 'rate-4', name: 'Satisfactory / Competent', score: roundScore(maxPts * 0.4), description: 'Meets minimum competition standards; noticeable inconsistency.' },
+        { id: 'rate-5', name: 'Developing / Needs Support', score: roundScore(maxPts * 0.2), description: 'Frequent performance breaks, lack of synchronization, or incomplete.' }
+    ];
+    presets.forEach((p, idx) => addRatingRow(p, idx));
+    showToast('Loaded 5-tier rubric preset.', 'info');
+}
+
+export function getDefaultRubricRatings(maxPoints = 100) {
+    const max = parseFloat(maxPoints) || 100;
+    return [
+        { id: 'rate-1', name: 'Excellent / Outstanding', score: roundScore(max * 1.0), description: 'Exemplary performance, flawless execution, and superior technical mastery.' },
+        { id: 'rate-2', name: 'Very Good / Proficient', score: roundScore(max * 0.75), description: 'High-level proficiency with solid technique and only minor, isolated errors.' },
+        { id: 'rate-3', name: 'Good / Competent', score: roundScore(max * 0.50), description: 'Meets standard expectations; demonstrated ability with noticeable room for improvement.' },
+        { id: 'rate-4', name: 'Fair / Needs Improvement', score: roundScore(max * 0.25), description: 'Below standard; frequent inconsistencies, technical flaws, or lack of refinement.' }
+    ];
+}
+
+export function getDefaultScoringCategories(totalMax = 30) {
+    const max = parseFloat(totalMax) || 30;
+    const perCat = Math.round((max / 3) * 10) / 10;
+    const remainder = Math.round((max - (perCat * 2)) * 10) / 10;
+    return [
+        { id: 'cat-1', name: 'Stance uniqueness', points: perCat, max_score: perCat, description: 'Beautiful stance and unique positioning' },
+        { id: 'cat-2', name: 'Pose preference', points: perCat, max_score: perCat, description: 'Wonderful preference, alignment, and visual poise' },
+        { id: 'cat-3', name: 'Crowd impact', points: remainder, max_score: remainder, description: 'Crowds shout continuously, powerful audience connection' }
+    ];
+}
+
+function roundScore(val) {
+    return Math.round(val * 10) / 10;
+}
+
 export function openCriterionRubricModal(criterionId) {
     const modal = document.getElementById('criterion-rubric-modal');
     if (!modal) return;
@@ -852,42 +1257,73 @@ export function openCriterionRubricModal(criterionId) {
     const critIdInput = document.getElementById('rubric-modal-crit-id');
     const titleInput = document.getElementById('rubric-modal-title-input');
     const pctInput = document.getElementById('rubric-modal-pct-input');
+    const minInput = document.getElementById('rubric-modal-min-input');
     const maxInput = document.getElementById('rubric-modal-max-input');
+    const stepInput = document.getElementById('rubric-modal-step-input');
     const descInput = document.getElementById('rubric-modal-desc-input');
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
+    const ratingsContainer = document.getElementById('rubric-ratings-container');
+    const categoryContainer = document.getElementById('category-rows-container');
     const modalTitle = document.getElementById('rubric-modal-title');
-    const maxBadge = document.getElementById('rubric-max-points-badge');
 
-    if (!container) return;
-    container.innerHTML = '';
+    if (ratingsContainer) ratingsContainer.innerHTML = '';
+    if (categoryContainer) categoryContainer.innerHTML = '';
 
     const criterion = cachedCriteria.find(c => String(c.id) === String(criterionId));
-    let initialMax = 50;
-    let categories = [];
+    let scoringType = 'manual';
+    let initialMin = 0;
+    let initialMax = 100;
+    let initialStep = 0.5;
+    let rubricRatings = [];
+    let scoringCategories = [];
 
     if (criterion) {
-        modalTitle.textContent = `Edit Rubric: ${criterion.title}`;
+        modalTitle.textContent = `Edit Criterion: ${criterion.title}`;
         critIdInput.value = criterion.id;
         titleInput.value = criterion.title || '';
         pctInput.value = criterion.percentage || 0;
-        initialMax = parseInt(criterion.max_points) || 50;
-        maxInput.value = initialMax;
-        descInput.value = criterion.description || '';
-
-        categories = (Array.isArray(criterion.scoring_categories) && criterion.scoring_categories.length > 0)
+        scoringType = criterion.scoring_type || (criterion.scoring_categories?.length > 0 ? 'category' : (criterion.rubric_ratings?.length > 0 ? 'rubric' : 'manual'));
+        initialMin = typeof criterion.min_points !== 'undefined' ? parseFloat(criterion.min_points) : 0;
+        initialMax = parseFloat(criterion.max_points) || 100;
+        initialStep = parseFloat(criterion.score_step) || 0.5;
+        descInput.value = criterion.description || criterion.instructions || '';
+        rubricRatings = (Array.isArray(criterion.rubric_ratings) && criterion.rubric_ratings.length > 0)
+            ? criterion.rubric_ratings
+            : getDefaultRubricRatings(initialMax);
+        scoringCategories = (Array.isArray(criterion.scoring_categories) && criterion.scoring_categories.length > 0)
             ? criterion.scoring_categories
             : getDefaultScoringCategories(initialMax);
     } else {
-        modalTitle.textContent = 'Add New Judging Criterion & Rubric';
+        modalTitle.textContent = 'Add Judging Criterion & Scoring Method';
         critIdInput.value = '';
         titleInput.value = '';
         pctInput.value = 0;
-        initialMax = 50;
-        maxInput.value = initialMax;
+        scoringType = 'manual';
+        initialMin = 0;
+        initialMax = 100;
+        initialStep = 0.5;
         descInput.value = '';
-
-        categories = getDefaultScoringCategories(initialMax);
+        rubricRatings = getDefaultRubricRatings(initialMax);
+        scoringCategories = getDefaultScoringCategories(30);
     }
+
+    if (minInput) minInput.value = initialMin;
+    if (maxInput) maxInput.value = initialMax;
+    if (stepInput) stepInput.value = initialStep;
+
+    const summaryBadge = document.getElementById('manual-range-summary-badge');
+    if (summaryBadge) summaryBadge.textContent = `Allowed Range: ${initialMin} - ${initialMax} pts`;
+
+    // Populate predefined ratings into container
+    rubricRatings.forEach((r, idx) => addRatingRow(r, idx));
+
+    // Populate category rows into container if category-based
+    if (scoringType === 'category') {
+        scoringCategories.forEach((c, idx) => addCategoryRow(c, idx));
+        updateCategorySum();
+    }
+
+    // Toggle scoring type selection in modal
+    setModalScoringType(scoringType);
 
     // Set weight remaining bounds and hint in Rubric Modal
     let otherCriteriaTotal = 0;
@@ -916,223 +1352,7 @@ export function openCriterionRubricModal(criterionId) {
         }
     }
 
-    maxInput.dataset.previousMax = initialMax;
-    if (maxBadge) maxBadge.textContent = `${initialMax} pts`;
-
-    categories.forEach((cat, idx) => addCategoryRow(cat, initialMax, idx));
-
     modal.classList.remove('hidden');
-}
-
-export function getDefaultScoringCategories(maxPoints = 40) {
-    const max = parseFloat(maxPoints) || 40;
-    const count = 4;
-    const perCat = roundScore(max / count);
-    return [
-        {
-            id: 'cat-' + Math.random().toString(36).substring(2, 7),
-            name: 'Difficulty & Variety',
-            description: 'Complexity, variety of movements, and creative staging variations.',
-            points: perCat
-        },
-        {
-            id: 'cat-' + Math.random().toString(36).substring(2, 7),
-            name: 'Synchronization & Timing',
-            description: 'Precision, unison among dancers, and micro-timing accuracy.',
-            points: perCat
-        },
-        {
-            id: 'cat-' + Math.random().toString(36).substring(2, 7),
-            name: 'Technique & Form',
-            description: 'Body control, posture, extension, lines, and movement cleanliness.',
-            points: perCat
-        },
-        {
-            id: 'cat-' + Math.random().toString(36).substring(2, 7),
-            name: 'Transitions & Staging',
-            description: 'Fluidity between routine sections, formations, and spatial coverage.',
-            points: perCat
-        }
-    ];
-}
-
-function roundScore(val) {
-    return Math.round(val * 10) / 10;
-}
-
-function handleRubricMaxPointsChange() {
-    const maxInput = document.getElementById('rubric-modal-max-input');
-    const maxBadge = document.getElementById('rubric-max-points-badge');
-    if (!maxInput) return;
-
-    const newMax = parseFloat(maxInput.value) || 1;
-    const prevMax = parseFloat(maxInput.dataset.previousMax) || newMax;
-    maxInput.dataset.previousMax = newMax;
-
-    if (maxBadge) maxBadge.textContent = `${newMax} pts`;
-
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
-    if (!container) return;
-
-    const rows = container.querySelectorAll('.rubric-category-item');
-    const ratio = prevMax > 0 ? (newMax / prevMax) : 1;
-
-    rows.forEach(row => {
-        const pointsInput = row.querySelector('.cat-points-input');
-        if (pointsInput) {
-            const currentVal = parseFloat(pointsInput.value) || 0;
-            const scaled = Math.min(newMax, roundScore(currentVal * ratio));
-            pointsInput.value = scaled;
-            pointsInput.max = newMax;
-        }
-        updateCategoryRowIndicators(row, newMax);
-    });
-
-    updateRubricCategoriesSum();
-}
-
-function autoDistributeCategoryPoints() {
-    const maxInput = document.getElementById('rubric-modal-max-input');
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
-    if (!maxInput || !container) return;
-
-    const max = parseFloat(maxInput.value) || 50;
-    const rows = container.querySelectorAll('.rubric-category-item');
-    const count = rows.length;
-    if (count === 0) return;
-
-    const perCategory = roundScore(max / count);
-
-    rows.forEach((row) => {
-        const pointsInput = row.querySelector('.cat-points-input');
-        if (pointsInput) {
-            pointsInput.value = perCategory;
-            pointsInput.max = max;
-        }
-        updateCategoryRowIndicators(row, max);
-    });
-
-    updateRubricCategoriesSum();
-    showToast(`Divided ${max} max points evenly: ${perCategory} pts per category.`, 'info');
-}
-
-function addCategoryRow(cat = null, maxPoints = null, index = null) {
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
-    const maxInput = document.getElementById('rubric-modal-max-input');
-    if (!container) return;
-
-    const max = maxPoints !== null ? maxPoints : (parseFloat(maxInput?.value) || 50);
-    const existingRows = container.querySelectorAll('.rubric-category-item');
-    const nextIdx = index !== null ? index : existingRows.length;
-
-    let defaultPts = roundScore(max / Math.max(1, existingRows.length + 1));
-    if (cat && typeof cat.points !== 'undefined') {
-        defaultPts = parseFloat(cat.points);
-    }
-
-    const catId = cat?.id || ('cat-' + Math.random().toString(36).substring(2, 7));
-    const catName = cat?.name || '';
-    const catDesc = cat?.description || '';
-
-    const row = document.createElement('div');
-    row.className = 'rubric-category-item p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3 transition-all hover:border-slate-300 shadow-2xs';
-    row.dataset.catId = catId;
-
-    row.innerHTML = `
-        <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2.5">
-            <div class="flex items-center gap-2.5 flex-1 flex-wrap sm:flex-nowrap">
-                <span class="category-index-badge w-7 h-7 rounded-lg bg-buksu-navy text-buksu-gold flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                    #${nextIdx + 1}
-                </span>
-                <div class="flex-1 min-w-[180px]">
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Category Name / Title</label>
-                    <input type="text" class="cat-name-input w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Difficulty, Form, Synchronization..." value="${escapeHtml(catName)}" required>
-                </div>
-                <div class="shrink-0">
-                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Max Score (pts)</label>
-                    <div class="flex items-center gap-1.5">
-                        <input type="number" step="0.5" min="0" max="${max}" class="cat-points-input w-20 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="${defaultPts}">
-                        <span class="text-xs font-bold text-slate-500 whitespace-nowrap">
-                            pts max
-                        </span>
-                        <span class="cat-ratio-badge px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 whitespace-nowrap">
-                            ${Math.round((defaultPts / max) * 100)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <button type="button" class="remove-category-btn px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl text-xs cursor-pointer font-bold flex items-center gap-1 transition-colors" title="Remove Category">
-                <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Remove</span>
-            </button>
-        </div>
-
-        <div>
-            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">Scoring Description &amp; Guidelines</label>
-            <textarea class="cat-desc-input w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-normal leading-relaxed" rows="2" placeholder="Describe the evaluation guidelines, criteria, and observable behavior required for this category...">${escapeHtml(catDesc)}</textarea>
-        </div>
-    `;
-
-    // Bind points input change to update ratio badge and sum
-    const pointsInput = row.querySelector('.cat-points-input');
-    pointsInput?.addEventListener('input', () => {
-        updateCategoryRowIndicators(row, parseFloat(maxInput?.value) || max);
-    });
-
-    // Bind remove button
-    row.querySelector('.remove-category-btn')?.addEventListener('click', () => {
-        const remaining = container.querySelectorAll('.rubric-category-item');
-        if (remaining.length <= 1) {
-            showToast('A criterion must have at least one scoring category.', 'warning');
-            return;
-        }
-        row.remove();
-        container.querySelectorAll('.rubric-category-item').forEach((item, idx) => {
-            const badge = item.querySelector('.category-index-badge');
-            if (badge) badge.textContent = `#${idx + 1}`;
-        });
-        updateRubricCategoriesSum();
-    });
-
-    container.appendChild(row);
-    updateRubricCategoriesSum();
-}
-
-function updateCategoryRowIndicators(row, maxPoints) {
-    const pointsInput = row.querySelector('.cat-points-input');
-    const ratioBadge = row.querySelector('.cat-ratio-badge');
-
-    const pts = parseFloat(pointsInput?.value) || 0;
-    const max = parseFloat(maxPoints) || 1;
-    const pct = Math.round((pts / max) * 100);
-
-    if (ratioBadge) {
-        ratioBadge.textContent = `${pct}%`;
-    }
-    updateRubricCategoriesSum();
-}
-
-function updateRubricCategoriesSum() {
-    const maxInput = document.getElementById('rubric-modal-max-input');
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
-    const sumIndicator = document.getElementById('rubric-categories-sum-indicator');
-    if (!maxInput || !container) return;
-
-    const max = parseFloat(maxInput.value) || 50;
-    let sum = 0;
-    container.querySelectorAll('.cat-points-input').forEach(inp => {
-        sum += parseFloat(inp.value) || 0;
-    });
-    sum = roundScore(sum);
-
-    if (sumIndicator) {
-        if (Math.abs(sum - max) < 0.05) {
-            sumIndicator.className = 'text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200';
-            sumIndicator.innerHTML = `<i class="fa-solid fa-check me-1"></i> Sum: ${sum} / ${max} pts`;
-        } else {
-            sumIndicator.className = 'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200';
-            sumIndicator.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> Sum: ${sum} / ${max} pts (Diff: ${(max - sum).toFixed(1)})`;
-        }
-    }
 }
 
 async function handleSaveRubricCriterion(e) {
@@ -1142,8 +1362,8 @@ async function handleSaveRubricCriterion(e) {
     const critId = document.getElementById('rubric-modal-crit-id')?.value;
     const title = document.getElementById('rubric-modal-title-input')?.value.trim();
     const pct = parseInt(document.getElementById('rubric-modal-pct-input')?.value) || 0;
-    const max = parseInt(document.getElementById('rubric-modal-max-input')?.value) || 50;
     const desc = document.getElementById('rubric-modal-desc-input')?.value.trim();
+    const scoringType = document.querySelector('input[name="modal_scoring_type"]:checked')?.value || 'manual';
     const saveBtn = document.getElementById('saveRubricCriterionBtn');
 
     if (!title) {
@@ -1164,67 +1384,132 @@ async function handleSaveRubricCriterion(e) {
         return;
     }
 
-    const container = document.getElementById('rubric-categories-container') || document.getElementById('rubric-subcriteria-container');
-    const items = container?.querySelectorAll('.rubric-category-item') || [];
+    let minPoints = 0;
+    let maxPoints = 100;
+    let scoreStep = 0.5;
+    let rubricRatings = [];
+    let scoringCategories = [];
 
-    if (items.length === 0) {
-        showToast('Please configure at least one score category.', 'warning');
-        return;
-    }
+    if (scoringType === 'manual') {
+        minPoints = parseFloat(document.getElementById('rubric-modal-min-input')?.value);
+        if (isNaN(minPoints) || minPoints < 0) minPoints = 0;
+        maxPoints = parseFloat(document.getElementById('rubric-modal-max-input')?.value);
+        if (isNaN(maxPoints) || maxPoints <= 0) maxPoints = 100;
+        scoreStep = parseFloat(document.getElementById('rubric-modal-step-input')?.value) || 0.5;
 
-    const scoringCategories = [];
-    let hasInvalidName = false;
-
-    items.forEach((item, idx) => {
-        const name = item.querySelector('.cat-name-input')?.value.trim();
-        if (!name) {
-            hasInvalidName = true;
+        if (minPoints >= maxPoints) {
+            showToast('Invalid Range', 'Minimum allowed score must be strictly less than maximum score.', 'warning');
             return;
         }
-        const pts = parseFloat(item.querySelector('.cat-points-input')?.value);
-        const catDesc = item.querySelector('.cat-desc-input')?.value.trim() || '';
-        const id = item.dataset.catId || ('cat-' + (idx + 1));
+    } else if (scoringType === 'rubric') {
+        // Rubric-Based Scoring
+        const container = document.getElementById('rubric-ratings-container');
+        const items = container?.querySelectorAll('.rubric-rating-item') || [];
 
-        scoringCategories.push({
-            id,
-            name,
-            points: isNaN(pts) ? 0 : Math.min(max, Math.max(0, pts)),
-            description: catDesc
+        if (items.length < 2) {
+            showToast('Rubric Configuration', 'Please configure at least 2 predefined rating options.', 'warning');
+            return;
+        }
+
+        let hasInvalid = false;
+        let highest = 0;
+        items.forEach((item, idx) => {
+            const name = item.querySelector('.rate-name-input')?.value.trim();
+            const score = parseFloat(item.querySelector('.rate-score-input')?.value);
+            const rDesc = item.querySelector('.rate-desc-input')?.value.trim() || '';
+            const id = item.dataset.rateId || ('rate-' + (idx + 1));
+
+            if (!name || isNaN(score) || score < 0) {
+                hasInvalid = true;
+                return;
+            }
+
+            if (score > highest) highest = score;
+
+            rubricRatings.push({
+                id,
+                name,
+                score,
+                description: rDesc
+            });
         });
-    });
 
-    if (hasInvalidName) {
-        showToast('Please provide a name for each scoring category.', 'warning');
-        return;
+        if (hasInvalid) {
+            showToast('Incomplete Rating', 'Please provide a valid name and score for all predefined ratings.', 'warning');
+            return;
+        }
+
+        maxPoints = highest > 0 ? highest : 100;
+        minPoints = 0;
+    } else {
+        // Category-Based Scoring
+        const container = document.getElementById('category-rows-container');
+        const items = container?.querySelectorAll('.category-row-item') || [];
+
+        if (items.length < 2) {
+            showToast('Category Configuration', 'Please configure at least 2 score categories.', 'warning');
+            return;
+        }
+
+        let hasInvalid = false;
+        let sumPoints = 0;
+        items.forEach((item, idx) => {
+            const name = item.querySelector('.cat-name-input')?.value.trim();
+            const pts = parseFloat(item.querySelector('.cat-points-input')?.value);
+            const cDesc = item.querySelector('.cat-desc-input')?.value.trim() || '';
+            const id = item.dataset.catId || ('cat-' + (idx + 1));
+
+            if (!name || isNaN(pts) || pts <= 0) {
+                hasInvalid = true;
+                return;
+            }
+
+            sumPoints += pts;
+
+            scoringCategories.push({
+                id,
+                name,
+                points: pts,
+                max_score: pts,
+                description: cDesc
+            });
+        });
+
+        if (hasInvalid) {
+            showToast('Incomplete Category', 'Please provide a valid name and max score greater than 0 for all categories.', 'warning');
+            return;
+        }
+
+        maxPoints = Math.round(sumPoints * 10) / 10;
+        minPoints = 0;
     }
 
     if (saveBtn) saveBtn.disabled = true;
 
+    const payload = {
+        title,
+        description: desc,
+        scoring_type: scoringType,
+        min_points: minPoints,
+        max_points: maxPoints,
+        score_step: scoreStep,
+        instructions: desc,
+        percentage: pct,
+        rubric_ratings: rubricRatings,
+        scoring_categories: scoringCategories
+    };
+
     let res;
     if (critId) {
-        res = await editCriterion({
-            id: critId,
-            title,
-            description: desc,
-            max_points: max,
-            percentage: pct,
-            scoring_categories: scoringCategories
-        });
+        res = await editCriterion({ id: critId, ...payload });
     } else {
-        res = await createCriterion({
-            event_id: currentEventId,
-            title,
-            description: desc,
-            max_points: max,
-            percentage: pct,
-            scoring_categories: scoringCategories
-        });
+        res = await createCriterion({ event_id: currentEventId, ...payload });
     }
 
     if (saveBtn) saveBtn.disabled = false;
 
     if (res.success) {
-        showToast(critId ? 'Criterion Updated!' : 'Criterion Created!', res.message || 'Judging criterion and scoring rubric saved.', 'create');
+        showToast(critId ? 'Criterion Updated!' : 'Criterion Created!', res.message || 'Judging criterion saved successfully.', 'create');
         document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
         loadCriteriaList();
         document.getElementById('refreshEventsBtn')?.click();
@@ -1240,16 +1525,26 @@ async function handleAddCriterion(e) {
     const titleInput = document.getElementById('new-criterion-title');
     const descInput = document.getElementById('new-criterion-desc');
     const maxInput = document.getElementById('new-criterion-max');
+    const minInput = document.getElementById('new-criterion-min');
+    const stepInput = document.getElementById('new-criterion-step');
     const pctInput = document.getElementById('new-criterion-pct');
     const btn = document.getElementById('addCriterionBtn');
 
+    const scoringType = document.querySelector('input[name="quick_scoring_type"]:checked')?.value || 'manual';
     const title = titleInput?.value.trim();
     const description = descInput?.value.trim();
-    const maxPoints = parseInt(maxInput?.value) || 50;
+    const maxPoints = parseFloat(maxInput?.value) || 100;
+    const minPoints = parseFloat(minInput?.value) || 0;
+    const scoreStep = parseFloat(stepInput?.value) || 0.5;
     const percentage = parseInt(pctInput?.value) || 0;
 
     if (!title) {
         showToast('Please provide a criterion title.', 'warning');
+        return;
+    }
+
+    if (scoringType === 'manual' && minPoints >= maxPoints) {
+        showToast('Invalid Range', 'Minimum score must be less than maximum score.', 'warning');
         return;
     }
 
@@ -1263,25 +1558,37 @@ async function handleAddCriterion(e) {
 
     if (btn) btn.disabled = true;
 
-    const defaultCategories = getDefaultScoringCategories(maxPoints);
+    let rubricRatings = [];
+    let scoringCategories = [];
+    if (scoringType === 'rubric') {
+        rubricRatings = getDefaultRubricRatings(maxPoints);
+    } else if (scoringType === 'category') {
+        scoringCategories = getDefaultScoringCategories(maxPoints);
+    }
 
     const res = await createCriterion({
         event_id: currentEventId,
         title,
         description,
+        scoring_type: scoringType,
+        min_points: minPoints,
         max_points: maxPoints,
+        score_step: scoreStep,
+        instructions: description,
         percentage,
-        scoring_categories: defaultCategories
+        rubric_ratings: rubricRatings,
+        scoring_categories: scoringCategories
     });
 
     if (btn) btn.disabled = false;
 
     if (res.success) {
-        showToast('Criterion Added!', `Criterion '${title}' added with custom scoring rubric!`, 'create');
+        const typeName = scoringType === 'rubric' ? 'Rubric-Based' : scoringType === 'category' ? 'Category-Based' : 'Manual Scoring';
+        showToast('Criterion Added!', `Criterion '${title}' added with ${typeName}!`, 'create');
         if (titleInput) titleInput.value = '';
         if (descInput) descInput.value = '';
         if (pctInput) pctInput.value = '';
-        document.getElementById('manage-event-setup-modal')?.classList.add('hidden');
+        loadCriteriaList();
         document.getElementById('refreshEventsBtn')?.click();
     } else {
         showToast(res.message || 'Failed to add criterion.', 'error');
