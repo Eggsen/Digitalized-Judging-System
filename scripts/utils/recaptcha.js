@@ -3,15 +3,32 @@
  */
 
 const widgetMap = {};
-let isScriptReady = false;
+const renderingInProgress = {};
 
-// Global callback invoked by Google reCAPTCHA API script when ready
-window.onRecaptchaApiReady = function () {
-    isScriptReady = true;
-    // Automatically render the primary login widget if its container exists
+/**
+ * Initialize / render the primary login widget if its container exists.
+ */
+export function initLoginRecaptcha() {
     if (document.getElementById('login-recaptcha')) {
         renderRecaptchaWidget('login-recaptcha');
     }
+}
+
+// Global hook for inline callback in login.php
+window.__initLoginRecaptcha = initLoginRecaptcha;
+
+// Global callback invoked by Google reCAPTCHA API script when ready
+const previousOnload = window.onRecaptchaApiReady;
+window.onRecaptchaApiReady = function () {
+    window.__recaptchaApiLoaded = true;
+    if (typeof previousOnload === 'function') {
+        try {
+            previousOnload();
+        } catch (e) {
+            console.warn("Previous onRecaptchaApiReady callback failed:", e);
+        }
+    }
+    initLoginRecaptcha();
 };
 
 /**
@@ -32,24 +49,34 @@ export function renderRecaptchaWidget(containerId) {
     if (!container) return;
 
     // Check if widget for this container has already been rendered
-    if (widgetMap[containerId] !== undefined) {
+    if (widgetMap[containerId] !== undefined && container.children.length > 0) {
+        return;
+    }
+
+    if (renderingInProgress[containerId]) {
         return;
     }
 
     if (!window.grecaptcha || typeof window.grecaptcha.render !== 'function') {
-        // If API is not yet loaded, queue render shortly
-        setTimeout(() => renderRecaptchaWidget(containerId), 250);
+        // If API is not yet loaded, queue retry shortly
+        setTimeout(() => renderRecaptchaWidget(containerId), 150);
         return;
     }
 
     try {
-        const widgetId = window.grecaptcha.render(containerId, {
-            sitekey: siteKey,
-            theme: 'light'
-        });
-        widgetMap[containerId] = widgetId;
+        renderingInProgress[containerId] = true;
+        // Ensure container is empty before rendering to avoid duplicate widget errors
+        if (container.children.length === 0) {
+            const widgetId = window.grecaptcha.render(containerId, {
+                sitekey: siteKey,
+                theme: 'light'
+            });
+            widgetMap[containerId] = widgetId;
+        }
     } catch (err) {
         console.error(`reCAPTCHA render error for container "${containerId}":`, err);
+    } finally {
+        delete renderingInProgress[containerId];
     }
 }
 
@@ -59,11 +86,19 @@ export function renderRecaptchaWidget(containerId) {
  * @returns {string} Response token, or empty string if not checked
  */
 export function getRecaptchaResponse(containerId) {
-    if (!window.grecaptcha || widgetMap[containerId] === undefined) {
+    if (!window.grecaptcha) {
         return "";
     }
+    if (widgetMap[containerId] !== undefined) {
+        try {
+            return window.grecaptcha.getResponse(widgetMap[containerId]) || "";
+        } catch (err) {
+            return "";
+        }
+    }
+    // Fallback if widgetMap entry is missing: try default widget response
     try {
-        return window.grecaptcha.getResponse(widgetMap[containerId]) || "";
+        return window.grecaptcha.getResponse() || "";
     } catch (err) {
         return "";
     }
@@ -74,12 +109,26 @@ export function getRecaptchaResponse(containerId) {
  * @param {string} containerId 
  */
 export function resetRecaptchaWidget(containerId) {
-    if (!window.grecaptcha || widgetMap[containerId] === undefined) {
+    if (!window.grecaptcha) {
         return;
     }
     try {
-        window.grecaptcha.reset(widgetMap[containerId]);
+        if (widgetMap[containerId] !== undefined) {
+            window.grecaptcha.reset(widgetMap[containerId]);
+        } else {
+            window.grecaptcha.reset();
+        }
     } catch (err) {
         console.warn(`reCAPTCHA reset failed for "${containerId}":`, err);
     }
 }
+
+// Auto-trigger rendering immediately or as soon as DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initLoginRecaptcha();
+    });
+} else {
+    initLoginRecaptcha();
+}
+

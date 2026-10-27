@@ -39,6 +39,7 @@ function hideForgotPasswordCard() {
     document.getElementById('forgot-password-card')?.classList.add('hidden');
     document.getElementById('login-card')?.classList.remove('hidden');
     document.getElementById('login-card')?.classList.add('animate-fade-in');
+    renderRecaptchaWidget('login-recaptcha');
 }
 
 async function handleResetRequestSubmit() {

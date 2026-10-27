@@ -1,7 +1,10 @@
 import { loginUser, registerAdmin } from "./auth/authAPI.js";
-import { showNotice, togglePasswordVisibility, getRecaptchaResponse, resetRecaptchaWidget } from "./utils/index.js";
+import { showNotice, togglePasswordVisibility, getRecaptchaResponse, resetRecaptchaWidget, renderRecaptchaWidget } from "./utils/index.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Ensure primary login recaptcha is rendered as early as possible
+    renderRecaptchaWidget('login-recaptcha');
+
     const loginForm = document.getElementById("loginForm");
     const noticeText = document.getElementById("notice-text");
 
@@ -106,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         registerCard.classList.add("hidden");
                         loginCard.classList.remove("hidden");
                         loginCard.classList.add("animate-fade-in");
+                        renderRecaptchaWidget('login-recaptcha');
                     }
                 }, 1200);
             } else {

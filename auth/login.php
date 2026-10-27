@@ -28,6 +28,13 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
     <script>
         window.RECAPTCHA_ENABLED = <?= json_encode((bool)$recaptchaEnabled) ?>;
         window.RECAPTCHA_SITE_KEY = <?= json_encode($recaptchaSiteKey) ?>;
+        window.__recaptchaApiLoaded = false;
+        window.onRecaptchaApiReady = function() {
+            window.__recaptchaApiLoaded = true;
+            if (typeof window.__initLoginRecaptcha === 'function') {
+                window.__initLoginRecaptcha();
+            }
+        };
     </script>
     <?php if ($recaptchaEnabled): ?>
     <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaApiReady&render=explicit" async defer></script>
@@ -120,7 +127,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
 
                 <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
-                <div class="flex justify-center pt-2 overflow-hidden">
+                <div class="flex justify-center pt-2 overflow-hidden min-h-[78px]">
                     <div id="login-recaptcha"></div>
                 </div>
                 <?php endif; ?>
@@ -228,7 +235,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
 
                 <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
-                <div class="flex justify-center pt-2 overflow-hidden">
+                <div class="flex justify-center pt-2 overflow-hidden min-h-[78px]">
                     <div id="register-recaptcha"></div>
                 </div>
                 <?php endif; ?>
@@ -277,7 +284,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
 
                 <?php if ($recaptchaEnabled): ?>
                 <!-- Google reCAPTCHA v2 Widget -->
-                <div class="flex justify-center pt-2 overflow-hidden">
+                <div class="flex justify-center pt-2 overflow-hidden min-h-[78px]">
                     <div id="reset-recaptcha"></div>
                 </div>
                 <?php endif; ?>

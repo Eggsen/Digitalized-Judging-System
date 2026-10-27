@@ -25,6 +25,9 @@ function initLandingPage() {
         backFromRegisterBtn.addEventListener('click', hideRegisterAdminCard);
     }
 
+    // Ensure login recaptcha is initialized
+    renderRecaptchaWidget('login-recaptcha');
+
     // Password visibility toggles for invite & reset forms
     document.getElementById('toggle-invite-password-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('invite-password-input', 'toggle-invite-password-icon');
@@ -202,6 +205,7 @@ async function handleAcceptInvite() {
                 acceptInviteCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                renderRecaptchaWidget('login-recaptcha');
             } else {
                 window.location.href = '/auth/login.php';
             }
@@ -292,6 +296,7 @@ async function handleCompleteReset() {
                 resetTokenCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                renderRecaptchaWidget('login-recaptcha');
             } else {
                 window.location.href = '/auth/login.php';
             }
@@ -361,5 +366,6 @@ function hideRegisterAdminCard() {
         registerCard.classList.add('hidden');
         loginCard.classList.remove('hidden');
         loginCard.classList.add('animate-fade-in');
+        renderRecaptchaWidget('login-recaptcha');
     }
 }
