@@ -1,4 +1,4 @@
-import { clearLoginForm, togglePasswordVisibility, showNotice } from "../utils/index.js";
+import { clearLoginForm, togglePasswordVisibility, showNotice, renderRecaptchaWidget } from "../utils/index.js";
 import { verifyInviteToken, acceptInvitation, resetPassword } from "../auth/authAPI.js";
 
 // Module scripts are deferred — DOM is ready by the time this runs
@@ -25,6 +25,9 @@ function initLandingPage() {
         backFromRegisterBtn.addEventListener('click', hideRegisterAdminCard);
     }
 
+    // Ensure login recaptcha is initialized
+    renderRecaptchaWidget('login-recaptcha');
+
     // Password visibility toggles for invite & reset forms
     document.getElementById('toggle-invite-password-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('invite-password-input', 'toggle-invite-password-icon');
@@ -40,10 +43,56 @@ function initLandingPage() {
         togglePasswordVisibility('reset-token-confirm-pw-input', 'toggle-reset-token-confirm-pw-icon');
     });
 
-    // Check URL query parameters for tokens
+    // Check URL query parameters for tokens or OAuth errors
     const urlParams = new URLSearchParams(window.location.search);
     const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
+    const oauthError = urlParams.get('error');
+    const oauthEmail = urlParams.get('email');
+
+    if (oauthError) {
+        const noticeText = document.getElementById('notice-text');
+        let errorMsg = 'Google authentication failed. Please try again.';
+
+        switch (oauthError) {
+            case 'no_account':
+                errorMsg = oauthEmail 
+                    ? `No account found for "${oauthEmail}". Please contact an administrator to register your account.`
+                    : 'No registered account found matching your Google email. Please contact an administrator.';
+                break;
+            case 'account_disabled':
+                errorMsg = 'Your account has been disabled. Please contact the administrator.';
+                break;
+            case 'oauth_disabled':
+                errorMsg = 'Google Sign-In is currently disabled by the system administrator.';
+                break;
+            case 'oauth_denied':
+                errorMsg = 'Google sign-in was cancelled or access was denied.';
+                break;
+            case 'invalid_state':
+                errorMsg = 'Session security check failed. Please try signing in again.';
+                break;
+            case 'unverified_email':
+                errorMsg = 'Your Google email is unverified. Please verify your email with Google first.';
+                break;
+            case 'oauth_config_missing':
+                errorMsg = 'Google OAuth credentials are not properly configured on the server.';
+                break;
+            case 'token_exchange_failed':
+            case 'userinfo_failed':
+                errorMsg = 'Unable to complete verification with Google. Please try again.';
+                break;
+            default:
+                errorMsg = 'An error occurred during Google sign-in. Please try again.';
+        }
+
+        if (noticeText) {
+            showNotice(noticeText, errorMsg, 'error');
+        }
+
+        // Clean query parameters from URL history without page reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     if (inviteToken && acceptInviteCard) {
         if (loginCard) loginCard.classList.add('hidden');
@@ -156,6 +205,7 @@ async function handleAcceptInvite() {
                 acceptInviteCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                renderRecaptchaWidget('login-recaptcha');
             } else {
                 window.location.href = '/auth/login.php';
             }
@@ -246,6 +296,7 @@ async function handleCompleteReset() {
                 resetTokenCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                renderRecaptchaWidget('login-recaptcha');
             } else {
                 window.location.href = '/auth/login.php';
             }
@@ -304,6 +355,7 @@ function showRegisterAdminCard() {
         loginCard.classList.add('hidden');
         registerCard.classList.remove('hidden');
         registerCard.classList.add('animate-fade-in');
+        renderRecaptchaWidget('register-recaptcha');
     }
 }
 
@@ -314,5 +366,6 @@ function hideRegisterAdminCard() {
         registerCard.classList.add('hidden');
         loginCard.classList.remove('hidden');
         loginCard.classList.add('animate-fade-in');
+        renderRecaptchaWidget('login-recaptcha');
     }
 }

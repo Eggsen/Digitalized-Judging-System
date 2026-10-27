@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . "/../database/config.php";
+require_once __DIR__ . "/recaptcha.php";
 
 if ($_SERVER['REQUEST_METHOD'] !== "POST") {
     echo json_encode([
@@ -35,6 +36,16 @@ if ($identifier === "" || $password === "") {
     echo json_encode([
         "success" => false,
         "message" => "Please enter all required fields."
+    ]);
+    exit;
+}
+
+$recaptchaToken = trim($data['recaptcha_response'] ?? $data['g-recaptcha-response'] ?? "");
+$captchaCheck = verifyRecaptcha($recaptchaToken);
+if (!$captchaCheck['success']) {
+    echo json_encode([
+        "success" => false,
+        "message" => $captchaCheck['message']
     ]);
     exit;
 }

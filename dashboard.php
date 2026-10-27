@@ -515,6 +515,9 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     <button type="button" data-subtab="settings-content-backup" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
                         <i class="fa-solid fa-database me-1.5"></i> Data Backup &amp; Diagnostics
                     </button>
+                    <button type="button" data-subtab="settings-content-security" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
+                        <i class="fa-solid fa-shield-halved me-1.5 text-emerald-500"></i> Authentication &amp; Security
+                    </button>
                     <button type="button" data-subtab="settings-content-preferences" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
                         <i class="fa-solid fa-sliders me-1.5 text-amber-500"></i> Preferences &amp; UI
                     </button>
@@ -851,6 +854,97 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                     <p class="text-[11px] text-slate-600 dark:text-slate-300">Current audit records: <strong id="diag-logs-count" class="text-rose-700 dark:text-rose-400">0</strong> entries</p>
                                     <button type="button" id="clearLogsBtn" class="px-4 py-2 bg-white hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold rounded-xl border border-rose-300 dark:border-rose-800 transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5">
                                         <i class="fa-solid fa-trash-can"></i> Purge Activity Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION: AUTHENTICATION & SECURITY CONTROLS -->
+                        <div id="settings-content-security" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                            <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-200/70 pb-3 flex-wrap gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                            <i class="fa-solid fa-shield-halved"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-extrabold text-sm text-slate-800">Authentication &amp; Bot Protection Controls</h3>
+                                            <p class="text-[11px] text-slate-500">Configure third-party Single Sign-On and automated brute-force protection mechanisms.</p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                                        <i class="fa-solid fa-envelope-circle-check text-amber-600"></i> Email Confirmation Protected
+                                    </span>
+                                </div>
+
+                                <div class="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0 text-sm"></i>
+                                    <div class="text-[11px] leading-relaxed">
+                                        <strong>Two-Step Security Requirement:</strong> To prevent unauthorized tampering with authentication controls, toggling Google OAuth or reCAPTCHA sends a verification code and link to your administrator email address before changes are committed.
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                    <!-- Google OAuth 2.0 Card -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
+                                                        <svg class="w-4 h-4" viewBox="0 0 24 24">
+                                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">Google OAuth 2.0 Login</h4>
+                                                        <span id="google-auth-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-google-auth" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Enables the "Sign in with Google" button on login. Allows administrators, judges, and tabulators to sign in directly with their registered Google account.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Google reCAPTCHA v2 Card -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                                                        <i class="fa-solid fa-robot"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">Google reCAPTCHA v2</h4>
+                                                        <span id="recaptcha-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-recaptcha" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Enforces the "I'm not a robot" checkbox challenge across the Sign In, Admin Registration, and Password Reset forms to prevent automated brute-force attacks.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
+                                    <span class="text-[11px] text-slate-400">
+                                        Requires email OTP confirmation before changes are applied.
+                                    </span>
+                                    <button type="button" id="applySecurityTogglesBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
+                                        <i class="fa-solid fa-paper-plane text-emerald-200"></i> Update Security Controls
                                     </button>
                                 </div>
                             </div>
@@ -1596,6 +1690,53 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
                 <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">
                     Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SECURITY SETTINGS CONFIRMATION OTP -->
+    <div id="security-confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[70] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 border border-slate-100 animate-fade-in flex flex-col text-center">
+            
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto text-2xl shadow-xs border border-amber-500/20">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-black text-buksu-navy tracking-tight">Security Verification Required</h3>
+                <p class="text-xs text-slate-500 mt-1">
+                    We sent a 6-digit confirmation code to <strong id="security-modal-masked-email" class="text-slate-700">your email</strong>.
+                </p>
+            </div>
+
+            <div id="security-confirm-notice" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
+
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-left text-xs space-y-2">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Proposed Modifications:</span>
+                <div id="security-modal-diff-list" class="space-y-1 text-[11px] text-slate-600 font-medium">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <form id="securityConfirmForm" onsubmit="return false;" class="space-y-3 pt-1">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Enter 6-Digit Code</label>
+                    <input type="text" id="security-otp-input" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="••••••" class="w-48 mx-auto text-center tracking-[8px] text-2xl font-black text-buksu-navy py-2 px-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-buksu-navy focus:bg-white transition-all font-mono">
+                </div>
+
+                <button type="submit" id="confirmSecurityOtpBtn" class="w-full py-2.5 px-4 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 border border-buksu-gold/30 cursor-pointer">
+                    <i class="fa-solid fa-check text-buksu-gold"></i>
+                    <span id="confirm-otp-btn-text">Verify &amp; Apply Changes</span>
+                </button>
+            </form>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <button type="button" id="resendSecurityOtpBtn" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right text-[11px]"></i> Resend Code
+                </button>
+                <button type="button" id="closeSecurityModalBtn" class="font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+                    Cancel
                 </button>
             </div>
         </div>

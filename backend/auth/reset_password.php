@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . "/../database/config.php";
 require_once __DIR__ . "/../utils/mailer.php";
+require_once __DIR__ . "/recaptcha.php";
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -59,6 +60,16 @@ if ($action === "request_reset") {
 
     if ($identifier === "") {
         echo json_encode(["success" => false, "message" => "Please enter your registered email address."]);
+        exit;
+    }
+
+    $recaptchaToken = trim($data['recaptcha_response'] ?? $data['g-recaptcha-response'] ?? "");
+    $captchaCheck = verifyRecaptcha($recaptchaToken);
+    if (!$captchaCheck['success']) {
+        echo json_encode([
+            "success" => false,
+            "message" => $captchaCheck['message']
+        ]);
         exit;
     }
 
