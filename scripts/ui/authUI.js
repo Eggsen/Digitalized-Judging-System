@@ -40,10 +40,53 @@ function initLandingPage() {
         togglePasswordVisibility('reset-token-confirm-pw-input', 'toggle-reset-token-confirm-pw-icon');
     });
 
-    // Check URL query parameters for tokens
+    // Check URL query parameters for tokens or OAuth errors
     const urlParams = new URLSearchParams(window.location.search);
     const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
+    const oauthError = urlParams.get('error');
+    const oauthEmail = urlParams.get('email');
+
+    if (oauthError) {
+        const noticeText = document.getElementById('notice-text');
+        let errorMsg = 'Google authentication failed. Please try again.';
+
+        switch (oauthError) {
+            case 'no_account':
+                errorMsg = oauthEmail 
+                    ? `No account found for "${oauthEmail}". Please contact an administrator to register your account.`
+                    : 'No registered account found matching your Google email. Please contact an administrator.';
+                break;
+            case 'account_disabled':
+                errorMsg = 'Your account has been disabled. Please contact the administrator.';
+                break;
+            case 'oauth_denied':
+                errorMsg = 'Google sign-in was cancelled or access was denied.';
+                break;
+            case 'invalid_state':
+                errorMsg = 'Session security check failed. Please try signing in again.';
+                break;
+            case 'unverified_email':
+                errorMsg = 'Your Google email is unverified. Please verify your email with Google first.';
+                break;
+            case 'oauth_config_missing':
+                errorMsg = 'Google OAuth credentials are not properly configured on the server.';
+                break;
+            case 'token_exchange_failed':
+            case 'userinfo_failed':
+                errorMsg = 'Unable to complete verification with Google. Please try again.';
+                break;
+            default:
+                errorMsg = 'An error occurred during Google sign-in. Please try again.';
+        }
+
+        if (noticeText) {
+            showNotice(noticeText, errorMsg, 'error');
+        }
+
+        // Clean query parameters from URL history without page reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     if (inviteToken && acceptInviteCard) {
         if (loginCard) loginCard.classList.add('hidden');
