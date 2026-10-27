@@ -79,7 +79,7 @@ if ($response === false && in_array($errno, [60, 77], true)) {
 
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
-curl_close($ch);
+unset($ch);
 
 if ($response === false || $httpCode !== 200) {
     $detailMsg = $curlError ?: ($response ? "HTTP $httpCode: $response" : "HTTP $httpCode");
@@ -121,7 +121,7 @@ if ($userResponse === false && in_array($errno, [60, 77], true)) {
 
 $userHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $userCurlError = curl_error($ch);
-curl_close($ch);
+unset($ch);
 
 if ($userResponse === false || $userHttpCode !== 200) {
     $detailMsg = $userCurlError ?: ($userResponse ? "HTTP $userHttpCode: $userResponse" : "HTTP $userHttpCode");

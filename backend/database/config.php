@@ -1,5 +1,8 @@
 <?php
 
+// Prevent PHP deprecation notices from polluting API JSON responses in PHP 8.5+
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 $autoloadPath = __DIR__ . '/../../vendor/autoload.php';
 if (!file_exists($autoloadPath)) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {

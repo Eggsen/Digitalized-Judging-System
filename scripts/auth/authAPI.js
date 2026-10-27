@@ -3,6 +3,17 @@ async function parseResponse(response, defaultError = "Unable to connect to serv
     try {
         return JSON.parse(text);
     } catch (e) {
+        // Fallback: Check if valid JSON object is embedded within text (e.g. if PHP emitted warnings/notices)
+        const jsonStart = text.indexOf('{');
+        const jsonEnd = text.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            try {
+                return JSON.parse(text.substring(jsonStart, jsonEnd + 1));
+            } catch (innerError) {
+                // Ignore and fall through to error reporting
+            }
+        }
+
         console.error("Non-JSON Server Response:", text);
         const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
         return {
