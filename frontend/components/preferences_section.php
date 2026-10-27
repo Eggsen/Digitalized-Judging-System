@@ -66,7 +66,7 @@
                         </div>
                         <div>
                             <span class="font-black text-sm text-slate-800 dark:text-slate-100 block">Dark Mode</span>
-                            <span class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">High Contrast</span>
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Low Glare Slate</span>
                         </div>
                     </div>
                     <div class="pref-check-indicator w-6 h-6 rounded-full bg-buksu-gold text-buksu-navy text-[11px] hidden items-center justify-center shadow-xs">
@@ -118,15 +118,15 @@
                     </div>
                 </div>
                 <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-                    Diverse vibrant spectrum: Criteria icons, status badges, and action buttons render with multi-colored accents (emerald, amber, indigo, rose, purple).
+                    Balanced spectrum: Criteria icons, status badges, and action buttons render with clean accents (emerald, amber, slate, rose, navy).
                 </p>
                 <div class="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-700">
                     <span class="w-3.5 h-3.5 rounded-full bg-emerald-500"></span>
                     <span class="w-3.5 h-3.5 rounded-full bg-amber-500"></span>
-                    <span class="w-3.5 h-3.5 rounded-full bg-indigo-500"></span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-slate-500"></span>
                     <span class="w-3.5 h-3.5 rounded-full bg-rose-500"></span>
-                    <span class="w-3.5 h-3.5 rounded-full bg-purple-500"></span>
-                    <span class="text-[10px] text-slate-400 ms-auto font-medium">Multi-Color</span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-buksu-navy"></span>
+                    <span class="text-[10px] text-slate-400 ms-auto font-medium">Standard</span>
                 </div>
             </div>
 

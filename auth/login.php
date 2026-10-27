@@ -157,7 +157,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
 
             <div id="register-admin-wrap" class="mt-4 mx-3 pt-3 border-t border-slate-100 text-center text-xs text-slate-500">
                 <span>First time setup? </span>
-                <button type="button" id="open-register-admin-btn" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer underline inline-block">Register Admin Account</button>
+                <button type="button" id="open-register-admin-btn" class="font-bold text-buksu-navy hover:text-buksu-navy-light transition-colors cursor-pointer underline inline-block">Register Admin Account</button>
             </div>
 
             <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
@@ -169,8 +169,8 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
         <!-- REGISTER ADMIN CARD -->
         <div id="register-admin-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
             <div class="flex items-center justify-between mb-6">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold tracking-wide border border-indigo-200">
-                    <i class="fa-solid fa-user-shield text-indigo-500"></i> Admin Registration
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-buksu-navy text-xs font-semibold tracking-wide border border-slate-200">
+                    <i class="fa-solid fa-user-shield text-buksu-navy"></i> Admin Registration
                 </span>
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-800">
                     <i class="fa-solid fa-crown"></i> Initial Setup
@@ -256,7 +256,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
         <!-- REQUEST PASSWORD RESET CARD -->
         <div id="forgot-password-card" class="w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-100 p-6 sm:p-8 transition-all duration-300 hidden">
             <div class="flex items-center justify-between mb-6">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-buksu-navy text-buksu-gold border border-buksu-gold/30 shadow-xs">
                     <i class="fa-solid fa-key"></i>
                     <span>Password Self-Service</span>
                 </span>

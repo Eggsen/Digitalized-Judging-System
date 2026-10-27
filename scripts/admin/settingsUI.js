@@ -155,10 +155,20 @@ export function activateSettingsSubtab(target) {
     const subTabContents = document.querySelectorAll('.settings-subtab-content');
 
     subTabBtns.forEach(b => {
-        if (b.dataset.subtab === target) {
+        const isMatch = b.dataset.subtab === target;
+        const icon = b.querySelector('i');
+        if (isMatch) {
             b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30';
+            if (icon) {
+                icon.classList.remove('text-slate-400', 'text-slate-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-buksu-gold');
+            }
         } else {
             b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent';
+            if (icon) {
+                icon.classList.remove('text-buksu-gold', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-slate-400');
+            }
         }
     });
 

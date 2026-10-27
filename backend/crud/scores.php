@@ -115,13 +115,11 @@ if ($method === "GET") {
             }
 
             $scoringType = trim($doc['scoring_type'] ?? '');
-            if ($scoringType !== 'manual' && $scoringType !== 'rubric' && $scoringType !== 'category') {
-                if (!empty($doc['rubric_ratings'])) {
-                    $scoringType = 'rubric';
-                } elseif (!empty($doc['scoring_categories'])) {
+            if ($scoringType !== 'rubric' && $scoringType !== 'category') {
+                if (!empty($doc['scoring_categories'])) {
                     $scoringType = 'category';
                 } else {
-                    $scoringType = 'manual';
+                    $scoringType = 'rubric';
                 }
             }
 

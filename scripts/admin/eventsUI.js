@@ -43,6 +43,7 @@ export function switchAdminTab(targetTab) {
 
     tabBtns.forEach(b => {
         const isMatch = b.dataset.tab === targetTab;
+        const icon = b.querySelector('i');
         if (b.classList.contains('sidebar-nav-btn')) {
             if (isMatch) {
                 b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30';
@@ -54,6 +55,15 @@ export function switchAdminTab(targetTab) {
                 b.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer';
             } else {
                 b.className = 'admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer';
+            }
+        }
+        if (icon) {
+            if (isMatch) {
+                icon.classList.remove('text-slate-400', 'text-slate-500', 'text-indigo-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-buksu-gold');
+            } else {
+                icon.classList.remove('text-buksu-gold', 'text-indigo-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-slate-400');
             }
         }
     });
@@ -95,6 +105,7 @@ export function switchUserTab(targetTab) {
 
     userTabBtns.forEach(b => {
         const isMatch = b.dataset.tab === targetTab;
+        const icon = b.querySelector('i');
         if (b.classList.contains('sidebar-nav-btn')) {
             if (isMatch) {
                 b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30';
@@ -106,6 +117,15 @@ export function switchUserTab(targetTab) {
                 b.className = 'user-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer';
             } else {
                 b.className = 'user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer';
+            }
+        }
+        if (icon) {
+            if (isMatch) {
+                icon.classList.remove('text-slate-400', 'text-slate-500', 'text-indigo-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-buksu-gold');
+            } else {
+                icon.classList.remove('text-buksu-gold', 'text-indigo-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-slate-400');
             }
         }
     });
@@ -182,13 +202,13 @@ export async function loadAdminEvents() {
         if (e.judgingStatus === 'In Progress') {
             judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 animate-pulse"><i class="fa-solid fa-play text-[8px]"></i> Judging Active</span>';
         } else if (e.judgingStatus === 'Finished') {
-            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">Judging Finished</span>';
+            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-800 border border-slate-300">Judging Finished</span>';
         } else {
             judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Judging Inactive</span>';
         }
 
         return `
-        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-indigo-300'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
+        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
@@ -198,7 +218,7 @@ export async function loadAdminEvents() {
                     </div>
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
-                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
+                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-slate-900 transition-colors">${escapeHtml(e.eventName)}</h3>
                 <p class="text-xs text-slate-500 font-normal line-clamp-2 mb-3">${escapeHtml(e.description || 'No description provided.')}</p>
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
@@ -240,7 +260,7 @@ export async function loadAdminEvents() {
                     </button>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button class="open-assign-btn p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
+                    <button class="open-assign-btn p-1.5 bg-slate-100 hover:bg-slate-200 text-buksu-navy font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
                         <i class="fa-solid fa-users-gear"></i>
                     </button>
                     <button class="open-edit-btn p-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" 
@@ -318,8 +338,8 @@ async function loadJudgeAssignments() {
                     </span>
                 </div>
             </div>
-            <button class="open-assign-btn px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                <i class="fa-solid fa-users-gear me-1.5"></i> Manage Assignments
+            <button class="open-assign-btn px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded-xl text-xs cursor-pointer shadow transition-colors flex items-center gap-1.5" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                <i class="fa-solid fa-users-gear text-buksu-gold"></i> Manage Assignments
             </button>
         </div>
     `).join('');
@@ -357,7 +377,7 @@ async function loadAuditLogs() {
                 <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
             </td>
             <td class="px-4 py-3 text-center align-middle">
-                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">${escapeHtml(log.action)}</span>
+                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 text-buksu-navy dark:text-buksu-gold border border-slate-200 dark:border-slate-700">${escapeHtml(log.action)}</span>
             </td>
             <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
         </tr>
@@ -400,14 +420,14 @@ async function loadUserAssignedEvents() {
     const events = sortEventsByPriority(res.events);
 
     grid.innerHTML = events.map(e => `
-        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-300'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
+        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                     ${getStatusBadgeHtml(e.status)}
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
-                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-indigo-600 transition-colors">${escapeHtml(e.eventName)}</h3>
+                <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-slate-900 transition-colors">${escapeHtml(e.eventName)}</h3>
                 <p class="text-xs text-slate-500 font-normal line-clamp-2 mb-3">${escapeHtml(e.description || 'No description provided.')}</p>
 
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
@@ -803,7 +823,7 @@ export async function openViewEventModal(eventId) {
             return `
                 <div class="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
                     <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div class="w-6 h-6 rounded-lg bg-indigo-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
+                        <div class="w-6 h-6 rounded-lg bg-slate-100 text-buksu-navy flex items-center justify-center text-xs font-bold shrink-0">
                             <i class="fa-solid fa-gavel"></i>
                         </div>
                         <div class="overflow-hidden">
@@ -955,7 +975,7 @@ async function openAssignModal(eventId, eventName) {
             return `
                 <label class="flex items-center justify-between gap-2 p-2 rounded-xl border border-slate-100 transition-colors ${!isActivated ? 'opacity-60 cursor-not-allowed bg-slate-100/60' : 'hover:bg-slate-50 cursor-pointer font-medium text-slate-700'}">
                     <div class="flex items-center gap-2 overflow-hidden">
-                        <input type="checkbox" value="${j.id}" class="judge-checkbox accent-indigo-600 rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
+                        <input type="checkbox" value="${j.id}" class="judge-checkbox accent-buksu-navy rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
                         <span class="truncate text-xs">${escapeHtml(j.username)} <span class="text-slate-400 font-normal">(${escapeHtml(j.email || 'No email')})</span></span>
                     </div>
                     ${badge}
@@ -982,7 +1002,7 @@ async function openAssignModal(eventId, eventName) {
             return `
                 <label class="flex items-center justify-between gap-2 p-2 rounded-xl border border-slate-100 transition-colors ${!isActivated ? 'opacity-60 cursor-not-allowed bg-slate-100/60' : 'hover:bg-slate-50 cursor-pointer font-medium text-slate-700'}">
                     <div class="flex items-center gap-2 overflow-hidden">
-                        <input type="checkbox" value="${t.id}" class="tabulator-checkbox accent-indigo-600 rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
+                        <input type="checkbox" value="${t.id}" class="tabulator-checkbox accent-buksu-navy rounded w-4 h-4 shrink-0" ${isChecked ? 'checked' : ''} ${!isActivated ? 'disabled' : ''}>
                         <span class="truncate text-xs">${escapeHtml(t.username)} <span class="text-slate-400 font-normal">(${escapeHtml(t.email || 'No email')})</span></span>
                     </div>
                     ${badge}
@@ -995,7 +1015,7 @@ async function openAssignModal(eventId, eventName) {
 function getStatusStyle(status) {
     if (status === 'Upcoming') return 'bg-amber-100 text-amber-800';
     if (status === 'Ongoing') return 'bg-emerald-100 text-emerald-800';
-    if (status === 'Completed') return 'bg-indigo-100 text-indigo-800';
+    if (status === 'Completed') return 'bg-slate-100 text-slate-800 border border-slate-300';
     if (status === 'Archived') return 'bg-slate-200 text-slate-700';
     return 'bg-slate-100 text-slate-700';
 }
@@ -1008,7 +1028,7 @@ function getStatusBadgeHtml(status) {
         return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-amber-100 text-amber-800">Upcoming</span>`;
     }
     if (status === 'Completed') {
-        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-indigo-100 text-indigo-800">Completed</span>`;
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 text-slate-800 border border-slate-300">Completed</span>`;
     }
     if (status === 'Archived') {
         return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-200 text-slate-700">Archived</span>`;

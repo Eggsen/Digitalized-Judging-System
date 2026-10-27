@@ -81,7 +81,7 @@ async function handleResetRequestSubmit() {
                     <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Testing reset link:</div>
                     <div class="flex items-center gap-1.5">
                         <input type="text" readonly value="${res.reset_link}" id="demo-reset-link" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800 focus:outline-none" />
-                        <a href="${res.reset_link}" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-[11px] transition-colors shrink-0">Open Link</a>
+                        <a href="${res.reset_link}" class="px-2.5 py-1 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded text-[11px] transition-colors shrink-0">Open Link</a>
                     </div>
                 ` : ''}
             `;

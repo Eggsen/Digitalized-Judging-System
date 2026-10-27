@@ -36,13 +36,11 @@ if ($method === "GET") {
             $maxPoints = (int)($doc['max_points'] ?? 100);
 
             $scoringType = trim($doc['scoring_type'] ?? '');
-            if ($scoringType !== 'manual' && $scoringType !== 'rubric' && $scoringType !== 'category') {
-                if (!empty($doc['rubric_ratings'])) {
-                    $scoringType = 'rubric';
-                } elseif (!empty($doc['scoring_categories'])) {
+            if ($scoringType !== 'rubric' && $scoringType !== 'category') {
+                if (!empty($doc['scoring_categories'])) {
                     $scoringType = 'category';
                 } else {
-                    $scoringType = 'manual';
+                    $scoringType = 'rubric';
                 }
             }
 
@@ -299,9 +297,9 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
-        $scoringType = trim($data['scoring_type'] ?? 'manual');
-        if ($scoringType !== 'rubric' && $scoringType !== 'manual' && $scoringType !== 'category') {
-            $scoringType = 'manual';
+        $scoringType = trim($data['scoring_type'] ?? 'rubric');
+        if ($scoringType !== 'category') {
+            $scoringType = 'rubric';
         }
 
         $minPoints = (float)($data['min_points'] ?? 0.0);
@@ -413,9 +411,9 @@ if ($method === "POST") {
         $description = trim($data['description'] ?? '');
         $maxPoints = (int)($data['max_points'] ?? 100);
         $percentage = (int)($data['percentage'] ?? 0);
-        $scoringType = trim($data['scoring_type'] ?? 'manual');
-        if ($scoringType !== 'rubric' && $scoringType !== 'manual' && $scoringType !== 'category') {
-            $scoringType = 'manual';
+        $scoringType = trim($data['scoring_type'] ?? 'rubric');
+        if ($scoringType !== 'category') {
+            $scoringType = 'rubric';
         }
 
         $minPoints = (float)($data['min_points'] ?? 0.0);
