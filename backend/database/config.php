@@ -1,6 +1,21 @@
 <?php
 
-require_once __DIR__ . '/../../vendor/autoload.php';
+$autoloadPath = __DIR__ . '/../../vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {
+        header("Content-Type: application/json", true, 500);
+        echo json_encode([
+            "success" => false,
+            "message" => "Composer dependencies are missing. Please run 'composer install' in the project directory."
+        ]);
+        exit;
+    } else {
+        echo "Composer dependencies missing. Run 'composer install'.";
+        exit;
+    }
+}
+
+require_once $autoloadPath;
 
 use Dotenv\Dotenv;
 use MongoDB\Client;
@@ -14,6 +29,10 @@ try {
 
     if (!$uri || !$databaseName) {
         throw new Exception("Database environment variables MONGODB_URI or MONGODB_DATABASE missing.");
+    }
+
+    if (!extension_loaded('mongodb')) {
+        throw new Exception("PHP MongoDB extension is missing or not enabled. Please enable 'extension=mongodb' in your php.ini.");
     }
 
     // Connect to MongoDB Atlas
@@ -33,8 +52,7 @@ try {
     $scoresCollection = $db->scores;
     $settingsCollection = $db->settings;
 
-
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {
         header("Content-Type: application/json", true, 500);
         echo json_encode([

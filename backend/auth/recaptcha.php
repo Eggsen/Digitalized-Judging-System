@@ -47,6 +47,13 @@ function verifyRecaptcha(?string $token): array {
         'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
     ];
 
+    if (!extension_loaded('curl')) {
+        return [
+            'success' => false,
+            'message' => 'PHP cURL extension is not enabled. Please enable extension=curl in your php.ini.'
+        ];
+    }
+
     $ch = curl_init($verifyUrl);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -57,6 +64,15 @@ function verifyRecaptcha(?string $token): array {
     ]);
 
     $response = curl_exec($ch);
+    $errno = curl_errno($ch);
+
+    // If local environment lacks CA bundle (common on Windows PHP/XAMPP error 60/77)
+    if ($response === false && in_array($errno, [60, 77], true)) {
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        $response = curl_exec($ch);
+    }
+
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
@@ -65,7 +81,7 @@ function verifyRecaptcha(?string $token): array {
         error_log("reCAPTCHA cURL error: " . ($curlError ?: "HTTP $httpCode"));
         return [
             'success' => false,
-            'message' => 'Unable to verify reCAPTCHA with Google servers. Please try again.'
+            'message' => 'Unable to verify reCAPTCHA with Google servers (' . ($curlError ?: "HTTP $httpCode") . '). Please try again.'
         ];
     }
 

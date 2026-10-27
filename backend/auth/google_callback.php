@@ -68,13 +68,23 @@ curl_setopt_array($ch, [
 ]);
 
 $response = curl_exec($ch);
+$errno = curl_errno($ch);
+
+// If local environment lacks CA bundle (common on Windows PHP/XAMPP error 60/77)
+if ($response === false && in_array($errno, [60, 77], true)) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    $response = curl_exec($ch);
+}
+
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
 
 if ($response === false || $httpCode !== 200) {
-    error_log("Google Token Exchange Failed: HTTP $httpCode - " . ($curlError ?: $response));
-    header("Location: /auth/login.php?error=token_exchange_failed");
+    $detailMsg = $curlError ?: ($response ? "HTTP $httpCode: $response" : "HTTP $httpCode");
+    error_log("Google Token Exchange Failed: " . $detailMsg);
+    header("Location: /auth/login.php?error=token_exchange_failed&details=" . urlencode($detailMsg));
     exit;
 }
 
@@ -100,13 +110,23 @@ curl_setopt_array($ch, [
 ]);
 
 $userResponse = curl_exec($ch);
+$errno = curl_errno($ch);
+
+// If local environment lacks CA bundle (common on Windows PHP/XAMPP error 60/77)
+if ($userResponse === false && in_array($errno, [60, 77], true)) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    $userResponse = curl_exec($ch);
+}
+
 $userHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $userCurlError = curl_error($ch);
 curl_close($ch);
 
 if ($userResponse === false || $userHttpCode !== 200) {
-    error_log("Google UserInfo Request Failed: HTTP $userHttpCode - " . ($userCurlError ?: $userResponse));
-    header("Location: /auth/login.php?error=userinfo_failed");
+    $detailMsg = $userCurlError ?: ($userResponse ? "HTTP $userHttpCode: $userResponse" : "HTTP $userHttpCode");
+    error_log("Google UserInfo Request Failed: " . $detailMsg);
+    header("Location: /auth/login.php?error=userinfo_failed&details=" . urlencode($detailMsg));
     exit;
 }
 

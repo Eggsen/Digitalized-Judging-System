@@ -80,7 +80,10 @@ function initLandingPage() {
                 break;
             case 'token_exchange_failed':
             case 'userinfo_failed':
-                errorMsg = 'Unable to complete verification with Google. Please try again.';
+                const oauthDetails = urlParams.get('details');
+                errorMsg = oauthDetails 
+                    ? `Unable to complete verification with Google: ${oauthDetails}`
+                    : 'Unable to complete verification with Google. Please try again.';
                 break;
             default:
                 errorMsg = 'An error occurred during Google sign-in. Please try again.';
