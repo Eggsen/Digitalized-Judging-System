@@ -581,7 +581,11 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                         <div class="flex items-center gap-2 flex-wrap">
                                                             <button type="button" id="triggerLogoUploadBtn" class="px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 border border-buksu-gold/30">
                                                                 <i class="fa-solid fa-cloud-arrow-up text-buksu-gold"></i>
-                                                                <span>Upload New Logo</span>
+                                                                <span>Upload New</span>
+                                                            </button>
+                                                            <button type="button" id="openLogoLibraryBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 border border-slate-300">
+                                                                <i class="fa-solid fa-images text-buksu-gold"></i>
+                                                                <span>Choose from Library</span>
                                                             </button>
                                                             <button type="button" id="resetLogoDefaultBtn" class="px-2.5 py-1.5 bg-slate-200/70 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1">
                                                                 <i class="fa-solid fa-arrow-rotate-left text-[11px]"></i>
@@ -1762,6 +1766,54 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <i class="fa-solid fa-download"></i> Save PNG
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: LOGO ASSET REPOSITORY / MEDIA LIBRARY -->
+    <div id="logo-library-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center font-black shadow-xs border border-amber-200">
+                        <i class="fa-solid fa-images text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-base leading-tight">Institution Logo Library</h3>
+                        <p class="text-[11px] text-slate-500">Pick any previously uploaded logo or the system default seal with a single click</p>
+                    </div>
+                </div>
+                <button type="button" id="closeLogoLibraryModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+            </div>
+
+            <!-- Quick Actions & Stats -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span id="logo-library-count-text" class="text-xs font-bold text-slate-600">Loading assets...</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="uploadFromLibraryModalBtn" class="px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 border border-buksu-gold/30">
+                        <i class="fa-solid fa-cloud-arrow-up text-buksu-gold"></i>
+                        <span>Upload New Logo</span>
+                    </button>
+                    <button type="button" id="refreshLogoLibraryBtn" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer" title="Refresh library">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div id="logo-library-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5 min-h-[180px] overflow-y-auto max-h-[50vh] p-1">
+                <div class="col-span-full py-12 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin text-xl text-buksu-navy mb-2 block"></i>
+                    Loading logo repository...
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span class="text-[11px]">Selected logo applies immediately to reports, boards, and scorecards</span>
+                <button type="button" id="closeLogoLibraryModalFooterBtn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Close
+                </button>
             </div>
         </div>
     </div>

@@ -51,6 +51,7 @@ try {
     $criteriaCollection = $db->criteria;
     $scoresCollection = $db->scores;
     $settingsCollection = $db->settings;
+    $logoLibraryCollection = $db->logo_library;
 
 } catch (Throwable $e) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {

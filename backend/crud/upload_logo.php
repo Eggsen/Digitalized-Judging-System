@@ -103,6 +103,20 @@ try {
         ]
     );
 
+    // Save asset to Logo Repository
+    try {
+        $logoLibraryCollection->insertOne([
+            'url' => $newLogoUrl,
+            'filename' => $file['name'] ?? 'institution_logo',
+            'storage' => $provider,
+            'size' => (int)($file['size'] ?? 0),
+            'mimeType' => $file['type'] ?? '',
+            'uploadedBy' => $_SESSION['username'] ?? 'Admin',
+            'uploadedAt' => date('Y-m-d H:i:s'),
+            'createdAt' => new MongoDB\BSON\UTCDateTime()
+        ]);
+    } catch (Throwable $ignore) {}
+
     logSystemAction(
         $_SESSION['user_id'] ?? null,
         $_SESSION['username'] ?? 'Admin',

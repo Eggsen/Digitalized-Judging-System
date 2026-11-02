@@ -195,6 +195,7 @@ export function initSettingsPanel() {
     initSubTabs();
     initSettingsForm();
     initLogoUploader();
+    initLogoLibraryModal();
     initSecuritySettings();
     initBackupAndMaintenance();
 }
@@ -367,6 +368,11 @@ function initLogoUploader() {
                 updateLogoPreviewUI(newLogoUrl);
                 const storageMethod = data.storage === 'cloudinary' ? 'Cloudinary CDN' : 'Local Storage';
                 showToast("Logo Uploaded", `Institution logo saved via ${storageMethod}.`, "create");
+
+                const modal = document.getElementById('logo-library-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    loadLogoLibrary();
+                }
             } else {
                 showToast("Upload Failed", data.message || "Failed to upload institution logo.", "error");
             }
@@ -405,6 +411,11 @@ function initLogoUploader() {
                 cachedSettings.branding.logoUrl = null;
                 updateLogoPreviewUI(null);
                 showToast("Logo Reset", "Reverted to default institution seal.", "archive");
+
+                const modal = document.getElementById('logo-library-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    loadLogoLibrary();
+                }
             } else {
                 showToast("Reset Failed", data.message || "Could not reset logo.", "error");
             }
@@ -416,6 +427,254 @@ function initLogoUploader() {
             resetBtn.innerHTML = originalBtnHtml;
         }
     });
+}
+
+function initLogoLibraryModal() {
+    const modal = document.getElementById('logo-library-modal');
+    const openBtn = document.getElementById('openLogoLibraryBtn');
+    const closeBtn = document.getElementById('closeLogoLibraryModalBtn');
+    const closeFooterBtn = document.getElementById('closeLogoLibraryModalFooterBtn');
+    const refreshBtn = document.getElementById('refreshLogoLibraryBtn');
+    const uploadBtn = document.getElementById('uploadFromLibraryModalBtn');
+    const fileInput = document.getElementById('setting-logo-file-input');
+
+    const closeModal = () => {
+        if (modal) modal.classList.add('hidden');
+    };
+
+    const openModal = () => {
+        if (modal) {
+            modal.classList.remove('hidden');
+            loadLogoLibrary();
+        }
+    };
+
+    openBtn?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    closeFooterBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    refreshBtn?.addEventListener('click', () => {
+        loadLogoLibrary();
+    });
+
+    uploadBtn?.addEventListener('click', () => {
+        fileInput?.click();
+    });
+}
+
+export async function loadLogoLibrary() {
+    const grid = document.getElementById('logo-library-grid');
+    const countText = document.getElementById('logo-library-count-text');
+    if (!grid) return;
+
+    grid.innerHTML = `
+        <div class="col-span-full py-12 text-center text-slate-400 text-xs">
+            <i class="fa-solid fa-spinner fa-spin text-xl text-buksu-navy mb-2 block"></i>
+            Loading logo repository...
+        </div>
+    `;
+
+    try {
+        const resp = await fetch('/backend/crud/logo_library.php', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await resp.json();
+
+        if (!data.success || !Array.isArray(data.items)) {
+            grid.innerHTML = `
+                <div class="col-span-full py-8 text-center text-rose-500 text-xs">
+                    <i class="fa-solid fa-circle-exclamation text-lg mb-1 block"></i>
+                    ${data.message || 'Failed to load logo repository.'}
+                </div>
+            `;
+            if (countText) countText.textContent = 'Error loading library';
+            return;
+        }
+
+        const items = data.items;
+        if (countText) {
+            const count = items.length;
+            countText.textContent = `${count} ${count === 1 ? 'item' : 'items'} in repository`;
+        }
+
+        if (items.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full py-10 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-images text-2xl text-slate-300 mb-2 block"></i>
+                    No logos uploaded yet. Click "Upload New Logo" to add your institution logo.
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = '';
+        items.forEach(item => {
+            const card = document.createElement('div');
+            const isActive = !!item.isActive;
+            const isDefault = !!item.isDefault;
+
+            let badgeHtml = '';
+            if (isDefault) {
+                badgeHtml = '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">System Default</span>';
+            } else if (item.storage === 'cloudinary') {
+                badgeHtml = '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300"><i class="fa-solid fa-cloud me-1"></i>Cloud CDN</span>';
+            } else {
+                badgeHtml = '<span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300"><i class="fa-solid fa-server me-1"></i>Local</span>';
+            }
+
+            card.className = `p-3 rounded-2xl flex flex-col justify-between items-center transition-all relative ${
+                isActive 
+                    ? 'border-2 border-emerald-500 bg-emerald-50/20 shadow-xs' 
+                    : 'border border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs'
+            }`;
+
+            card.innerHTML = `
+                <div class="w-full flex items-center justify-between gap-1 mb-2">
+                    ${badgeHtml}
+                    ${!isDefault ? `
+                        <button type="button" class="btn-delete-logo text-slate-400 hover:text-rose-600 p-1 text-xs cursor-pointer transition-colors rounded-lg hover:bg-rose-50" data-id="${item.id}" data-filename="${encodeURIComponent(item.filename || 'logo')}" title="Delete logo from library">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center p-1.5 bg-white rounded-xl border border-slate-100 shadow-2xs my-1">
+                    <img src="${item.url}" alt="${item.filename}" class="max-w-full max-h-full object-contain">
+                </div>
+
+                <div class="w-full mt-2 text-center">
+                    <div class="text-[11px] font-bold text-slate-800 truncate" title="${item.filename}">
+                        ${item.filename}
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">
+                        ${item.uploadedAt || ''}
+                    </div>
+                </div>
+
+                <div class="w-full mt-2.5">
+                    ${isActive ? `
+                        <div class="w-full py-1.5 px-2 text-center rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-[11px] border border-emerald-300 flex items-center justify-center gap-1.5 shadow-2xs">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Active Logo</span>
+                        </div>
+                    ` : `
+                        <button type="button" class="btn-select-logo w-full py-1.5 px-2 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-[11px] shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-buksu-gold/30" data-url="${item.url}">
+                            <i class="fa-solid fa-circle-check text-buksu-gold"></i>
+                            <span>Use This Logo</span>
+                        </button>
+                    `}
+                </div>
+            `;
+
+            grid.appendChild(card);
+        });
+
+        // Attach event listeners for buttons inside the cards
+        grid.querySelectorAll('.btn-select-logo').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const url = btn.dataset.url;
+                if (!url) return;
+                await selectLogoFromLibrary(url, btn);
+            });
+        });
+
+        grid.querySelectorAll('.btn-delete-logo').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const filename = decodeURIComponent(btn.dataset.filename || 'this logo');
+                if (!id) return;
+                await deleteLogoFromLibrary(id, filename, btn);
+            });
+        });
+
+    } catch (err) {
+        console.error("Load logo library error:", err);
+        grid.innerHTML = `
+            <div class="col-span-full py-8 text-center text-rose-500 text-xs">
+                <i class="fa-solid fa-triangle-exclamation text-lg mb-1 block"></i>
+                Could not connect to logo repository.
+            </div>
+        `;
+        if (countText) countText.textContent = 'Connection error';
+    }
+}
+
+async function selectLogoFromLibrary(url, btn) {
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-buksu-gold"></i> Selecting...';
+
+    try {
+        const resp = await fetch('/backend/crud/logo_library.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'select_logo', url: url })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            if (!cachedSettings) cachedSettings = {};
+            if (!cachedSettings.branding) cachedSettings.branding = {};
+            cachedSettings.branding.logoUrl = data.logoUrl;
+
+            updateLogoPreviewUI(data.logoUrl);
+            await loadLogoLibrary();
+            showToast("Active Logo Updated", data.message || "Institution logo updated from library.", "create");
+        } else {
+            showToast("Selection Failed", data.message || "Could not select logo.", "error");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    } catch (err) {
+        console.error("Select logo error:", err);
+        showToast("Network Error", "Could not complete logo selection.", "error");
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+
+async function deleteLogoFromLibrary(id, filename, btn) {
+    if (!confirm(`Are you sure you want to delete "${filename}" from the repository?`)) {
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    try {
+        const resp = await fetch('/backend/crud/logo_library.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_logo', id: id })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            if (data.wasActive) {
+                if (!cachedSettings) cachedSettings = {};
+                if (!cachedSettings.branding) cachedSettings.branding = {};
+                cachedSettings.branding.logoUrl = null;
+                updateLogoPreviewUI(null);
+            }
+            await loadLogoLibrary();
+            showToast("Logo Deleted", data.message || "Logo deleted from repository.", "archive");
+        } else {
+            showToast("Delete Failed", data.message || "Could not delete logo.", "error");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    } catch (err) {
+        console.error("Delete logo error:", err);
+        showToast("Network Error", "Could not complete logo deletion.", "error");
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
 }
 
 function initBackupAndMaintenance() {
