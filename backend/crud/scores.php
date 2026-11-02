@@ -104,16 +104,6 @@ if ($method === "GET") {
                 }
             }
 
-            if (empty($scoringCategories)) {
-                $perCat = round($maxPts / 4, 2);
-                $scoringCategories = [
-                    ['id' => 'cat-1', 'name' => 'Difficulty & Variety', 'points' => $perCat, 'description' => 'Degree of difficulty, complexity, and choreographic variety.'],
-                    ['id' => 'cat-2', 'name' => 'Synchronization & Timing', 'points' => $perCat, 'description' => 'Precision, unison among performers, and beat alignment.'],
-                    ['id' => 'cat-3', 'name' => 'Technique & Form', 'points' => $perCat, 'description' => 'Body control, posture, execution lines, and cleanliness.'],
-                    ['id' => 'cat-4', 'name' => 'Staging & Transitions', 'points' => $perCat, 'description' => 'Spatial coverage, dynamic formations, and transition fluidity.']
-                ];
-            }
-
             $scoringType = trim($doc['scoring_type'] ?? '');
             if ($scoringType !== 'rubric' && $scoringType !== 'category') {
                 if (!empty($doc['scoring_categories'])) {
@@ -143,13 +133,6 @@ if ($method === "GET") {
                         'description' => (string)($r['description'] ?? '')
                     ];
                 }
-            } else if ($scoringType === 'rubric') {
-                $rubricRatings = [
-                    ['id' => 'rating-1', 'name' => 'Excellent / Outstanding', 'score' => (float)$maxPts, 'description' => 'Exemplary performance, flawless execution.'],
-                    ['id' => 'rating-2', 'name' => 'Very Good / Proficient', 'score' => round($maxPts * 0.75, 2), 'description' => 'Strong performance with minimal errors.'],
-                    ['id' => 'rating-3', 'name' => 'Good / Competent', 'score' => round($maxPts * 0.50, 2), 'description' => 'Satisfactory performance; noticeable areas to improve.'],
-                    ['id' => 'rating-4', 'name' => 'Fair / Needs Improvement', 'score' => round($maxPts * 0.25, 2), 'description' => 'Below standard; technical lapses.']
-                ];
             }
 
             $minPts = (float)($doc['min_points'] ?? 0.0);

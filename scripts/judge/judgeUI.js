@@ -397,7 +397,7 @@ function renderScoringSheet() {
 
                     const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
                         ? cr.scoring_categories
-                        : (isCategory ? getDefaultScoringCategories(cr.max_points) : []);
+                        : [];
                     const scoredCatsCount = isCategory ? Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length : 0;
 
                     return `
@@ -560,14 +560,7 @@ function renderActiveRubricSection() {
 }
 
 function getDefaultRubricRatingsList(maxPoints = 40) {
-    const max = parseFloat(maxPoints) || 40;
-    return [
-        { id: 'rate-5', name: 'Outstanding', score: max, description: 'Exemplary performance exceeding all standards with exceptional mastery and creativity.' },
-        { id: 'rate-4', name: 'Very Good', score: Math.round(max * 0.8 * 10) / 10, description: 'Strong and consistent execution meeting standards with commendable precision.' },
-        { id: 'rate-3', name: 'Good', score: Math.round(max * 0.6 * 10) / 10, description: 'Competent and adequate performance meeting core criteria with minor inconsistencies.' },
-        { id: 'rate-2', name: 'Fair', score: Math.round(max * 0.4 * 10) / 10, description: 'Incomplete or inconsistent execution requiring noticeable improvement.' },
-        { id: 'rate-1', name: 'Poor', score: Math.round(max * 0.2 * 10) / 10, description: 'Lacks fundamental execution, coherence, or technique.' }
-    ];
+    return [];
 }
 
 function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
@@ -582,7 +575,7 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
         // Category-Based Scoring — Bind Sub-Category Inputs & Steppers
         const categories = (Array.isArray(activeCriterion.scoring_categories) && activeCriterion.scoring_categories.length > 0)
             ? activeCriterion.scoring_categories
-            : getDefaultScoringCategories(maxPts);
+            : [];
 
         const updateCategorySubScore = (catId, rawVal) => {
             if (!selectedContestantId) return;
@@ -745,14 +738,7 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
 }
 
 function getDefaultScoringCategories(totalMax = 30) {
-    const max = parseFloat(totalMax) || 30;
-    const perCat = Math.round((max / 3) * 10) / 10;
-    const remainder = Math.round((max - (perCat * 2)) * 10) / 10;
-    return [
-        { id: 'cat-1', name: 'Stance uniqueness', points: perCat, max_score: perCat, description: 'Beautiful stance and unique positioning' },
-        { id: 'cat-2', name: 'Pose preference', points: perCat, max_score: perCat, description: 'Wonderful preference, alignment, and visual poise' },
-        { id: 'cat-3', name: 'Crowd impact', points: remainder, max_score: remainder, description: 'Crowds shout continuously, powerful audience connection' }
-    ];
+    return [];
 }
 
 function renderActiveRubricCard(cr, isInputsDisabled) {
@@ -826,7 +812,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
         // CHOICE 3: CATEGORY-BASED SCORING — Score each sub-category
         const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
             ? cr.scoring_categories
-            : getDefaultScoringCategories(maxPts);
+            : [];
 
         cardHtml += `
             <div class="space-y-4">
@@ -933,7 +919,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
         // Criteria-Based ('rubric') Scoring — Select predefined rating with fixed score and description
         const ratings = (Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0)
             ? cr.rubric_ratings
-            : getDefaultRubricRatingsList(maxPts);
+            : [];
 
         cardHtml += `
             <div class="space-y-4">
@@ -1107,7 +1093,7 @@ function updateLiveDisplays() {
             if (categoryPill && activeCrit?.scoring_type === 'category') {
                 const categories = (Array.isArray(activeCrit.scoring_categories) && activeCrit.scoring_categories.length > 0)
                     ? activeCrit.scoring_categories
-                    : getDefaultScoringCategories(activeCrit.max_points);
+                    : [];
                 const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length;
                 if (scoredCats > 0) {
                     categoryPill.innerHTML = `<i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-category-count-text">${scoredCats}/${categories.length} Categories Scored</span>`;
@@ -1170,7 +1156,7 @@ async function handleSaveScore(action) {
         if (isCategory && action === 'submit') {
             const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
                 ? cr.scoring_categories
-                : getDefaultScoringCategories(cr.max_points);
+                : [];
             const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '');
             if (scoredCats.length < categories.length) {
                 isComplete = false;

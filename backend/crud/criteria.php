@@ -45,12 +45,8 @@ if ($method === "GET") {
             }
 
             $rubricRatings = [];
-            if ($scoringType === 'rubric') {
-                if (!empty($doc['rubric_ratings'])) {
-                    $rubricRatings = sanitizeRubricRatings($doc['rubric_ratings'], $maxPoints);
-                } else {
-                    $rubricRatings = getDefaultRubricRatings($maxPoints);
-                }
+            if ($scoringType === 'rubric' && !empty($doc['rubric_ratings'])) {
+                $rubricRatings = sanitizeRubricRatings($doc['rubric_ratings'], $maxPoints);
             }
 
             $minPoints = (float)($doc['min_points'] ?? 0.0);
@@ -61,8 +57,6 @@ if ($method === "GET") {
             if ($scoringType === 'category') {
                 if (!empty($doc['scoring_categories'])) {
                     $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints, true);
-                } else {
-                    $scoringCategories = getDefaultScoringCategories($maxPoints);
                 }
             } elseif (!empty($doc['scoring_categories'])) {
                 $scoringCategories = sanitizeScoringCategories($doc['scoring_categories'], $maxPoints, false);
@@ -140,7 +134,7 @@ function sanitizeRubricRatings($rawRatings, &$maxPoints) {
     }
 
     if (!is_array($rawRatings) || empty($rawRatings)) {
-        return getDefaultRubricRatings($maxPoints);
+        return [];
     }
 
     $sanitized = [];
@@ -154,7 +148,7 @@ function sanitizeRubricRatings($rawRatings, &$maxPoints) {
 
         $name = trim($r['name'] ?? '');
         if ($name === '') {
-            $name = 'Rating Tier ' . ($idx + 1);
+            continue; // Admin must explicitly provide a name
         }
         $id = trim($r['id'] ?? ('rating-' . ($idx + 1) . '-' . bin2hex(random_bytes(2))));
         $desc = trim($r['description'] ?? '');
@@ -174,7 +168,7 @@ function sanitizeRubricRatings($rawRatings, &$maxPoints) {
     }
 
     if (empty($sanitized)) {
-        return getDefaultRubricRatings($maxPoints);
+        return [];
     }
 
     // Sort descending by score
@@ -190,35 +184,6 @@ function sanitizeRubricRatings($rawRatings, &$maxPoints) {
     return $sanitized;
 }
 
-// Helper to provide default scoring categories scaled to maxPoints
-function getDefaultScoringCategories($maxPoints = 30) {
-    $maxPts = (float)$maxPoints;
-    if ($maxPts <= 0) $maxPts = 30.0;
-    $count = 3;
-    $perCat = round($maxPts / $count, 2);
-
-    return [
-        [
-            'id' => 'cat-1',
-            'name' => 'Stance uniqueness',
-            'description' => 'Beautiful stance, stability, and posture.',
-            'points' => $perCat
-        ],
-        [
-            'id' => 'cat-2',
-            'name' => 'Pose preference',
-            'description' => 'Wonderful preference, angle, and dynamic execution.',
-            'points' => $perCat
-        ],
-        [
-            'id' => 'cat-3',
-            'name' => 'Crowd impact',
-            'description' => 'Crowds shout continuously; overall audience engagement and energy.',
-            'points' => round($maxPts - ($perCat * 2), 2)
-        ]
-    ];
-}
-
 // Helper to sanitize customizable scoring categories array
 function sanitizeScoringCategories($rawCategories, &$maxPoints, $isCategoryDriven = false) {
     if ($rawCategories instanceof Traversable) {
@@ -228,7 +193,7 @@ function sanitizeScoringCategories($rawCategories, &$maxPoints, $isCategoryDrive
     }
 
     if (!is_array($rawCategories) || empty($rawCategories)) {
-        return getDefaultScoringCategories($maxPoints);
+        return [];
     }
 
     $sanitized = [];
@@ -242,12 +207,12 @@ function sanitizeScoringCategories($rawCategories, &$maxPoints, $isCategoryDrive
 
         $name = trim($cat['name'] ?? '');
         if ($name === '') {
-            $name = 'Score Category ' . ($index + 1);
+            continue; // Admin must explicitly provide a name
         }
         $id = trim($cat['id'] ?? ('cat-' . ($index + 1) . '-' . bin2hex(random_bytes(2))));
         $desc = trim($cat['description'] ?? '');
         $pts = (float)($cat['points'] ?? 0);
-        if ($pts < 0) $pts = 0;
+        if ($pts <= 0) continue;
 
         $sanitized[] = [
             'id' => $id,
@@ -259,7 +224,7 @@ function sanitizeScoringCategories($rawCategories, &$maxPoints, $isCategoryDrive
     }
 
     if (empty($sanitized)) {
-        return getDefaultScoringCategories($maxPoints);
+        return [];
     }
 
     if ($isCategoryDriven && $totalCatPts > 0) {
@@ -337,12 +302,27 @@ if ($method === "POST") {
             }
 
             $rubricRatings = [];
+            $scoringCategories = [];
             if ($scoringType === 'rubric') {
                 $rubricRatings = sanitizeRubricRatings($data['rubric_ratings'] ?? [], $maxPoints);
+                if (count($rubricRatings) < 2) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "At least 2 predefined ratings are required for a criterion. Please configure at least 2 ratings."
+                    ]);
+                    exit;
+                }
+            } else {
+                $isCategoryDriven = true;
+                $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? [], $maxPoints, $isCategoryDriven);
+                if (count($scoringCategories) < 2) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "At least 2 score categories are required for a criterion. Please configure at least 2 categories."
+                    ]);
+                    exit;
+                }
             }
-
-            $isCategoryDriven = ($scoringType === 'category');
-            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? [], $maxPoints, $isCategoryDriven);
 
             $newId = "criteria-" . bin2hex(random_bytes(6));
             $doc = [
@@ -466,12 +446,27 @@ if ($method === "POST") {
             }
 
             $rubricRatings = [];
+            $scoringCategories = [];
             if ($scoringType === 'rubric') {
                 $rubricRatings = sanitizeRubricRatings($data['rubric_ratings'] ?? [], $maxPoints);
+                if (count($rubricRatings) < 2) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "At least 2 predefined ratings are required for a criterion. Please configure at least 2 ratings."
+                    ]);
+                    exit;
+                }
+            } else {
+                $isCategoryDriven = true;
+                $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? ($existing['scoring_categories'] ?? []), $maxPoints, $isCategoryDriven);
+                if (count($scoringCategories) < 2) {
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "At least 2 score categories are required for a criterion. Please configure at least 2 categories."
+                    ]);
+                    exit;
+                }
             }
-
-            $isCategoryDriven = ($scoringType === 'category');
-            $scoringCategories = sanitizeScoringCategories($data['scoring_categories'] ?? ($existing['scoring_categories'] ?? []), $maxPoints, $isCategoryDriven);
 
             $updateFields = [
                 'title' => $title,

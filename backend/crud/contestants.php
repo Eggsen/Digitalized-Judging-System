@@ -100,15 +100,6 @@ if ($method === "POST") {
         $teamMembers = parseTeamMembers($data['team_members'] ?? []);
 
         $comments = [];
-        $initialComment = trim($data['initial_comment'] ?? ($data['comment'] ?? ''));
-        if ($initialComment !== '') {
-            $comments[] = [
-                'id' => 'cmt-' . bin2hex(random_bytes(4)),
-                'text' => $initialComment,
-                'author' => $_SESSION['username'] ?? 'Admin',
-                'created_at' => (new DateTime())->format('Y-m-d H:i:s')
-            ];
-        }
 
         if ($eventId <= 0 || $contestantNumber <= 0 || $name === '') {
             echo json_encode(["success" => false, "message" => "Contestant number, name, and valid event_id are required."]);
@@ -251,10 +242,10 @@ if ($method === "POST") {
         }
     }
 
-    // Action 3: Add Comment / Special Citation (Judge or Admin)
+    // Action 3: Add Comment / Special Citation (Judges only)
     if ($action === 'add_comment' || $action === 'add_award') {
-        if (!in_array($userRole, ['admin', 'judge'])) {
-            echo json_encode(["success" => false, "message" => "Access denied. Only judges or administrators can assign awards/comments."]);
+        if ($userRole !== 'judge') {
+            echo json_encode(["success" => false, "message" => "Access denied. Only judges can assign awards or citations."]);
             exit;
         }
 

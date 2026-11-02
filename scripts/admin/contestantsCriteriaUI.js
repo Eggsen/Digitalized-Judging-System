@@ -54,48 +54,13 @@ export function initContestantsCriteriaUI() {
         });
     });
 
-    // Contestant Citations & Comments modal handlers
-    document.getElementById('addContestantCommentForm')?.addEventListener('submit', handleAddCitation);
+    // Team members save handler in modal
     document.getElementById('saveContestantMembersBtn')?.addEventListener('click', handleSaveTeamMembers);
-
-    // Form: Create Criterion
-    document.getElementById('createCriterionForm')?.addEventListener('submit', handleAddCriterion);
-
-    // Quick Add: Scoring Choice Radio Toggle (Criteria-Based vs Category-Based)
-    document.querySelectorAll('input[name="quick_scoring_type"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            const val = e.target.value;
-            const rubricBox = document.getElementById('quick-rubric-info-box');
-            const categoryBox = document.getElementById('quick-category-info-box');
-            const rubricCard = document.getElementById('quick-scoring-rubric-card');
-            const categoryCard = document.getElementById('quick-scoring-category-card');
-            const maxLabel = document.getElementById('new-criterion-max-label');
-
-            if (val === 'category') {
-                rubricBox?.classList.add('hidden');
-                categoryBox?.classList.remove('hidden');
-                categoryCard?.classList.add('border-buksu-navy', 'bg-slate-100/70');
-                categoryCard?.classList.remove('border-slate-200', 'bg-white');
-                rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/40');
-                rubricCard?.classList.add('border-slate-200', 'bg-white');
-                if (maxLabel) maxLabel.textContent = 'Total Category Points (pts)';
-            } else {
-                // Criteria-Based ('rubric')
-                rubricBox?.classList.remove('hidden');
-                categoryBox?.classList.add('hidden');
-                rubricCard?.classList.add('border-amber-500', 'bg-amber-50/40');
-                rubricCard?.classList.remove('border-slate-200', 'bg-white');
-                categoryCard?.classList.remove('border-buksu-navy', 'bg-slate-100/70');
-                categoryCard?.classList.add('border-slate-200', 'bg-white');
-                if (maxLabel) maxLabel.textContent = 'Max Score (pts)';
-            }
-        });
-    });
 
     // Open Weights Modal
     document.getElementById('openConfigureWeightsBtn')?.addEventListener('click', openAdjustWeightsModal);
 
-    // Open Rubric / Scoring Builder for New Criterion
+    // Open Advanced Scoring Builder for New Criterion
     document.getElementById('openNewCriterionRubricBtn')?.addEventListener('click', () => openCriterionRubricModal());
     document.getElementById('openCustomRubricBuilderBtn')?.addEventListener('click', () => openCriterionRubricModal());
 
@@ -111,28 +76,22 @@ export function initContestantsCriteriaUI() {
 
     // Modal: Rubric Rating Buttons
     document.getElementById('rubricAddRatingBtn')?.addEventListener('click', () => addRatingRow());
-    document.getElementById('rubricLoad4TierPresetBtn')?.addEventListener('click', load4TierPreset);
-    document.getElementById('rubricLoad5TierPresetBtn')?.addEventListener('click', load5TierPreset);
 
     // Modal: Category-Based Buttons
     document.getElementById('categoryAddRowBtn')?.addEventListener('click', () => addCategoryRow());
-    document.getElementById('categoryLoadStylePresetBtn')?.addEventListener('click', loadStyleCategoryPreset);
-    document.getElementById('categoryLoad4TierPresetBtn')?.addEventListener('click', load4CategoryPreset);
+
+    // Modal: Criterion Max Score change listener (divides points evenly across items)
+    document.getElementById('rubric-modal-max-input')?.addEventListener('input', () => {
+        const scoringType = document.querySelector('input[name="modal_scoring_type"]:checked')?.value || 'rubric';
+        if (scoringType === 'category') {
+            rebalanceCategoryPoints();
+        } else {
+            rebalanceRubricPoints();
+        }
+    });
 
     // Form: Save Criterion & Scoring Setup
     document.getElementById('criterionRubricForm')?.addEventListener('submit', handleSaveRubricCriterion);
-
-    // Live validation: Quick Add Weight input (cannot exceed remaining to 100%)
-    document.getElementById('new-criterion-pct')?.addEventListener('input', (e) => {
-        const input = e.target;
-        const entered = parseInt(input.value) || 0;
-        const currentTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
-        const remaining = Math.max(0, 100 - currentTotal);
-        if (entered > remaining) {
-            showToast('Weight Limit Exceeded', `Total criteria weight cannot exceed 100%! Only ${remaining}% is available.`, 'warning');
-            input.value = remaining;
-        }
-    });
 
     // Live validation: Rubric Modal Weight input (cannot exceed remaining to 100%)
     document.getElementById('rubric-modal-pct-input')?.addEventListener('input', (e) => {
@@ -534,7 +493,6 @@ async function handleAddContestant(e) {
     const deptInput = document.getElementById('new-contestant-dept');
     const descInput = document.getElementById('new-contestant-desc');
     const membersInput = document.getElementById('new-contestant-members');
-    const commentInput = document.getElementById('new-contestant-comment');
     const entryTypeRadio = document.querySelector('input[name="contestant_entry_type"]:checked');
     const btn = document.getElementById('addContestantBtn');
 
@@ -544,7 +502,6 @@ async function handleAddContestant(e) {
     const description = descInput?.value.trim();
     const entryType = entryTypeRadio?.value || 'individual';
     const teamMembers = membersInput?.value.trim();
-    const initialComment = commentInput?.value.trim();
 
     if (!contestantNumber || !name) {
         showToast('Please provide a contestant number and name.', 'warning');
@@ -560,8 +517,7 @@ async function handleAddContestant(e) {
         department_or_org: departmentOrOrg,
         description,
         entry_type: entryType,
-        team_members: teamMembers,
-        initial_comment: initialComment
+        team_members: teamMembers
     });
 
     if (btn) btn.disabled = false;
@@ -572,7 +528,6 @@ async function handleAddContestant(e) {
         if (deptInput) deptInput.value = '';
         if (descInput) descInput.value = '';
         if (membersInput) membersInput.value = '';
-        if (commentInput) commentInput.value = '';
         
         // Modal must NOT disappear when adding contestants as requested!
         // Instead, reload the contestants list dynamically and pre-fill next number
@@ -777,12 +732,8 @@ async function loadCriteriaList() {
 
     container.innerHTML = cachedCriteria.map(cr => {
         const isCategory = (cr.scoring_type === 'category');
-        const rubricRatings = Array.isArray(cr.rubric_ratings) && cr.rubric_ratings.length > 0 
-            ? cr.rubric_ratings 
-            : getDefaultRubricRatings(cr.max_points);
-        const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
-            ? cr.scoring_categories
-            : (isCategory ? getDefaultScoringCategories(cr.max_points) : []);
+        const rubricRatings = Array.isArray(cr.rubric_ratings) ? cr.rubric_ratings : [];
+        const categories = Array.isArray(cr.scoring_categories) ? cr.scoring_categories : [];
 
         return `
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-all space-y-3">
@@ -908,7 +859,7 @@ function bindCriteriaRowActions() {
     });
 }
 
-export function setModalScoringType(type) {
+export function setModalScoringType(type, preserveExisting = false) {
     const isCategory = (type === 'category');
 
     const rubricRadio = document.getElementById('modal-scoring-type-rubric');
@@ -935,12 +886,8 @@ export function setModalScoringType(type) {
         categoryCard?.classList.remove('border-buksu-navy', 'bg-slate-100/70', 'shadow-2xs');
         categoryCard?.classList.add('border-slate-200', 'bg-white');
 
-        // If ratings container is empty, populate default ratings
-        const container = document.getElementById('rubric-ratings-container');
-        if (container && container.querySelectorAll('.rubric-rating-item').length === 0) {
-            const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
-            const defaults = getDefaultRubricRatings(maxPts);
-            defaults.forEach((r, idx) => addRatingRow(r, idx));
+        if (!preserveExisting) {
+            rebalanceRubricPoints();
         }
     } else {
         // Category-Based
@@ -952,52 +899,112 @@ export function setModalScoringType(type) {
         rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
         rubricCard?.classList.add('border-slate-200', 'bg-white');
 
-        // If category container is empty, load style preset
-        const container = document.getElementById('category-rows-container');
-        if (container && container.querySelectorAll('.category-row-item').length === 0) {
-            loadStyleCategoryPreset();
-        } else {
-            updateCategorySum();
+        if (!preserveExisting) {
+            rebalanceCategoryPoints();
         }
     }
 }
 
-export function updateCategorySum() {
+export function rebalanceCategoryPoints() {
     const container = document.getElementById('category-rows-container');
     const badge = document.getElementById('category-sum-total-badge');
     const maxInput = document.getElementById('rubric-modal-max-input');
-    if (!container) return 0;
+    if (!container) return;
 
-    const items = container.querySelectorAll('.category-row-item');
-    let sum = 0;
-    items.forEach(item => {
-        const pts = parseFloat(item.querySelector('.cat-points-input')?.value) || 0;
-        sum += pts;
+    const rows = container.querySelectorAll('.category-row-item');
+    const count = rows.length;
+    const maxPts = parseFloat(maxInput?.value) || 0;
+
+    let emptyMsg = container.querySelector('.empty-category-placeholder');
+    if (count === 0) {
+        if (!emptyMsg) {
+            container.innerHTML = `
+                <div class="empty-category-placeholder py-8 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+                    <i class="fa-solid fa-layer-group text-slate-300 text-2xl mb-2 block"></i>
+                    <p class="text-xs font-bold text-slate-600">No score categories added yet</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Click <strong class="text-buksu-navy font-bold">"+ Add Category"</strong> above to add categories. At least 2 categories are required.</p>
+                </div>
+            `;
+        }
+        if (badge) badge.textContent = `Total: ${maxPts} pts (0 Categories)`;
+        return;
+    } else if (emptyMsg) {
+        emptyMsg.remove();
+    }
+
+    const perItem = count > 0 ? (Math.round((maxPts / count) * 100) / 100) : 0;
+
+    rows.forEach((row, idx) => {
+        const badgeElem = row.querySelector('.cat-index-badge');
+        if (badgeElem) badgeElem.textContent = `#${idx + 1}`;
+
+        const ptsInput = row.querySelector('.cat-points-input');
+        if (ptsInput) {
+            ptsInput.value = perItem;
+        }
     });
 
-    sum = Math.round(sum * 10) / 10;
-
     if (badge) {
-        badge.textContent = `Total: ${sum} pts (${items.length} Categories)`;
+        badge.textContent = `Total: ${maxPts} pts (${count} Categories - ${perItem} pts each)`;
     }
-    if (maxInput) {
-        maxInput.value = sum;
+}
+
+export function rebalanceRubricPoints() {
+    const container = document.getElementById('rubric-ratings-container');
+    const maxInput = document.getElementById('rubric-modal-max-input');
+    if (!container) return;
+
+    const rows = container.querySelectorAll('.rubric-rating-item');
+    const count = rows.length;
+    const maxPts = parseFloat(maxInput?.value) || 0;
+
+    let emptyMsg = container.querySelector('.empty-rating-placeholder');
+    if (count === 0) {
+        if (!emptyMsg) {
+            container.innerHTML = `
+                <div class="empty-rating-placeholder py-8 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+                    <i class="fa-solid fa-list-check text-slate-300 text-2xl mb-2 block"></i>
+                    <p class="text-xs font-bold text-slate-600">No predefined ratings added yet</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Click <strong class="text-amber-600 font-bold">"+ Add Predefined Rating"</strong> above to add ratings. At least 2 ratings are required.</p>
+                </div>
+            `;
+        }
+        return;
+    } else if (emptyMsg) {
+        emptyMsg.remove();
     }
-    return sum;
+
+    const perItem = count > 0 ? (Math.round((maxPts / count) * 100) / 100) : 0;
+
+    rows.forEach((row, idx) => {
+        const badgeElem = row.querySelector('.rating-index-badge');
+        if (badgeElem) badgeElem.textContent = `#${idx + 1}`;
+
+        const scoreInput = row.querySelector('.rate-score-input');
+        if (scoreInput) {
+            scoreInput.value = perItem;
+        }
+    });
+}
+
+export function updateCategorySum() {
+    return rebalanceCategoryPoints();
 }
 
 export function addCategoryRow(category = null, index = null) {
     const container = document.getElementById('category-rows-container');
     if (!container) return;
 
+    container.querySelector('.empty-category-placeholder')?.remove();
+
     const existingRows = container.querySelectorAll('.category-row-item');
     const nextIdx = index !== null ? index : existingRows.length;
 
     const cId = category?.id || ('cat-' + Math.random().toString(36).substring(2, 7));
-    const cName = category?.name || (nextIdx === 0 ? 'Stance uniqueness' : nextIdx === 1 ? 'Pose preference' : nextIdx === 2 ? 'Crowd impact' : 'Execution quality');
+    const cName = category?.name || '';
     const cPoints = (category && (category.points !== undefined || category.max_score !== undefined))
         ? parseFloat(category.points ?? category.max_score)
-        : 10;
+        : 0;
     const cDesc = category?.description || '';
 
     const row = document.createElement('div');
@@ -1012,12 +1019,12 @@ export function addCategoryRow(category = null, index = null) {
                 </span>
                 <div class="flex-1 min-w-[160px]">
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Category Name / Aspect</label>
-                    <input type="text" class="cat-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-buksu-navy" placeholder="e.g. Stance uniqueness, Pose preference..." value="${escapeHtml(cName)}" required>
+                    <input type="text" class="cat-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-buksu-navy" placeholder="e.g. Execution, Artistry, Technique..." value="${escapeHtml(cName)}" required>
                 </div>
                 <div class="shrink-0">
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Max Points (pts)</label>
                     <div class="flex items-center gap-1.5">
-                        <input type="number" step="0.5" min="0.5" class="cat-points-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-buksu-navy focus:outline-none focus:ring-2 focus:ring-buksu-navy" value="${cPoints}" required>
+                        <input type="number" step="any" min="0.1" class="cat-points-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-buksu-navy focus:outline-none focus:ring-2 focus:ring-buksu-navy" value="${cPoints}" required>
                         <span class="text-xs font-bold text-slate-500">pts</span>
                     </div>
                 </div>
@@ -1029,71 +1036,47 @@ export function addCategoryRow(category = null, index = null) {
 
         <div>
             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-0.5">Category Description &amp; Performance Standards</label>
-            <textarea class="cat-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-buksu-navy font-normal leading-relaxed" rows="2" placeholder="e.g. Beautiful stance and positioning, flawless poise...">${escapeHtml(cDesc)}</textarea>
+            <textarea class="cat-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-buksu-navy font-normal leading-relaxed" rows="2" placeholder="Describe expectations and scoring guidelines for this category...">${escapeHtml(cDesc)}</textarea>
         </div>
     `;
 
-    // Live update sum when points change
-    row.querySelector('.cat-points-input')?.addEventListener('input', updateCategorySum);
-
-    // Remove button handler
-    row.querySelector('.remove-cat-btn')?.addEventListener('click', () => {
-        const remaining = container.querySelectorAll('.category-row-item');
-        if (remaining.length <= 2) {
-            showToast('A category-based criterion must have at least 2 categories.', 'warning');
-            return;
-        }
-        row.remove();
-        container.querySelectorAll('.category-row-item').forEach((item, idx) => {
-            const badge = item.querySelector('.cat-index-badge');
-            if (badge) badge.textContent = `#${idx + 1}`;
+    row.querySelector('.cat-points-input')?.addEventListener('input', () => {
+        const rows = container.querySelectorAll('.category-row-item');
+        let sum = 0;
+        rows.forEach(r => {
+            sum += parseFloat(r.querySelector('.cat-points-input')?.value) || 0;
         });
-        updateCategorySum();
+        sum = Math.round(sum * 100) / 100;
+        const badge = document.getElementById('category-sum-total-badge');
+        if (badge) {
+            badge.textContent = `Total: ${sum} pts (${rows.length} Categories)`;
+        }
+    });
+
+    row.querySelector('.remove-cat-btn')?.addEventListener('click', () => {
+        row.remove();
+        rebalanceCategoryPoints();
     });
 
     container.appendChild(row);
-    updateCategorySum();
-}
 
-export function loadStyleCategoryPreset() {
-    const container = document.getElementById('category-rows-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const stylePresets = [
-        { id: 'cat-1', name: 'Stance uniqueness', points: 10, max_score: 10, description: 'Beautiful stance, unique positioning, and expressive balance' },
-        { id: 'cat-2', name: 'Pose preference', points: 10, max_score: 10, description: 'Wonderful preference, alignment, and visual poise' },
-        { id: 'cat-3', name: 'Crowd impact', points: 10, max_score: 10, description: 'Crowds shout continuously, powerful audience connection and charisma' }
-    ];
-    stylePresets.forEach((p, idx) => addCategoryRow(p, idx));
-    updateCategorySum();
-    showToast('Loaded Style Example (30 pts)', 'info');
-}
-
-export function load4CategoryPreset() {
-    const container = document.getElementById('category-rows-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const presets = [
-        { id: 'cat-1', name: 'Execution & Technique', points: 10, max_score: 10, description: 'Precision, posture, body control, and clean technical execution' },
-        { id: 'cat-2', name: 'Artistry & Musicality', points: 10, max_score: 10, description: 'Rhythm adherence, emotional nuance, musical interpretation' },
-        { id: 'cat-3', name: 'Difficulty & Variety', points: 10, max_score: 10, description: 'Complex combinations, diverse transitions, and movement variety' },
-        { id: 'cat-4', name: 'Overall Stage Presence', points: 10, max_score: 10, description: 'Audience connection, confidence, projection, and performance energy' }
-    ];
-    presets.forEach((p, idx) => addCategoryRow(p, idx));
-    updateCategorySum();
-    showToast('Loaded 4 Standard Categories (40 pts)', 'info');
+    if (!category || category.points === undefined) {
+        rebalanceCategoryPoints();
+    }
 }
 
 export function addRatingRow(rating = null, index = null) {
     const container = document.getElementById('rubric-ratings-container');
     if (!container) return;
 
+    container.querySelector('.empty-rating-placeholder')?.remove();
+
     const existingRows = container.querySelectorAll('.rubric-rating-item');
     const nextIdx = index !== null ? index : existingRows.length;
 
     const rId = rating?.id || ('rate-' + Math.random().toString(36).substring(2, 7));
-    const rName = rating?.name || (nextIdx === 0 ? 'Excellent' : nextIdx === 1 ? 'Very Good' : nextIdx === 2 ? 'Good' : 'Needs Improvement');
-    const rScore = (rating && typeof rating.score !== 'undefined') ? parseFloat(rating.score) : Math.max(0, 100 - (nextIdx * 25));
+    const rName = rating?.name || '';
+    const rScore = (rating && typeof rating.score !== 'undefined') ? parseFloat(rating.score) : 0;
     const rDesc = rating?.description || '';
 
     const row = document.createElement('div');
@@ -1113,7 +1096,7 @@ export function addRatingRow(rating = null, index = null) {
                 <div class="shrink-0">
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Fixed Score (pts)</label>
                     <div class="flex items-center gap-1.5">
-                        <input type="number" step="0.5" min="0" class="rate-score-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500" value="${rScore}" required>
+                        <input type="number" step="any" min="0" class="rate-score-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500" value="${rScore}" required>
                         <span class="text-xs font-bold text-slate-500">pts</span>
                     </div>
                 </div>
@@ -1129,72 +1112,16 @@ export function addRatingRow(rating = null, index = null) {
         </div>
     `;
 
-    // Remove button handler
     row.querySelector('.remove-rating-btn')?.addEventListener('click', () => {
-        const remaining = container.querySelectorAll('.rubric-rating-item');
-        if (remaining.length <= 2) {
-            showToast('A rubric-based criterion must have at least 2 predefined ratings.', 'warning');
-            return;
-        }
         row.remove();
-        container.querySelectorAll('.rubric-rating-item').forEach((item, idx) => {
-            const badge = item.querySelector('.rating-index-badge');
-            if (badge) badge.textContent = `#${idx + 1}`;
-        });
+        rebalanceRubricPoints();
     });
 
     container.appendChild(row);
-}
 
-export function load4TierPreset() {
-    const container = document.getElementById('rubric-ratings-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
-    const presets = getDefaultRubricRatings(maxPts);
-    presets.forEach((p, idx) => addRatingRow(p, idx));
-    showToast('Loaded 4-tier rubric preset.', 'info');
-}
-
-export function load5TierPreset() {
-    const container = document.getElementById('rubric-ratings-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const maxPts = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || 100;
-    const presets = [
-        { id: 'rate-1', name: 'Superior / Masterful', score: roundScore(maxPts * 1.0), description: 'Extraordinary artistry, flawless technique, and innovative stage presence.' },
-        { id: 'rate-2', name: 'Excellent / High Distinction', score: roundScore(maxPts * 0.8), description: 'Superior execution with remarkable precision and minimal errors.' },
-        { id: 'rate-3', name: 'Proficient / Above Average', score: roundScore(maxPts * 0.6), description: 'Well-executed with solid timing and commendable choreography.' },
-        { id: 'rate-4', name: 'Satisfactory / Competent', score: roundScore(maxPts * 0.4), description: 'Meets minimum competition standards; noticeable inconsistency.' },
-        { id: 'rate-5', name: 'Developing / Needs Support', score: roundScore(maxPts * 0.2), description: 'Frequent performance breaks, lack of synchronization, or incomplete.' }
-    ];
-    presets.forEach((p, idx) => addRatingRow(p, idx));
-    showToast('Loaded 5-tier rubric preset.', 'info');
-}
-
-export function getDefaultRubricRatings(maxPoints = 100) {
-    const max = parseFloat(maxPoints) || 100;
-    return [
-        { id: 'rate-1', name: 'Excellent / Outstanding', score: roundScore(max * 1.0), description: 'Exemplary performance, flawless execution, and superior technical mastery.' },
-        { id: 'rate-2', name: 'Very Good / Proficient', score: roundScore(max * 0.75), description: 'High-level proficiency with solid technique and only minor, isolated errors.' },
-        { id: 'rate-3', name: 'Good / Competent', score: roundScore(max * 0.50), description: 'Meets standard expectations; demonstrated ability with noticeable room for improvement.' },
-        { id: 'rate-4', name: 'Fair / Needs Improvement', score: roundScore(max * 0.25), description: 'Below standard; frequent inconsistencies, technical flaws, or lack of refinement.' }
-    ];
-}
-
-export function getDefaultScoringCategories(totalMax = 30) {
-    const max = parseFloat(totalMax) || 30;
-    const perCat = Math.round((max / 3) * 10) / 10;
-    const remainder = Math.round((max - (perCat * 2)) * 10) / 10;
-    return [
-        { id: 'cat-1', name: 'Stance uniqueness', points: perCat, max_score: perCat, description: 'Beautiful stance and unique positioning' },
-        { id: 'cat-2', name: 'Pose preference', points: perCat, max_score: perCat, description: 'Wonderful preference, alignment, and visual poise' },
-        { id: 'cat-3', name: 'Crowd impact', points: remainder, max_score: remainder, description: 'Crowds shout continuously, powerful audience connection' }
-    ];
-}
-
-function roundScore(val) {
-    return Math.round(val * 10) / 10;
+    if (!rating || rating.score === undefined) {
+        rebalanceRubricPoints();
+    }
 }
 
 export function openCriterionRubricModal(criterionId) {
@@ -1204,9 +1131,7 @@ export function openCriterionRubricModal(criterionId) {
     const critIdInput = document.getElementById('rubric-modal-crit-id');
     const titleInput = document.getElementById('rubric-modal-title-input');
     const pctInput = document.getElementById('rubric-modal-pct-input');
-    const minInput = document.getElementById('rubric-modal-min-input');
     const maxInput = document.getElementById('rubric-modal-max-input');
-    const stepInput = document.getElementById('rubric-modal-step-input');
     const descInput = document.getElementById('rubric-modal-desc-input');
     const ratingsContainer = document.getElementById('rubric-ratings-container');
     const categoryContainer = document.getElementById('category-rows-container');
@@ -1229,12 +1154,8 @@ export function openCriterionRubricModal(criterionId) {
         scoringType = criterion.scoring_type === 'category' ? 'category' : 'rubric';
         initialMax = parseFloat(criterion.max_points) || 100;
         descInput.value = criterion.description || criterion.instructions || '';
-        rubricRatings = (Array.isArray(criterion.rubric_ratings) && criterion.rubric_ratings.length > 0)
-            ? criterion.rubric_ratings
-            : getDefaultRubricRatings(initialMax);
-        scoringCategories = (Array.isArray(criterion.scoring_categories) && criterion.scoring_categories.length > 0)
-            ? criterion.scoring_categories
-            : getDefaultScoringCategories(initialMax);
+        rubricRatings = Array.isArray(criterion.rubric_ratings) ? criterion.rubric_ratings : [];
+        scoringCategories = Array.isArray(criterion.scoring_categories) ? criterion.scoring_categories : [];
     } else {
         modalTitle.textContent = 'Add Judging Criterion & Scoring Method';
         critIdInput.value = '';
@@ -1243,23 +1164,20 @@ export function openCriterionRubricModal(criterionId) {
         scoringType = 'rubric';
         initialMax = 100;
         descInput.value = '';
-        rubricRatings = getDefaultRubricRatings(initialMax);
-        scoringCategories = getDefaultScoringCategories(30);
+        rubricRatings = [];
+        scoringCategories = [];
     }
 
     if (maxInput) maxInput.value = initialMax;
 
-    // Populate predefined ratings into container
+    // Populate existing ratings if any
     rubricRatings.forEach((r, idx) => addRatingRow(r, idx));
 
-    // Populate category rows into container if category-based
-    if (scoringType === 'category') {
-        scoringCategories.forEach((c, idx) => addCategoryRow(c, idx));
-        updateCategorySum();
-    }
+    // Populate existing category rows if any
+    scoringCategories.forEach((c, idx) => addCategoryRow(c, idx));
 
-    // Toggle scoring type selection in modal
-    setModalScoringType(scoringType);
+    // Toggle scoring type selection in modal (preserves existing points if editing)
+    setModalScoringType(scoringType, Boolean(criterion));
 
     // Set weight remaining bounds and hint in Rubric Modal
     let otherCriteriaTotal = 0;
@@ -1332,7 +1250,7 @@ async function handleSaveRubricCriterion(e) {
         const items = container?.querySelectorAll('.rubric-rating-item') || [];
 
         if (items.length < 2) {
-            showToast('Criteria Configuration', 'Please configure at least 2 predefined rating options.', 'warning');
+            showToast('Ratings Incomplete', 'A criterion must have at least 2 predefined ratings before saving. Please add at least 2 ratings.', 'warning');
             return;
         }
 
@@ -1364,7 +1282,7 @@ async function handleSaveRubricCriterion(e) {
             return;
         }
 
-        maxPoints = highest > 0 ? highest : 100;
+        maxPoints = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || (highest > 0 ? highest : 100);
         minPoints = 0;
     } else {
         // Category-Based Scoring
@@ -1372,7 +1290,7 @@ async function handleSaveRubricCriterion(e) {
         const items = container?.querySelectorAll('.category-row-item') || [];
 
         if (items.length < 2) {
-            showToast('Category Configuration', 'Please configure at least 2 score categories.', 'warning');
+            showToast('Categories Incomplete', 'A criterion must have at least 2 score categories before saving. Please add at least 2 categories.', 'warning');
             return;
         }
 
@@ -1405,7 +1323,7 @@ async function handleSaveRubricCriterion(e) {
             return;
         }
 
-        maxPoints = Math.round(sumPoints * 10) / 10;
+        maxPoints = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || Math.round(sumPoints * 100) / 100;
         minPoints = 0;
     }
 
@@ -1440,76 +1358,6 @@ async function handleSaveRubricCriterion(e) {
         document.getElementById('refreshEventsBtn')?.click();
     } else {
         showToast(res.message || 'Failed to save criterion.', 'error');
-    }
-}
-
-async function handleAddCriterion(e) {
-    e.preventDefault();
-    if (!currentEventId) return;
-
-    const titleInput = document.getElementById('new-criterion-title');
-    const descInput = document.getElementById('new-criterion-desc');
-    const maxInput = document.getElementById('new-criterion-max');
-    const pctInput = document.getElementById('new-criterion-pct');
-    const btn = document.getElementById('addCriterionBtn');
-
-    const scoringType = document.querySelector('input[name="quick_scoring_type"]:checked')?.value === 'category' ? 'category' : 'rubric';
-    const title = titleInput?.value.trim();
-    const description = descInput?.value.trim();
-    const maxPoints = parseFloat(maxInput?.value) || 100;
-    const minPoints = 0;
-    const scoreStep = 0.5;
-    const percentage = parseInt(pctInput?.value) || 0;
-
-    if (!title) {
-        showToast('Please provide a criterion title.', 'warning');
-        return;
-    }
-
-    // Weight validation: ensure total event weight does not exceed 100%
-    const currentTotal = cachedCriteria.reduce((sum, c) => sum + (parseInt(c.percentage) || 0), 0);
-    const remaining = Math.max(0, 100 - currentTotal);
-    if ((currentTotal + percentage) > 100) {
-        showToast('Weight Limit Exceeded', `Cannot add criterion: Weight of ${percentage}% causes total event weight (${currentTotal + percentage}%) to exceed 100%. Only ${remaining}% is available.`, 'warning');
-        return;
-    }
-
-    if (btn) btn.disabled = true;
-
-    let rubricRatings = [];
-    let scoringCategories = [];
-    if (scoringType === 'category') {
-        scoringCategories = getDefaultScoringCategories(maxPoints);
-    } else {
-        rubricRatings = getDefaultRubricRatings(maxPoints);
-    }
-
-    const res = await createCriterion({
-        event_id: currentEventId,
-        title,
-        description,
-        scoring_type: scoringType,
-        min_points: minPoints,
-        max_points: maxPoints,
-        score_step: scoreStep,
-        instructions: description,
-        percentage,
-        rubric_ratings: rubricRatings,
-        scoring_categories: scoringCategories
-    });
-
-    if (btn) btn.disabled = false;
-
-    if (res.success) {
-        const typeName = scoringType === 'category' ? 'Category-Based' : 'Criteria-Based';
-        showToast('Criterion Added!', `Criterion '${title}' added with ${typeName} scoring!`, 'create');
-        if (titleInput) titleInput.value = '';
-        if (descInput) descInput.value = '';
-        if (pctInput) pctInput.value = '';
-        loadCriteriaList();
-        document.getElementById('refreshEventsBtn')?.click();
-    } else {
-        showToast(res.message || 'Failed to add criterion.', 'error');
     }
 }
 

@@ -1243,10 +1243,6 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                 <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Special Citation / Note <span class="text-slate-400 font-normal">(Optional)</span></label>
-                                <input type="text" id="new-contestant-comment" placeholder="e.g. Best Keyboardist, Special Award note..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
-                            </div>
-                            <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Entry Info</label>
                                 <textarea id="new-contestant-desc" rows="2" placeholder="Brief notes or piece title..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                             </div>
@@ -1274,6 +1270,9 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button type="button" id="openNewCriterionRubricBtn" class="px-3.5 py-2 bg-buksu-gold hover:bg-amber-500 text-buksu-navy font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-plus"></i> Add Judging Criterion
+                        </button>
                         <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-sliders"></i> Adjust All Weights
                         </button>
@@ -1293,77 +1292,31 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         </div>
                     </div>
 
-                    <!-- Create Criterion Form (2 cols) -->
-                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-folder-plus text-buksu-navy text-sm"></i>
-                            <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Add Judging Criterion</h4>
+                    <!-- Advanced Scoring Setup Panel (2 cols) -->
+                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-buksu-navy text-sm"></i>
+                                <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Add Judging Criterion</h4>
+                            </div>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                Every judging criterion must be set up via the <strong>Advanced Scoring Setup</strong> to customize criterion title, percentage weight, maximum points, and your choice of scoring method (Criteria-Based or Category-Based).
+                            </p>
+                            <div class="p-3 bg-amber-50/90 rounded-xl border border-amber-200/90 text-[11px] text-amber-900 space-y-1.5">
+                                <span class="font-extrabold flex items-center gap-1.5 text-amber-800">
+                                    <i class="fa-solid fa-shield-halved text-amber-600"></i> Advanced Scoring Setup
+                                </span>
+                                <ul class="list-disc list-inside text-[10px] text-amber-800 space-y-1 leading-normal">
+                                    <li>Admin explicitly defines each rating or score category.</li>
+                                    <li>At least 2 ratings or score categories are required to proceed.</li>
+                                    <li>Points are divided evenly based on total criterion score.</li>
+                                </ul>
+                            </div>
                         </div>
-                        <form id="createCriterionForm" onsubmit="return false;" class="space-y-3 text-xs">
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Criterion Title</label>
-                                <input type="text" id="new-criterion-title" required placeholder="e.g. Choreography & Execution" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy font-bold text-slate-800">
-                            </div>
 
-                            <!-- 2 Choices of Scoring Selector in Quick Add -->
-                            <div>
-                                <label class="block font-bold text-slate-700 mb-1">Scoring Choice</label>
-                                <div class="grid grid-cols-1 gap-2">
-                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-amber-500 bg-amber-50/40 cursor-pointer transition-all quick-scoring-type-label" id="quick-scoring-rubric-card">
-                                        <input type="radio" name="quick_scoring_type" value="rubric" class="mt-0.5 accent-amber-600" checked>
-                                        <div class="leading-tight">
-                                            <span class="font-bold text-slate-800 text-xs block">Criteria-Based Scoring</span>
-                                            <span class="text-[10px] text-slate-500">The judge selects a predefined rating with a fixed score and description.</span>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-400 transition-all quick-scoring-type-label" id="quick-scoring-category-card">
-                                        <input type="radio" name="quick_scoring_type" value="category" class="mt-0.5 accent-buksu-navy">
-                                        <div class="leading-tight">
-                                            <span class="font-bold text-slate-800 text-xs block">Category-Based Scoring</span>
-                                            <span class="text-[10px] text-slate-500">The judge scores individual sub-categories which sum up to the total score.</span>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <div class="flex items-center justify-between mb-1">
-                                        <label class="block font-semibold text-slate-700">Weight (%)</label>
-                                        <span id="new-criterion-weight-hint" class="text-[10px] font-bold text-slate-500"></span>
-                                    </div>
-                                    <input type="number" id="new-criterion-pct" min="0" max="100" placeholder="e.g. 40" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
-                                </div>
-                                <div>
-                                    <label class="block font-semibold text-slate-700 mb-1" id="new-criterion-max-label">Max Score (pts)</label>
-                                    <input type="number" id="new-criterion-max" min="1" value="100" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-buksu-navy">
-                                </div>
-                            </div>
-
-                            <!-- Criteria-Based Quick Info (visible by default) -->
-                            <div id="quick-rubric-info-box" class="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
-                                <span class="font-extrabold flex items-center gap-1"><i class="fa-solid fa-list-check text-amber-600"></i> Criteria-Based Scoring</span>
-                                <p class="text-[10px] text-amber-700">Predefined ratings (e.g. Excellent, Very Good, Good, Fair) will be automatically generated from Max Points, or click "Customize Criteria &amp; Scoring" below to edit each rating.</p>
-                            </div>
-
-                            <!-- Category Quick Info (visible if category) -->
-                            <div id="quick-category-info-box" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-800 space-y-1 hidden">
-                                <span class="font-extrabold flex items-center gap-1 text-buksu-navy"><i class="fa-solid fa-layer-group text-buksu-navy"></i> Category-Based Scoring</span>
-                                <p class="text-[10px] text-slate-600">Will be created with 3 categories totaling your Max Score (e.g. 10 + 10 + 10 = 30 pts). You can click "Edit" on the criterion to customize each category's name, max points, and description.</p>
-                            </div>
-
-                            <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Description / Guidelines</label>
-                                <textarea id="new-criterion-desc" rows="2" placeholder="Judging guidelines and instructions for judges..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
-                            </div>
-
-                            <button type="submit" id="addCriterionBtn" class="w-full py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-plus text-buksu-gold"></i> Add Judging Criterion
-                            </button>
-                            <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-buksu-navy border border-slate-200 font-extrabold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-sliders text-buksu-navy"></i> Open Advanced Scoring Setup
-                            </button>
-                        </form>
+                        <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-3 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-sliders text-buksu-gold"></i> Open Advanced Scoring Setup
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1505,13 +1458,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             <p class="text-[10px] text-slate-500">Judges select one of these predefined ratings during scoring. The fixed score is awarded automatically.</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <button type="button" id="rubricLoad4TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load standard 4-tier rubric (Excellent, Good, Fair, Poor)">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-amber-500"></i> 4-Level Preset
-                            </button>
-                            <button type="button" id="rubricLoad5TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load 5-tier rubric (Superior, Excellent, Good, Fair, Poor)">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-amber-500"></i> 5-Level Preset
-                            </button>
-                            <button type="button" id="rubricAddRatingBtn" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-amber-200">
+                            <button type="button" id="rubricAddRatingBtn" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs">
                                 <i class="fa-solid fa-plus text-xs"></i> Add Predefined Rating
                             </button>
                         </div>
@@ -1534,15 +1481,9 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
                             <span id="category-sum-total-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-slate-100 text-slate-800 border border-slate-300">
-                                Total: 30 pts (3 Categories)
+                                Total: 0 pts (0 Categories)
                             </span>
-                            <button type="button" id="categoryLoadStylePresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1" title="Load Style Example (Stance uniqueness 10pts, Pose preference 10pts, Crowd impact 10pts)">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-buksu-navy"></i> Style Example (30 pts)
-                            </button>
-                            <button type="button" id="categoryLoad4TierPresetBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1">
-                                <i class="fa-solid fa-wand-magic-sparkles text-xs text-buksu-navy"></i> 4 Standard Categories
-                            </button>
-                            <button type="button" id="categoryAddRowBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 border border-slate-200">
+                            <button type="button" id="categoryAddRowBtn" class="px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs">
                                 <i class="fa-solid fa-plus text-xs"></i> Add Category
                             </button>
                         </div>
@@ -1602,16 +1543,11 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <textarea id="contestant-modal-members-input" rows="2" placeholder="List member names (e.g. John Doe - Vocals, Jane Smith - Keyboardist)..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
             </div>
 
-            <!-- Add Citation / Comment Form -->
-            <form id="addContestantCommentForm" onsubmit="return false;" class="space-y-2">
-                <label class="block font-bold text-xs text-slate-700">Add Special Citation or Member Comment</label>
-                <div class="flex items-center gap-2">
-                    <input type="text" id="new-citation-text" required placeholder="e.g. Best Keyboardist - Jane Doe" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    <button type="submit" id="addCitationBtn" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-plus"></i> Add Citation
-                    </button>
-                </div>
-            </form>
+            <!-- Notice: Citations are awarded by judges -->
+            <div class="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/70 flex items-center gap-2.5 text-xs text-amber-900">
+                <i class="fa-solid fa-award text-amber-600 shrink-0 text-sm"></i>
+                <p class="text-[11px] leading-tight">Special citations and member awards are assigned directly by <strong>judges</strong> during contestant evaluation.</p>
+            </div>
 
             <!-- List of existing comments/citations -->
             <div class="space-y-2 pt-2 border-t border-slate-100 flex-1">
