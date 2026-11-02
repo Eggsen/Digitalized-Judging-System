@@ -461,9 +461,11 @@ function renderScoringSheet() {
                                         (${formatScore(weightedScore)}%)
                                     </span>
                                 </div>
-                                <span class="text-[10px] font-bold flex items-center gap-1 shrink-0 ${isActive ? 'text-amber-800 dark:text-amber-400 font-extrabold' : 'text-slate-400'}">
-                                    ${isActive ? `<i class="fa-solid fa-eye text-amber-600 dark:text-amber-400"></i> ${isCategory ? 'Active Category' : isRubric ? 'Active Rubric' : 'Active Console'}` : 'Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>'}
-                                </span>
+                                ${!isActive ? `
+                                    <span class="text-[10px] font-bold flex items-center gap-1 shrink-0 text-slate-400">
+                                        Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                                    </span>
+                                ` : ''}
                             </div>
                         </div>
                     `;
@@ -658,15 +660,6 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
             });
         });
 
-        container.querySelectorAll('.cat-preset-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const catId = btn.dataset.catId;
-                const targetVal = parseFloat(btn.dataset.val) || 0;
-                updateCategorySubScore(catId, targetVal);
-            });
-        });
-
         return;
     }
 
@@ -785,14 +778,6 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                         ${escapeHtml(cr.title)}
                     </h3>
                     ${cr.description ? `<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">${escapeHtml(cr.description)}</p>` : ''}
-                    ${cr.instructions ? `
-                        <div class="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2 mt-2">
-                            <i class="fa-solid fa-lightbulb text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
-                            <div>
-                                <span class="font-bold">Guidelines for Judges:</span> ${escapeHtml(cr.instructions)}
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
 
                 <div class="text-right shrink-0 bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs">
@@ -837,7 +822,6 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                         const subScore = critState.sub_scores?.[catId] !== undefined ? parseFloat(critState.sub_scores[catId]) : null;
                         const hasSubScore = (subScore !== null && !isNaN(subScore));
                         const currentVal = hasSubScore ? subScore : '';
-                        const halfVal = Math.round((catMax / 2) * 10) / 10;
 
                         return `
                             <div class="category-scoring-card p-4 sm:p-5 rounded-2xl border-2 border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800/90 hover:border-slate-400 transition-all flex flex-col justify-between space-y-3.5 shadow-2xs ${
@@ -891,19 +875,8 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                             ${isInputsDisabled ? 'disabled' : ''}>
                                     </div>
 
-                                    <!-- Quick Presets & Status -->
-                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 2px;">
-                                        <div style="display: flex; align-items: center; gap: 6px;">
-                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="0" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer; transition: background 0.15s ease;" title="Score 0">
-                                                0
-                                            </button>
-                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="${halfVal}" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer; transition: background 0.15s ease;" title="Half score">
-                                                Half (${halfVal})
-                                            </button>
-                                            <button type="button" class="cat-preset-btn" data-cat-id="${catId}" data-val="${catMax}" style="padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; background: #031527; color: #f5b800; border: 1px solid rgba(245, 184, 0, 0.3); cursor: pointer; transition: background 0.15s ease;" title="Max score">
-                                                Max (${catMax})
-                                            </button>
-                                        </div>
+                                    <!-- Category Score Status -->
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; padding-top: 2px;">
                                         <span class="cat-card-status" style="font-size: 11px; font-weight: 800; color: ${hasSubScore ? '#031527' : '#94a3b8'};">
                                             ${hasSubScore ? `<i class="fa-solid fa-circle-check" style="color: #16a34a; margin-right: 3px;"></i> ${subScore.toFixed(1)} pts` : '<i class="fa-regular fa-circle" style="color: #cbd5e1; margin-right: 3px;"></i> Pending'}
                                         </span>
