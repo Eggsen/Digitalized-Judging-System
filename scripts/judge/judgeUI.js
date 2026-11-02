@@ -684,47 +684,7 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
             critState.rating_name = ratingName;
             critState.is_scored = true;
 
-            // Visual update on all rating cards
-            container.querySelectorAll('.rubric-rating-card').forEach(c => {
-                const isSelected = String(c.dataset.ratingId) === String(ratingId);
-                if (isSelected) {
-                    c.classList.add('border-buksu-navy', 'dark:border-buksu-gold', 'bg-slate-50/90', 'dark:bg-slate-800/90', 'ring-2', 'ring-buksu-navy/20', 'dark:ring-buksu-gold/30', 'shadow-md', '-translate-y-0.5');
-                    c.classList.remove('border-slate-200/90', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800/90', 'shadow-2xs');
-                    const icon = c.querySelector('.rubric-radio-icon');
-                    if (icon) icon.className = 'rubric-radio-icon fa-solid fa-circle-check text-buksu-navy dark:text-buksu-gold text-base';
-                    const badge = c.querySelector('.rubric-score-badge');
-                    if (badge) badge.className = 'rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 bg-buksu-navy text-buksu-gold shadow-xs';
-                    const status = c.querySelector('.rubric-card-status');
-                    if (status) {
-                        status.innerHTML = '<i class="fa-solid fa-check-double text-buksu-navy dark:text-buksu-gold me-1"></i> Selected Rating';
-                        status.className = 'rubric-card-status text-[11px] font-bold text-buksu-navy dark:text-buksu-gold';
-                    }
-                } else {
-                    c.classList.remove('border-buksu-navy', 'dark:border-buksu-gold', 'bg-slate-50/90', 'dark:bg-slate-800/90', 'ring-2', 'ring-buksu-navy/20', 'dark:ring-buksu-gold/30', 'shadow-md', '-translate-y-0.5');
-                    c.classList.add('border-slate-200/90', 'dark:border-slate-700', 'bg-white', 'dark:bg-slate-800/90', 'shadow-2xs');
-                    const icon = c.querySelector('.rubric-radio-icon');
-                    if (icon) icon.className = 'rubric-radio-icon fa-regular fa-circle text-slate-300 text-base';
-                    const badge = c.querySelector('.rubric-score-badge');
-                    if (badge) badge.className = 'rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
-                    const status = c.querySelector('.rubric-card-status');
-                    if (status) {
-                        status.innerHTML = '<i class="fa-regular fa-hand-pointer text-slate-400 me-1"></i> Tap to select';
-                        status.className = 'rubric-card-status text-[11px] font-bold text-slate-400';
-                    }
-                }
-            });
-
-            const awardedBadge = container.querySelector('#gc-rubric-awarded-badge');
-            if (awardedBadge) {
-                awardedBadge.textContent = ratingName;
-                awardedBadge.className = 'px-2.5 py-0.5 rounded-md text-xs font-black bg-buksu-navy text-buksu-gold shadow-xs';
-            }
-
-            const footerScoreText = document.getElementById('gc-footer-score-text');
-            if (footerScoreText) {
-                footerScoreText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 me-1"></i> Selected rating: <strong>${escapeHtml(ratingName)}</strong> (${ratingScore.toFixed(1)} / ${maxPts} pts)`;
-            }
-
+            renderActiveRubricSection();
             updateLiveDisplays();
         });
     });
@@ -770,7 +730,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                 <i class="fa-solid fa-list-check"></i> Criteria-Based Scoring
                             </span>
                         `}
-                        <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
+                        <span id="gc-active-eval-status-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
                             ${isComplete ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Evaluated' : 'Pending Evaluation'}
                         </span>
                     </div>
@@ -1025,7 +985,7 @@ function updateLiveDisplays() {
     // 2. Update active criterion header display
     if (activeCriterionId) {
         const activeCrit = criteriaList.find(c => String(c.id) === String(activeCriterionId));
-        const critState = contestantScores[activeCriterionId] || { score: 0, sub_scores: {} };
+        const critState = contestantScores[activeCriterionId] || (activeCrit ? contestantScores[activeCrit.id] : null) || { score: 0, sub_scores: {} };
         if (activeCrit) {
             const ptsDisplay = document.getElementById('gc-crit-pts-display');
             const weightedDisplay = document.getElementById('gc-crit-weighted-display');
@@ -1033,6 +993,15 @@ function updateLiveDisplays() {
 
             if (ptsDisplay) ptsDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0');
             if (weightedDisplay) weightedDisplay.textContent = formatScore(weightedScore);
+
+            const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
+            const evalBadge = document.getElementById('gc-active-eval-status-badge');
+            if (evalBadge) {
+                evalBadge.innerHTML = isComplete 
+                    ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Evaluated' 
+                    : 'Pending Evaluation';
+                evalBadge.className = `px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}`;
+            }
         }
     }
 
@@ -1041,7 +1010,7 @@ function updateLiveDisplays() {
         const deckCard = document.querySelector(`.criterion-deck-card[data-crit-id="${activeCriterionId}"]`);
         if (deckCard) {
             const activeCrit = criteriaList.find(c => String(c.id) === String(activeCriterionId));
-            const critState = contestantScores[activeCriterionId] || { score: 0, sub_scores: {} };
+            const critState = contestantScores[activeCriterionId] || (activeCrit ? contestantScores[activeCrit.id] : null) || { score: 0, sub_scores: {} };
             const weightedScore = (critState.score / activeCrit.max_points) * activeCrit.percentage;
 
             const scoreDisplay = deckCard.querySelector('.deck-crit-score') || deckCard.querySelector('.text-sm.font-black');
