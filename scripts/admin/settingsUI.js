@@ -135,12 +135,16 @@ function updateLogoPreviewUI(logoUrl) {
     const previewImg = document.getElementById('setting-logo-preview-img');
     const bannerPreviewImg = document.getElementById('setting-preview-logo-img');
     const badge = document.getElementById('setting-logo-storage-badge');
+    const hiddenInput = document.getElementById('setting-logo-url-hidden');
 
     const defaultLogo = '/assets/logo/DJS Logo.png';
     const effectiveUrl = (logoUrl && logoUrl.trim()) ? logoUrl.trim() : defaultLogo;
 
     if (previewImg) previewImg.src = effectiveUrl;
     if (bannerPreviewImg) bannerPreviewImg.src = effectiveUrl;
+    if (hiddenInput) {
+        hiddenInput.value = (logoUrl && logoUrl.trim() && logoUrl !== defaultLogo) ? logoUrl.trim() : '';
+    }
 
     if (badge) {
         if (!logoUrl || logoUrl === defaultLogo) {
@@ -258,12 +262,18 @@ function initSettingsForm() {
             }
         }
 
+        const hiddenLogoInput = document.getElementById('setting-logo-url-hidden');
+        const activeLogoUrl = (hiddenLogoInput && hiddenLogoInput.value.trim() !== '')
+            ? hiddenLogoInput.value.trim()
+            : (cachedSettings?.branding?.logoUrl || null);
+
         const payload = {
             branding: {
                 institutionName: document.getElementById('setting-institution-name')?.value.trim() || 'Bukidnon State University',
                 campusUnit: document.getElementById('setting-campus-unit')?.value.trim() || '',
                 systemTitle: document.getElementById('setting-system-title')?.value.trim() || 'JudgeTab - Digitalized Judging System',
                 headerSubtitle: document.getElementById('setting-header-subtitle')?.value.trim() || '',
+                logoUrl: activeLogoUrl,
                 showWatermark: document.getElementById('setting-show-watermark')?.checked ?? true,
                 signatories: signatories
             },
@@ -349,12 +359,12 @@ function initLogoUploader() {
             });
             const data = await resp.json();
 
-            if (data.success && data.logoUrl) {
-                if (cachedSettings) {
-                    if (!cachedSettings.branding) cachedSettings.branding = {};
-                    cachedSettings.branding.logoUrl = data.logoUrl;
-                }
-                updateLogoPreviewUI(data.logoUrl);
+            const newLogoUrl = data.logoUrl || data.logo_url;
+            if (data.success && newLogoUrl) {
+                if (!cachedSettings) cachedSettings = {};
+                if (!cachedSettings.branding) cachedSettings.branding = {};
+                cachedSettings.branding.logoUrl = newLogoUrl;
+                updateLogoPreviewUI(newLogoUrl);
                 const storageMethod = data.storage === 'cloudinary' ? 'Cloudinary CDN' : 'Local Storage';
                 showToast("Logo Uploaded", `Institution logo saved via ${storageMethod}.`, "create");
             } else {
@@ -390,9 +400,9 @@ function initLogoUploader() {
             const data = await resp.json();
 
             if (data.success) {
-                if (cachedSettings && cachedSettings.branding) {
-                    cachedSettings.branding.logoUrl = null;
-                }
+                if (!cachedSettings) cachedSettings = {};
+                if (!cachedSettings.branding) cachedSettings.branding = {};
+                cachedSettings.branding.logoUrl = null;
                 updateLogoPreviewUI(null);
                 showToast("Logo Reset", "Reverted to default institution seal.", "archive");
             } else {

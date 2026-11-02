@@ -590,6 +590,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                             <span id="setting-logo-storage-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">Default Logo</span>
                                                         </div>
                                                         <input type="file" id="setting-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
+                                                        <input type="hidden" id="setting-logo-url-hidden" value="">
                                                         <p class="text-[11px] text-slate-500 leading-tight">
                                                             PNG, JPG, WebP, or SVG up to 5MB. Uploaded via Cloudinary Media API (or local storage if disabled) and displayed on official print sheets.
                                                         </p>

@@ -162,12 +162,20 @@ try {
             $signatories = getDefaultSettings()['branding']['signatories'];
         }
 
+        $existingDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+        $existingLogo = $existingDoc['branding']['logoUrl'] ?? null;
+
+        $logoUrlToSave = $existingLogo;
+        if (array_key_exists('logoUrl', $branding)) {
+            $logoUrlToSave = (!empty($branding['logoUrl']) && trim($branding['logoUrl']) !== '') ? trim($branding['logoUrl']) : null;
+        }
+
         $cleanBranding = [
             'institutionName' => trim($branding['institutionName'] ?? 'Bukidnon State University'),
             'campusUnit' => trim($branding['campusUnit'] ?? 'Main Campus, Malaybalay City - Office of Student Affairs & Services'),
             'systemTitle' => trim($branding['systemTitle'] ?? 'JudgeTab - Digitalized Judging System'),
             'headerSubtitle' => trim($branding['headerSubtitle'] ?? 'Official Tabulation & Certification of Competition Results'),
-            'logoUrl' => !empty($branding['logoUrl']) ? trim($branding['logoUrl']) : null,
+            'logoUrl' => $logoUrlToSave,
             'primaryColor' => $branding['primaryColor'] ?? '#0F2C59',
             'accentColor' => $branding['accentColor'] ?? '#F8B400',
             'showWatermark' => !empty($branding['showWatermark']),
