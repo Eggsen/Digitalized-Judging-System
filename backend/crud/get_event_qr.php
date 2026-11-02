@@ -72,6 +72,7 @@ try {
         "title" => $title,
         "description" => $description,
         "target_url" => $targetUrl,
+        "qr_code_url" => $qrUrl,
         "qr_url" => $qrUrl
     ]);
     exit;

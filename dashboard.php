@@ -1715,7 +1715,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
     <?php endif; ?>
 
     <!-- MODAL: EVENT QR CODE GENERATOR & SHARING (ACCESSIBLE TO ADMIN & TABULATOR) -->
-    <div id="event-qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div id="event-qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[80] hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-slate-100 animate-fade-in text-center relative">
             <button type="button" id="closeEventQrModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl cursor-pointer transition-colors leading-none">&times;</button>
             

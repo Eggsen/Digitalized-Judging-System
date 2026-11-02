@@ -1083,10 +1083,23 @@ function escapeHtml(str) {
 let currentQrEventId = null;
 let currentQrType = 'judge';
 let currentQrData = null;
+let activeParentModal = null;
 
-export async function openEventQrModal(eventId, eventName) {
+export async function openEventQrModal(eventId, eventName, parentModal = null) {
     currentQrEventId = eventId;
     currentQrType = 'judge';
+
+    // Find any currently open modal so we can hide it and let only the QR modal appear
+    if (!parentModal) {
+        const openModals = Array.from(document.querySelectorAll('.fixed.inset-0:not(.hidden)'));
+        activeParentModal = openModals.find(m => m.id !== 'event-qr-modal') || null;
+    } else {
+        activeParentModal = typeof parentModal === 'string' ? document.getElementById(parentModal) : parentModal;
+    }
+
+    if (activeParentModal) {
+        activeParentModal.classList.add('hidden');
+    }
 
     const modal = document.getElementById('event-qr-modal');
     const titleEl = document.getElementById('event-qr-modal-title');
@@ -1096,6 +1109,17 @@ export async function openEventQrModal(eventId, eventName) {
     if (modal) modal.classList.remove('hidden');
 
     await fetchAndRenderQrCode();
+}
+
+export function closeEventQrModal() {
+    const modal = document.getElementById('event-qr-modal');
+    if (modal) modal.classList.add('hidden');
+
+    // Restore previous modal if one was open
+    if (activeParentModal) {
+        activeParentModal.classList.remove('hidden');
+        activeParentModal = null;
+    }
 }
 
 function updateQrTypePills() {
@@ -1148,9 +1172,18 @@ async function fetchAndRenderQrCode() {
             return;
         }
 
-        if (data.success && data.qr_code_url) {
+        const qrCodeUrl = data.qr_code_url || data.qr_url;
+        if (data.success && qrCodeUrl) {
+            currentQrData.qr_code_url = qrCodeUrl;
             if (imgEl) {
-                imgEl.src = data.qr_code_url;
+                imgEl.src = qrCodeUrl;
+                imgEl.onerror = () => {
+                    // Fallback to secondary provider if qrserver is blocked or slow
+                    if (data.target_url && !imgEl.src.includes('quickchart.io')) {
+                        imgEl.src = `https://quickchart.io/qr?text=${encodeURIComponent(data.target_url)}&size=280&margin=2`;
+                        currentQrData.qr_code_url = imgEl.src;
+                    }
+                };
                 imgEl.classList.remove('hidden');
             }
             if (urlTextEl) {
@@ -1182,8 +1215,18 @@ function initQrModalControls() {
     const printBtn = document.getElementById('printQrPlacardBtn');
     const downloadBtn = document.getElementById('downloadQrImgBtn');
 
-    closeBtn?.addEventListener('click', () => {
-        if (modal) modal.classList.add('hidden');
+    closeBtn?.addEventListener('click', closeEventQrModal);
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeEventQrModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeEventQrModal();
+        }
     });
 
     judgeBtn?.addEventListener('click', () => {
@@ -1220,7 +1263,8 @@ function initQrModalControls() {
     });
 
     printBtn?.addEventListener('click', () => {
-        if (!currentQrData?.qr_code_url) return;
+        const qrUrl = currentQrData?.qr_code_url || currentQrData?.qr_url;
+        if (!qrUrl) return;
         const win = window.open('', '_blank');
         const eventName = document.getElementById('event-qr-modal-title')?.textContent || 'Competition';
         const typeLabel = currentQrType === 'judge' ? 'Judge Direct Scoring Access' : 'Public Live Leaderboard Access';
@@ -1243,7 +1287,7 @@ function initQrModalControls() {
                 <div class="card">
                     <h1>${eventName}</h1>
                     <h2>${typeLabel}</h2>
-                    <img src="${currentQrData.qr_code_url}" alt="QR Code">
+                    <img src="${qrUrl}" alt="QR Code">
                     <p>Scan with your phone's camera to access immediately.</p>
                     <div class="url">${currentQrData.target_url}</div>
                 </div>
@@ -1254,9 +1298,10 @@ function initQrModalControls() {
     });
 
     downloadBtn?.addEventListener('click', async () => {
-        if (!currentQrData?.qr_code_url) return;
+        const qrUrl = currentQrData?.qr_code_url || currentQrData?.qr_url;
+        if (!qrUrl) return;
         try {
-            const resp = await fetch(currentQrData.qr_code_url);
+            const resp = await fetch(qrUrl);
             const blob = await resp.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1267,7 +1312,7 @@ function initQrModalControls() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (e) {
-            window.open(currentQrData.qr_code_url, '_blank');
+            window.open(qrUrl, '_blank');
         }
     });
 }

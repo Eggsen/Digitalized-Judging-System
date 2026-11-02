@@ -35,7 +35,7 @@ export function initTabulatorUI() {
     document.getElementById('openTabulationQrBtn')?.addEventListener('click', () => {
         const eventName = document.getElementById('tabulation-event-title')?.textContent || `Competition #${currentEventId}`;
         if (currentEventId) {
-            openEventQrModal(currentEventId, eventName);
+            openEventQrModal(currentEventId, eventName, 'tabulation-board-modal');
         }
     });
 }
@@ -157,8 +157,9 @@ function renderTabulationBoard(data) {
             fetch(`/backend/crud/get_event_qr.php?event_id=${encodeURIComponent(currentEventId)}&type=public`)
                 .then(r => r.json())
                 .then(qrRes => {
-                    if (qrRes.success && qrRes.qr_code_url) {
-                        qrSealEl.src = qrRes.qr_code_url;
+                    const sealQr = qrRes.qr_code_url || qrRes.qr_url;
+                    if (qrRes.success && sealQr) {
+                        qrSealEl.src = sealQr;
                         qrSealEl.style.display = 'block';
                     } else {
                         qrSealEl.style.display = 'none';
