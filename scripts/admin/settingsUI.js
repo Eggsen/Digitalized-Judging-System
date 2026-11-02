@@ -97,6 +97,7 @@ function populateSettingsForm(settings) {
     const security = settings.security || {};
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+    const emailToggle = document.getElementById('setting-toggle-email');
 
     if (googleAuthToggle) {
         googleAuthToggle.checked = (security.googleAuthEnabled !== false);
@@ -106,6 +107,11 @@ function populateSettingsForm(settings) {
     if (recaptchaToggle) {
         recaptchaToggle.checked = (security.recaptchaEnabled !== false);
         updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+    }
+
+    if (emailToggle) {
+        emailToggle.checked = (security.emailServiceEnabled !== false);
+        updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
     }
 
     // Update live banner preview
@@ -364,6 +370,7 @@ function updateSecurityToggleBadge(badgeId, isEnabled) {
 function initSecuritySettings() {
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+    const emailToggle = document.getElementById('setting-toggle-email');
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
 
     if (googleAuthToggle) {
@@ -375,6 +382,12 @@ function initSecuritySettings() {
     if (recaptchaToggle) {
         recaptchaToggle.addEventListener('change', () => {
             updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+        });
+    }
+
+    if (emailToggle) {
+        emailToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
         });
     }
 
@@ -403,28 +416,32 @@ function initSecuritySettings() {
 async function handleApplySecurityChanges() {
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+    const emailToggle = document.getElementById('setting-toggle-email');
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
 
     const newGoogleAuth = googleAuthToggle ? googleAuthToggle.checked : true;
     const newRecaptcha = recaptchaToggle ? recaptchaToggle.checked : true;
+    const newEmail = emailToggle ? emailToggle.checked : true;
 
-    const currSec = cachedSettings?.security || { googleAuthEnabled: true, recaptchaEnabled: true };
+    const currSec = cachedSettings?.security || { googleAuthEnabled: true, recaptchaEnabled: true, emailServiceEnabled: true };
     const currGoogle = currSec.googleAuthEnabled !== false;
     const currRecaptcha = currSec.recaptchaEnabled !== false;
+    const currEmail = currSec.emailServiceEnabled !== false;
 
-    if (newGoogleAuth === currGoogle && newRecaptcha === currRecaptcha) {
+    if (newGoogleAuth === currGoogle && newRecaptcha === currRecaptcha && newEmail === currEmail) {
         showToast("Notice", "No changes were made to security controls.", "info");
         return;
     }
 
     if (applyBtn) {
         applyBtn.disabled = true;
-        applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Sending Verification Email...';
+        applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Updating Security Controls...';
     }
 
     const res = await requestSecurityChange({
         googleAuthEnabled: newGoogleAuth,
-        recaptchaEnabled: newRecaptcha
+        recaptchaEnabled: newRecaptcha,
+        emailServiceEnabled: newEmail
     });
 
     if (applyBtn) {
@@ -437,12 +454,29 @@ async function handleApplySecurityChanges() {
             currGoogle,
             newGoogleAuth,
             currRecaptcha,
-            newRecaptcha
+            newRecaptcha,
+            currEmail,
+            newEmail
         });
     } else if (res.success) {
+        if (res.security) {
+            cachedSettings.security = res.security;
+            if (googleAuthToggle) {
+                googleAuthToggle.checked = (res.security.googleAuthEnabled !== false);
+                updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
+            }
+            if (recaptchaToggle) {
+                recaptchaToggle.checked = (res.security.recaptchaEnabled !== false);
+                updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+            }
+            if (emailToggle) {
+                emailToggle.checked = (res.security.emailServiceEnabled !== false);
+                updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
+            }
+        }
         showToast("Success", res.message || "Security settings updated.", "success");
     } else {
-        showToast("Error", res.message || "Failed to initiate security changes.", "error");
+        showToast("Error", res.message || "Failed to update security controls.", "error");
     }
 }
 
@@ -462,9 +496,13 @@ function openSecurityConfirmModal(maskedEmail, diff) {
                 <span>Google OAuth 2.0:</span>
                 <span class="font-bold">${diff.currGoogle ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newGoogleAuth ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
-            <div class="flex items-center justify-between py-1">
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
                 <span>Google reCAPTCHA v2:</span>
                 <span class="font-bold">${diff.currRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+            <div class="flex items-center justify-between py-1">
+                <span>Gmail / Email Service:</span>
+                <span class="font-bold">${diff.currEmail ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newEmail ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
         `;
     }
@@ -487,6 +525,7 @@ function closeSecurityConfirmModal() {
     if (cachedSettings?.security) {
         const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
         const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+        const emailToggle = document.getElementById('setting-toggle-email');
         if (googleAuthToggle) {
             googleAuthToggle.checked = (cachedSettings.security.googleAuthEnabled !== false);
             updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
@@ -494,6 +533,10 @@ function closeSecurityConfirmModal() {
         if (recaptchaToggle) {
             recaptchaToggle.checked = (cachedSettings.security.recaptchaEnabled !== false);
             updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+        }
+        if (emailToggle) {
+            emailToggle.checked = (cachedSettings.security.emailServiceEnabled !== false);
+            updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
         }
     }
 }
@@ -525,6 +568,23 @@ async function handleConfirmSecurityOtp(e) {
     if (res.success) {
         if (cachedSettings) {
             cachedSettings.security = res.security;
+        }
+        const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
+        const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
+        const emailToggle = document.getElementById('setting-toggle-email');
+        if (res.security) {
+            if (googleAuthToggle) {
+                googleAuthToggle.checked = (res.security.googleAuthEnabled !== false);
+                updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
+            }
+            if (recaptchaToggle) {
+                recaptchaToggle.checked = (res.security.recaptchaEnabled !== false);
+                updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
+            }
+            if (emailToggle) {
+                emailToggle.checked = (res.security.emailServiceEnabled !== false);
+                updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
+            }
         }
         const modal = document.getElementById('security-confirm-modal');
         if (modal) modal.classList.add('hidden');

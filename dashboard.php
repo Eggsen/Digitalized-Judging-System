@@ -880,11 +880,11 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                 <div class="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
                                     <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0 text-sm"></i>
                                     <div class="text-[11px] leading-relaxed">
-                                        <strong>Two-Step Security Requirement:</strong> To prevent unauthorized tampering with authentication controls, toggling Google OAuth or reCAPTCHA sends a verification code and link to your administrator email address before changes are committed.
+                                        <strong>Two-Step Security Requirement:</strong> To prevent unauthorized tampering with authentication and communication controls, toggling security settings dispatches a 6-digit confirmation code and link to your administrator email before changes are applied. (If email service is disabled, direct updates are permitted).
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                                     <!-- Google OAuth 2.0 Card -->
                                     <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
                                         <div class="space-y-2">
@@ -899,7 +899,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                         </svg>
                                                     </div>
                                                     <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Google OAuth 2.0 Login</h4>
+                                                        <h4 class="font-bold text-xs text-slate-800">Google OAuth 2.0</h4>
                                                         <span id="google-auth-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
                                                     </div>
                                                 </div>
@@ -909,7 +909,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                 </label>
                                             </div>
                                             <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Enables the "Sign in with Google" button on login. Allows administrators, judges, and tabulators to sign in directly with their registered Google account.
+                                                Enables the "Sign in with Google" button on login. Allows accounts to authenticate directly with Google.
                                             </p>
                                         </div>
                                     </div>
@@ -933,7 +933,31 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                 </label>
                                             </div>
                                             <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Enforces the "I'm not a robot" checkbox challenge across the Sign In, Admin Registration, and Password Reset forms to prevent automated brute-force attacks.
+                                                Enforces the bot challenge across Sign In, Registration, and Password Reset to prevent brute-force attacks.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gmail / Email Notification Service Card -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">
+                                                        <i class="fa-solid fa-envelope"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">Gmail / Email Service</h4>
+                                                        <span id="email-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-email" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Controls system automated email dispatch (SMTP/Gmail). When disabled, password reset links and email notifications are blocked.
                                             </p>
                                         </div>
                                     </div>
@@ -941,7 +965,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
                                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
                                     <span class="text-[11px] text-slate-400">
-                                        Requires email OTP confirmation before changes are applied.
+                                        Requires email OTP confirmation before changes are applied (direct apply if email is off).
                                     </span>
                                     <button type="button" id="applySecurityTogglesBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
                                         <i class="fa-solid fa-paper-plane text-emerald-200"></i> Update Security Controls

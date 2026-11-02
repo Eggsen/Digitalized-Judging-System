@@ -8,7 +8,40 @@ if (file_exists(__DIR__ . "/../../vendor/autoload.php")) {
     require_once __DIR__ . "/../../vendor/autoload.php";
 }
 
-function sendSystemEmail($toEmail, $subject, $htmlMessage) {
+function sendSystemEmail($toEmail, $subject, $htmlMessage, $bypassSettingCheck = false) {
+    // Check if the administrator disabled outgoing system email service
+    if (!$bypassSettingCheck) {
+        global $settingsCollection;
+        if (!isset($settingsCollection)) {
+            try {
+                require_once __DIR__ . "/../database/config.php";
+            } catch (Throwable $e) {}
+        }
+        if (isset($settingsCollection)) {
+            try {
+                $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+                if ($settingsDoc && isset($settingsDoc['security']['emailServiceEnabled']) && $settingsDoc['security']['emailServiceEnabled'] === false) {
+                    $logDir = __DIR__ . "/../logs";
+                    if (!file_exists($logDir)) {
+                        @mkdir($logDir, 0777, true);
+                    }
+                    $logFile = $logDir . "/sent_emails.log";
+                    $logEntry = "[" . date('Y-m-d H:i:s') . "] STATUS: BLOCKED (Email dispatch disabled by administrator in Settings)\n"
+                              . "TO: {$toEmail} | SUBJECT: {$subject}\n"
+                              . "---------------------------------------------------------\n";
+                    @file_put_contents($logFile, $logEntry, FILE_APPEND);
+
+                    return [
+                        "sent" => false,
+                        "logged" => true,
+                        "disabled" => true,
+                        "error" => "Email service has been disabled by the administrator in Settings."
+                    ];
+                }
+            } catch (Throwable $e) {}
+        }
+    }
+
     $smtpHost = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com';
     $smtpPort = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
     $smtpUsername = $_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: '';

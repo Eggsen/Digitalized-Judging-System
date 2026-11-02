@@ -14,6 +14,7 @@ require_once __DIR__ . '/../backend/database/config.php';
 $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
 $googleAuthEnabled = $settingsDoc['security']['googleAuthEnabled'] ?? true;
 $recaptchaEnabled = $settingsDoc['security']['recaptchaEnabled'] ?? true;
+$emailServiceEnabled = $settingsDoc['security']['emailServiceEnabled'] ?? true;
 $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : '';
 
 ?>
@@ -26,6 +27,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
     <link rel="stylesheet" href="/frontend/css/output.css">
     <link rel="icon" href="/assets/logo/DJS Logo.png">
     <script>
+        window.EMAIL_SERVICE_ENABLED = <?= json_encode((bool)$emailServiceEnabled) ?>;
         window.RECAPTCHA_ENABLED = <?= json_encode((bool)$recaptchaEnabled) ?>;
         window.RECAPTCHA_SITE_KEY = <?= json_encode($recaptchaSiteKey) ?>;
         window.__recaptchaApiLoaded = false;
@@ -266,6 +268,15 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
                 <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Forgot Password?</h2>
                 <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your registered email address or username below. We'll send you a link to reset your password.</p>
             </div>
+
+            <?php if (!$emailServiceEnabled): ?>
+            <div class="mt-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0 text-sm"></i>
+                <div class="text-[11px] leading-relaxed">
+                    <strong>Email Service Disabled:</strong> The administrator has disabled system email notifications. Password reset emails cannot be dispatched. Please contact the administrator directly.
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div id="reset-notice-wrap" class="hidden my-4">
                 <span id="reset-notice"></span>

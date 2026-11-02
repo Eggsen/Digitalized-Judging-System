@@ -44,7 +44,8 @@ if (empty($token)) {
                 // Apply changes
                 $newSecurity = [
                     'googleAuthEnabled' => !empty($pending['changes']['googleAuthEnabled']),
-                    'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled'])
+                    'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
+                    'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled'])
                 ];
 
                 $updatedBy = $pending['requested_by_username'] ?? 'Administrator';
@@ -68,7 +69,7 @@ if (empty($token)) {
                     $updatedBy,
                     'admin',
                     'VERIFY_SECURITY_SETTINGS',
-                    'Admin verified security settings via email link: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF')
+                    'Admin verified security settings via email link: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
                 );
 
                 $success = true;
@@ -141,6 +142,17 @@ if (empty($token)) {
                             <i class="fa-solid fa-robot text-slate-500"></i> Google reCAPTCHA v2
                         </span>
                         <?php if ($newSecurity['recaptchaEnabled']): ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
+                        <?php else: ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                        <span class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-envelope text-slate-500"></i> Gmail / System Email
+                        </span>
+                        <?php if ($newSecurity['emailServiceEnabled']): ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
                         <?php else: ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>

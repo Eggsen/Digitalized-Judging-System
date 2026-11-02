@@ -65,7 +65,8 @@ function getDefaultSettings() {
         ],
         'security' => [
             'googleAuthEnabled' => true,
-            'recaptchaEnabled' => true
+            'recaptchaEnabled' => true,
+            'emailServiceEnabled' => true
         ],
         'backup' => [
             'lastBackupAt' => null,
@@ -89,8 +90,11 @@ try {
         if (empty($settingsDoc['security'])) {
             $settingsDoc['security'] = [
                 'googleAuthEnabled' => true,
-                'recaptchaEnabled' => true
+                'recaptchaEnabled' => true,
+                'emailServiceEnabled' => true
             ];
+        } elseif (!isset($settingsDoc['security']['emailServiceEnabled'])) {
+            $settingsDoc['security']['emailServiceEnabled'] = true;
         }
 
         // Diagnostics info
@@ -266,19 +270,61 @@ try {
     if ($action === 'request_security_change') {
         $googleAuth = !empty($data['googleAuthEnabled']);
         $recaptcha = !empty($data['recaptchaEnabled']);
+        $emailService = !empty($data['emailServiceEnabled']);
 
         $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']) ?? getDefaultSettings();
-        $currentSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true];
+        $currentSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true, 'emailServiceEnabled' => true];
         $currGoogle = $currentSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currentSec['recaptchaEnabled'] ?? true;
+        $currEmail = $currentSec['emailServiceEnabled'] ?? true;
 
         // If no changes, return immediately
-        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha) {
+        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha && $emailService === $currEmail) {
             echo json_encode([
                 "success" => true,
                 "requires_confirmation" => false,
                 "message" => "Security settings are unchanged.",
                 "security" => $currentSec
+            ]);
+            exit;
+        }
+
+        // If email service is currently disabled, sending an OTP verification email is impossible.
+        // Directly apply the updated security controls.
+        if ($currEmail === false) {
+            $newSecurity = [
+                'googleAuthEnabled' => $googleAuth,
+                'recaptchaEnabled' => $recaptcha,
+                'emailServiceEnabled' => $emailService
+            ];
+
+            $settingsCollection->updateOne(
+                ['_id' => 'system_settings'],
+                [
+                    '$set' => [
+                        'security' => $newSecurity,
+                        'updatedAt' => date('Y-m-d H:i:s'),
+                        'updatedBy' => $_SESSION['username'] ?? 'Administrator'
+                    ],
+                    '$unset' => [
+                        'pending_security_change' => ""
+                    ]
+                ]
+            );
+
+            logSystemAction(
+                $_SESSION['user_id'] ?? null,
+                $_SESSION['username'] ?? 'Admin',
+                'admin',
+                'UPDATE_SECURITY_SETTINGS',
+                'Admin directly updated security controls (email service was disabled): Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
+            );
+
+            echo json_encode([
+                "success" => true,
+                "requires_confirmation" => false,
+                "message" => "Security controls updated successfully!",
+                "security" => $newSecurity
             ]);
             exit;
         }
@@ -312,7 +358,8 @@ try {
             'token' => $token,
             'changes' => [
                 'googleAuthEnabled' => $googleAuth,
-                'recaptchaEnabled' => $recaptcha
+                'recaptchaEnabled' => $recaptcha,
+                'emailServiceEnabled' => $emailService
             ],
             'requested_by_id' => (string)$_SESSION['user_id'],
             'requested_by_username' => $_SESSION['username'],
@@ -331,6 +378,9 @@ try {
 
         $recaptchaChangeText = ($currRecaptcha ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($recaptcha ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $emailChangeText = ($currEmail ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($emailService ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
@@ -354,9 +404,13 @@ try {
                         <td style='padding: 8px 0; color: #334155;'><strong>Google OAuth 2.0 Login:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$googleChangeText}</td>
                     </tr>
-                    <tr>
+                    <tr style='border-bottom: 1px solid #e2e8f0;'>
                         <td style='padding: 8px 0; color: #334155;'><strong>Google reCAPTCHA v2:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$recaptchaChangeText}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 8px 0; color: #334155;'><strong>Gmail / Email Service:</strong></td>
+                        <td style='padding: 8px 0; text-align: right;'>{$emailChangeText}</td>
                     </tr>
                 </table>
             </div>
@@ -429,7 +483,8 @@ try {
         // Apply changes
         $newSecurity = [
             'googleAuthEnabled' => !empty($pending['changes']['googleAuthEnabled']),
-            'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled'])
+            'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
+            'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled'])
         ];
 
         $settingsCollection->updateOne(
@@ -451,7 +506,7 @@ try {
             $_SESSION['username'] ?? 'Admin',
             'admin',
             'UPDATE_SECURITY_SETTINGS',
-            'Admin confirmed and updated authentication security controls: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF')
+            'Admin confirmed and updated authentication security controls: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
         );
 
         echo json_encode([
@@ -488,15 +543,20 @@ try {
 
         $googleAuth = !empty($pending['changes']['googleAuthEnabled']);
         $recaptcha = !empty($pending['changes']['recaptchaEnabled']);
-        $currSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true];
+        $emailService = !empty($pending['changes']['emailServiceEnabled']);
+        $currSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true, 'emailServiceEnabled' => true];
         $currGoogle = $currSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currSec['recaptchaEnabled'] ?? true;
+        $currEmail = $currSec['emailServiceEnabled'] ?? true;
 
         $googleChangeText = ($currGoogle ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($googleAuth ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
         
         $recaptchaChangeText = ($currRecaptcha ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($recaptcha ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $emailChangeText = ($currEmail ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($emailService ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';

@@ -25,7 +25,13 @@ function showForgotPasswordCard() {
     if (forgotCard) {
         forgotCard.classList.remove('hidden');
         forgotCard.classList.add('animate-fade-in');
-        renderRecaptchaWidget('reset-recaptcha');
+        if (window.EMAIL_SERVICE_ENABLED === false) {
+            showResetNotice('warning', 'The administrator has disabled email notifications. Password reset links cannot be emailed.');
+            const btn = document.getElementById('resetRequestBtn');
+            if (btn) btn.disabled = true;
+        } else {
+            renderRecaptchaWidget('reset-recaptcha');
+        }
     }
 }
 
@@ -43,6 +49,11 @@ function hideForgotPasswordCard() {
 }
 
 async function handleResetRequestSubmit() {
+    if (window.EMAIL_SERVICE_ENABLED === false) {
+        showResetNotice('error', 'The email notification service has been disabled by the administrator. You cannot receive a password reset email at this time.');
+        return;
+    }
+
     const identifier = document.getElementById('reset-identifier-input')?.value.trim() || '';
     const btn = document.getElementById('resetRequestBtn');
     const btnText = document.getElementById('reset-request-btn-text');

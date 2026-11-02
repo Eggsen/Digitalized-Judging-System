@@ -56,6 +56,19 @@ $action = trim($data['action'] ?? "");
 
 // Request password reset email
 if ($action === "request_reset") {
+    // Check if administrator has disabled the email service
+    try {
+        $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+        $emailServiceEnabled = $settingsDoc['security']['emailServiceEnabled'] ?? true;
+        if (!$emailServiceEnabled) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Password reset email cannot be sent because the email notification service has been disabled by the administrator. Please contact your administrator directly to reset your password."
+            ]);
+            exit;
+        }
+    } catch (Throwable $e) {}
+
     $identifier = trim($data['email'] ?? $data['identifier'] ?? "");
 
     if ($identifier === "") {
