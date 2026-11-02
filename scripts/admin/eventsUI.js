@@ -12,6 +12,7 @@ let cachedEventsList = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     initCommonModalEvents();
+    initQrModalControls();
 
     if (userRole === 'admin') {
         initAdminTabs();
@@ -260,6 +261,9 @@ export async function loadAdminEvents() {
                     </button>
                 </div>
                 <div class="flex items-center gap-1">
+                    <button class="open-qr-modal-btn p-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Generate &amp; Share QR Code">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </button>
                     <button class="open-assign-btn p-1.5 bg-slate-100 hover:bg-slate-200 text-buksu-navy font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
                         <i class="fa-solid fa-users-gear"></i>
                     </button>
@@ -673,6 +677,14 @@ function bindEventCardActions() {
         });
     });
 
+    // Open QR Code Modal
+    document.querySelectorAll('.open-qr-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEventQrModal(btn.dataset.id, btn.dataset.name);
+        });
+    });
+
     // Open Edit Modal
     document.querySelectorAll('.open-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1063,4 +1075,199 @@ function escapeHtml(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+/* -------------------------------------------------------------
+ * EVENT QR CODE MODAL & INTEGRATION HANDLERS
+ * ------------------------------------------------------------- */
+let currentQrEventId = null;
+let currentQrType = 'judge';
+let currentQrData = null;
+
+export async function openEventQrModal(eventId, eventName) {
+    currentQrEventId = eventId;
+    currentQrType = 'judge';
+
+    const modal = document.getElementById('event-qr-modal');
+    const titleEl = document.getElementById('event-qr-modal-title');
+    if (titleEl) titleEl.textContent = eventName || `Competition #${eventId}`;
+
+    updateQrTypePills();
+    if (modal) modal.classList.remove('hidden');
+
+    await fetchAndRenderQrCode();
+}
+
+function updateQrTypePills() {
+    const judgeBtn = document.getElementById('event-qr-type-judge');
+    const publicBtn = document.getElementById('event-qr-type-public');
+    const descEl = document.getElementById('event-qr-modal-desc');
+
+    if (currentQrType === 'judge') {
+        if (judgeBtn) {
+            judgeBtn.className = 'flex-1 py-1.5 px-2 rounded-lg bg-white text-buksu-navy shadow-xs transition-all cursor-pointer font-bold';
+        }
+        if (publicBtn) {
+            publicBtn.className = 'flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-buksu-navy transition-all cursor-pointer font-bold';
+        }
+        if (descEl) descEl.textContent = 'Scan for instant direct access to judge scoring sheet.';
+    } else {
+        if (judgeBtn) {
+            judgeBtn.className = 'flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-buksu-navy transition-all cursor-pointer font-bold';
+        }
+        if (publicBtn) {
+            publicBtn.className = 'flex-1 py-1.5 px-2 rounded-lg bg-white text-buksu-navy shadow-xs transition-all cursor-pointer font-bold';
+        }
+        if (descEl) descEl.textContent = 'Scan to view live public leaderboard & standings.';
+    }
+}
+
+async function fetchAndRenderQrCode() {
+    if (!currentQrEventId) return;
+
+    const loadingEl = document.getElementById('event-qr-loading');
+    const imgEl = document.getElementById('event-qr-img');
+    const disabledEl = document.getElementById('event-qr-disabled-notice');
+    const urlTextEl = document.getElementById('event-qr-url-text');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (imgEl) imgEl.classList.add('hidden');
+    if (disabledEl) disabledEl.classList.add('hidden');
+    if (urlTextEl) urlTextEl.textContent = 'Generating...';
+
+    try {
+        const resp = await fetch(`/backend/crud/get_event_qr.php?event_id=${encodeURIComponent(currentQrEventId)}&type=${encodeURIComponent(currentQrType)}`);
+        const data = await resp.json();
+        currentQrData = data;
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (!data.success && data.message && data.message.includes('disabled')) {
+            if (disabledEl) disabledEl.classList.remove('hidden');
+            if (urlTextEl) urlTextEl.textContent = data.target_url || 'QR Generation Disabled';
+            return;
+        }
+
+        if (data.success && data.qr_code_url) {
+            if (imgEl) {
+                imgEl.src = data.qr_code_url;
+                imgEl.classList.remove('hidden');
+            }
+            if (urlTextEl) {
+                urlTextEl.textContent = data.target_url || '';
+            }
+        } else {
+            if (disabledEl) {
+                disabledEl.classList.remove('hidden');
+                disabledEl.textContent = data.message || 'Could not generate QR code.';
+            }
+            if (urlTextEl) urlTextEl.textContent = 'Error loading QR';
+        }
+    } catch (err) {
+        console.error("QR Code fetch error:", err);
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (disabledEl) {
+            disabledEl.classList.remove('hidden');
+            disabledEl.textContent = 'Failed to load QR code due to network error.';
+        }
+    }
+}
+
+function initQrModalControls() {
+    const closeBtn = document.getElementById('closeEventQrModalBtn');
+    const modal = document.getElementById('event-qr-modal');
+    const judgeBtn = document.getElementById('event-qr-type-judge');
+    const publicBtn = document.getElementById('event-qr-type-public');
+    const copyBtn = document.getElementById('copyEventQrUrlBtn');
+    const printBtn = document.getElementById('printQrPlacardBtn');
+    const downloadBtn = document.getElementById('downloadQrImgBtn');
+
+    closeBtn?.addEventListener('click', () => {
+        if (modal) modal.classList.add('hidden');
+    });
+
+    judgeBtn?.addEventListener('click', () => {
+        if (currentQrType !== 'judge') {
+            currentQrType = 'judge';
+            updateQrTypePills();
+            fetchAndRenderQrCode();
+        }
+    });
+
+    publicBtn?.addEventListener('click', () => {
+        if (currentQrType !== 'public') {
+            currentQrType = 'public';
+            updateQrTypePills();
+            fetchAndRenderQrCode();
+        }
+    });
+
+    copyBtn?.addEventListener('click', async () => {
+        const url = currentQrData?.target_url;
+        if (!url) return;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast("Copied!", "Access URL copied to clipboard.", "success");
+        } catch (e) {
+            const tempInput = document.createElement('input');
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast("Copied!", "Access URL copied to clipboard.", "success");
+        }
+    });
+
+    printBtn?.addEventListener('click', () => {
+        if (!currentQrData?.qr_code_url) return;
+        const win = window.open('', '_blank');
+        const eventName = document.getElementById('event-qr-modal-title')?.textContent || 'Competition';
+        const typeLabel = currentQrType === 'judge' ? 'Judge Direct Scoring Access' : 'Public Live Leaderboard Access';
+        win.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${eventName} - QR Placard</title>
+                <style>
+                    body { font-family: system-ui, sans-serif; text-align: center; padding: 40px; margin: 0; background: #f8fafc; }
+                    .card { border: 3px solid #0F172A; border-radius: 24px; padding: 32px; max-width: 420px; margin: auto; background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+                    h1 { font-size: 20px; color: #0F172A; margin: 0 0 4px; text-transform: uppercase; font-weight: 900; }
+                    h2 { font-size: 13px; color: #475569; margin: 0 0 20px; font-weight: 700; }
+                    img { width: 240px; height: 240px; border: 1px solid #CBD5E1; border-radius: 16px; padding: 12px; background: #fff; }
+                    p { font-size: 12px; color: #64748B; margin-top: 16px; font-weight: 500; }
+                    .url { font-family: monospace; font-size: 11px; background: #F1F5F9; padding: 8px 12px; border-radius: 8px; word-break: break-all; margin-top: 8px; color: #0F172A; }
+                </style>
+            </head>
+            <body onload="window.print()">
+                <div class="card">
+                    <h1>${eventName}</h1>
+                    <h2>${typeLabel}</h2>
+                    <img src="${currentQrData.qr_code_url}" alt="QR Code">
+                    <p>Scan with your phone's camera to access immediately.</p>
+                    <div class="url">${currentQrData.target_url}</div>
+                </div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    });
+
+    downloadBtn?.addEventListener('click', async () => {
+        if (!currentQrData?.qr_code_url) return;
+        try {
+            const resp = await fetch(currentQrData.qr_code_url);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `event_qr_${currentQrEventId}_${currentQrType}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            window.open(currentQrData.qr_code_url, '_blank');
+        }
+    });
 }

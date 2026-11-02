@@ -46,6 +46,7 @@ function getDefaultSettings() {
             'campusUnit' => 'Main Campus, Malaybalay City - Office of Student Affairs & Services',
             'systemTitle' => 'JudgeTab - Digitalized Judging System',
             'headerSubtitle' => 'Official Tabulation & Certification of Competition Results',
+            'logoUrl' => null,
             'primaryColor' => '#0F2C59',
             'accentColor' => '#F8B400',
             'showWatermark' => true,
@@ -66,7 +67,9 @@ function getDefaultSettings() {
         'security' => [
             'googleAuthEnabled' => true,
             'recaptchaEnabled' => true,
-            'emailServiceEnabled' => true
+            'emailServiceEnabled' => true,
+            'qrCodeEnabled' => true,
+            'cloudinaryEnabled' => true
         ],
         'backup' => [
             'lastBackupAt' => null,
@@ -91,10 +94,20 @@ try {
             $settingsDoc['security'] = [
                 'googleAuthEnabled' => true,
                 'recaptchaEnabled' => true,
-                'emailServiceEnabled' => true
+                'emailServiceEnabled' => true,
+                'qrCodeEnabled' => true,
+                'cloudinaryEnabled' => true
             ];
-        } elseif (!isset($settingsDoc['security']['emailServiceEnabled'])) {
-            $settingsDoc['security']['emailServiceEnabled'] = true;
+        } else {
+            if (!isset($settingsDoc['security']['emailServiceEnabled'])) {
+                $settingsDoc['security']['emailServiceEnabled'] = true;
+            }
+            if (!isset($settingsDoc['security']['qrCodeEnabled'])) {
+                $settingsDoc['security']['qrCodeEnabled'] = true;
+            }
+            if (!isset($settingsDoc['security']['cloudinaryEnabled'])) {
+                $settingsDoc['security']['cloudinaryEnabled'] = true;
+            }
         }
 
         // Diagnostics info
@@ -154,6 +167,7 @@ try {
             'campusUnit' => trim($branding['campusUnit'] ?? 'Main Campus, Malaybalay City - Office of Student Affairs & Services'),
             'systemTitle' => trim($branding['systemTitle'] ?? 'JudgeTab - Digitalized Judging System'),
             'headerSubtitle' => trim($branding['headerSubtitle'] ?? 'Official Tabulation & Certification of Competition Results'),
+            'logoUrl' => !empty($branding['logoUrl']) ? trim($branding['logoUrl']) : null,
             'primaryColor' => $branding['primaryColor'] ?? '#0F2C59',
             'accentColor' => $branding['accentColor'] ?? '#F8B400',
             'showWatermark' => !empty($branding['showWatermark']),
@@ -271,15 +285,25 @@ try {
         $googleAuth = !empty($data['googleAuthEnabled']);
         $recaptcha = !empty($data['recaptchaEnabled']);
         $emailService = !empty($data['emailServiceEnabled']);
+        $qrCode = !empty($data['qrCodeEnabled']);
+        $cloudinary = !empty($data['cloudinaryEnabled']);
 
         $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']) ?? getDefaultSettings();
-        $currentSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true, 'emailServiceEnabled' => true];
+        $currentSec = $settingsDoc['security'] ?? [
+            'googleAuthEnabled' => true,
+            'recaptchaEnabled' => true,
+            'emailServiceEnabled' => true,
+            'qrCodeEnabled' => true,
+            'cloudinaryEnabled' => true
+        ];
         $currGoogle = $currentSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currentSec['recaptchaEnabled'] ?? true;
         $currEmail = $currentSec['emailServiceEnabled'] ?? true;
+        $currQrCode = $currentSec['qrCodeEnabled'] ?? true;
+        $currCloudinary = $currentSec['cloudinaryEnabled'] ?? true;
 
         // If no changes, return immediately
-        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha && $emailService === $currEmail) {
+        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha && $emailService === $currEmail && $qrCode === $currQrCode && $cloudinary === $currCloudinary) {
             echo json_encode([
                 "success" => true,
                 "requires_confirmation" => false,
@@ -295,7 +319,9 @@ try {
             $newSecurity = [
                 'googleAuthEnabled' => $googleAuth,
                 'recaptchaEnabled' => $recaptcha,
-                'emailServiceEnabled' => $emailService
+                'emailServiceEnabled' => $emailService,
+                'qrCodeEnabled' => $qrCode,
+                'cloudinaryEnabled' => $cloudinary
             ];
 
             $settingsCollection->updateOne(
@@ -317,7 +343,7 @@ try {
                 $_SESSION['username'] ?? 'Admin',
                 'admin',
                 'UPDATE_SECURITY_SETTINGS',
-                'Admin directly updated security controls (email service was disabled): Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
+                'Admin directly updated security controls (email service disabled): Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF') . ', QR Code=' . ($newSecurity['qrCodeEnabled'] ? 'ON' : 'OFF') . ', Cloudinary=' . ($newSecurity['cloudinaryEnabled'] ? 'ON' : 'OFF')
             );
 
             echo json_encode([
@@ -359,7 +385,9 @@ try {
             'changes' => [
                 'googleAuthEnabled' => $googleAuth,
                 'recaptchaEnabled' => $recaptcha,
-                'emailServiceEnabled' => $emailService
+                'emailServiceEnabled' => $emailService,
+                'qrCodeEnabled' => $qrCode,
+                'cloudinaryEnabled' => $cloudinary
             ],
             'requested_by_id' => (string)$_SESSION['user_id'],
             'requested_by_username' => $_SESSION['username'],
@@ -382,6 +410,12 @@ try {
         $emailChangeText = ($currEmail ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($emailService ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
+        $qrCodeChangeText = ($currQrCode ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($qrCode ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
         $verifyLink = "{$protocol}://{$host}/backend/crud/verify_security_change.php?token={$token}";
@@ -401,16 +435,24 @@ try {
                 <h3 style='margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;'>Proposed Changes:</h3>
                 <table style='width: 100%; font-size: 13px; border-collapse: collapse;'>
                     <tr style='border-bottom: 1px solid #e2e8f0;'>
-                        <td style='padding: 8px 0; color: #334155;'><strong>Google OAuth 2.0 Login:</strong></td>
+                        <td style='padding: 8px 0; color: #334155;'><strong>Google OAuth 2.0:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$googleChangeText}</td>
                     </tr>
                     <tr style='border-bottom: 1px solid #e2e8f0;'>
                         <td style='padding: 8px 0; color: #334155;'><strong>Google reCAPTCHA v2:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$recaptchaChangeText}</td>
                     </tr>
-                    <tr>
+                    <tr style='border-bottom: 1px solid #e2e8f0;'>
                         <td style='padding: 8px 0; color: #334155;'><strong>Gmail / Email Service:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$emailChangeText}</td>
+                    </tr>
+                    <tr style='border-bottom: 1px solid #e2e8f0;'>
+                        <td style='padding: 8px 0; color: #334155;'><strong>QR Code Generation API:</strong></td>
+                        <td style='padding: 8px 0; text-align: right;'>{$qrCodeChangeText}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 8px 0; color: #334155;'><strong>Cloudinary Media CDN API:</strong></td>
+                        <td style='padding: 8px 0; text-align: right;'>{$cloudinaryChangeText}</td>
                     </tr>
                 </table>
             </div>
@@ -484,7 +526,9 @@ try {
         $newSecurity = [
             'googleAuthEnabled' => !empty($pending['changes']['googleAuthEnabled']),
             'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
-            'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled'])
+            'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled']),
+            'qrCodeEnabled' => !empty($pending['changes']['qrCodeEnabled']),
+            'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled'])
         ];
 
         $settingsCollection->updateOne(
@@ -506,7 +550,7 @@ try {
             $_SESSION['username'] ?? 'Admin',
             'admin',
             'UPDATE_SECURITY_SETTINGS',
-            'Admin confirmed and updated authentication security controls: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
+            'Admin confirmed and updated authentication security controls: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF') . ', QR=' . ($newSecurity['qrCodeEnabled'] ? 'ON' : 'OFF') . ', Cloudinary=' . ($newSecurity['cloudinaryEnabled'] ? 'ON' : 'OFF')
         );
 
         echo json_encode([
@@ -544,10 +588,21 @@ try {
         $googleAuth = !empty($pending['changes']['googleAuthEnabled']);
         $recaptcha = !empty($pending['changes']['recaptchaEnabled']);
         $emailService = !empty($pending['changes']['emailServiceEnabled']);
-        $currSec = $settingsDoc['security'] ?? ['googleAuthEnabled' => true, 'recaptchaEnabled' => true, 'emailServiceEnabled' => true];
+        $qrCode = !empty($pending['changes']['qrCodeEnabled']);
+        $cloudinary = !empty($pending['changes']['cloudinaryEnabled']);
+
+        $currSec = $settingsDoc['security'] ?? [
+            'googleAuthEnabled' => true,
+            'recaptchaEnabled' => true,
+            'emailServiceEnabled' => true,
+            'qrCodeEnabled' => true,
+            'cloudinaryEnabled' => true
+        ];
         $currGoogle = $currSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currSec['recaptchaEnabled'] ?? true;
         $currEmail = $currSec['emailServiceEnabled'] ?? true;
+        $currQrCode = $currSec['qrCodeEnabled'] ?? true;
+        $currCloudinary = $currSec['cloudinaryEnabled'] ?? true;
 
         $googleChangeText = ($currGoogle ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($googleAuth ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
@@ -557,6 +612,12 @@ try {
 
         $emailChangeText = ($currEmail ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($emailService ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $qrCodeChangeText = ($currQrCode ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($qrCode ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';

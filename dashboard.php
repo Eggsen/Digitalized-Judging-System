@@ -571,6 +571,32 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                                 </div>
                                             </div>
 
+                                            <div class="pt-2 border-t border-slate-200">
+                                                <label class="block font-bold text-slate-700 mb-1.5">Institution Logo &amp; Print Header Seal</label>
+                                                <div class="flex items-center gap-4 p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80">
+                                                    <div class="relative shrink-0">
+                                                        <img id="setting-logo-preview-img" src="/assets/logo/DJS Logo.png" alt="Logo Preview" class="w-16 h-16 rounded-xl object-contain bg-white border border-slate-200 p-1 shadow-xs">
+                                                    </div>
+                                                    <div class="space-y-1.5 flex-1">
+                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                            <button type="button" id="triggerLogoUploadBtn" class="px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 border border-buksu-gold/30">
+                                                                <i class="fa-solid fa-cloud-arrow-up text-buksu-gold"></i>
+                                                                <span>Upload New Logo</span>
+                                                            </button>
+                                                            <button type="button" id="resetLogoDefaultBtn" class="px-2.5 py-1.5 bg-slate-200/70 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1">
+                                                                <i class="fa-solid fa-arrow-rotate-left text-[11px]"></i>
+                                                                <span>Reset Default</span>
+                                                            </button>
+                                                            <span id="setting-logo-storage-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">Default Logo</span>
+                                                        </div>
+                                                        <input type="file" id="setting-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
+                                                        <p class="text-[11px] text-slate-500 leading-tight">
+                                                            PNG, JPG, WebP, or SVG up to 5MB. Uploaded via Cloudinary Media API (or local storage if disabled) and displayed on official print sheets.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="pt-2 flex items-center justify-between border-t border-slate-200">
                                                 <div class="space-y-0.5">
                                                     <span class="font-bold text-slate-800 block text-xs">University Watermark on Prints</span>
@@ -596,10 +622,8 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                         <div class="py-4 space-y-1">
                                             <h4 id="setting-preview-inst" class="text-base font-black tracking-tight text-white">Bukidnon State University</h4>
                                             <p id="setting-preview-unit" class="text-xs text-slate-300">Malaybalay City, Bukidnon</p>
-                                            <div class="pt-3 flex items-center gap-2">
-                                                <div class="w-8 h-8 rounded-lg bg-buksu-gold text-buksu-navy flex items-center justify-center font-black text-xs shadow-xs">
-                                                    <i class="fa-solid fa-gavel"></i>
-                                                </div>
+                                            <div class="pt-3 flex items-center gap-2.5">
+                                                <img id="setting-preview-logo-img" src="/assets/logo/DJS Logo.png" alt="Brand Logo" class="w-9 h-9 rounded-xl object-contain bg-white/10 p-1 border border-white/20 shadow-xs shrink-0">
                                                 <div>
                                                     <span id="setting-preview-title" class="text-xs font-black text-buksu-gold block">JudgeTab</span>
                                                     <span class="text-[10px] text-slate-300 block">Tabulation &amp; Evaluation Platform</span>
@@ -884,7 +908,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                                     <!-- Google OAuth 2.0 Card -->
                                     <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
                                         <div class="space-y-2">
@@ -958,6 +982,54 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                             </div>
                                             <p class="text-[11px] text-slate-500 leading-relaxed">
                                                 Controls system automated email dispatch (SMTP/Gmail). When disabled, password reset links and email notifications are blocked.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- QR Code Generator API Card -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
+                                                        <i class="fa-solid fa-qrcode"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">QR Code Generator API</h4>
+                                                        <span id="qrcode-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-qrcode" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Generates dynamic QR codes for judge mobile scoring direct-access, public audience leaderboard views, and print verification seals.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cloudinary Media API Card -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm">
+                                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">Cloudinary Media API</h4>
+                                                        <span id="cloudinary-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-cloudinary" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Cloud media storage &amp; global CDN delivery for uploaded institution logos. Gracefully falls back to local server storage if disabled or unconfigured.
                                             </p>
                                         </div>
                                     </div>
@@ -1637,6 +1709,62 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
     </div>
     <?php endif; ?>
 
+    <!-- MODAL: EVENT QR CODE GENERATOR & SHARING (ACCESSIBLE TO ADMIN & TABULATOR) -->
+    <div id="event-qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-slate-100 animate-fade-in text-center relative">
+            <button type="button" id="closeEventQrModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl cursor-pointer transition-colors leading-none">&times;</button>
+            
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto text-xl shadow-xs border border-purple-200">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            
+            <div>
+                <h3 id="event-qr-modal-title" class="text-base font-black text-buksu-navy tracking-tight">Event Access QR Code</h3>
+                <p id="event-qr-modal-desc" class="text-xs text-slate-500 mt-0.5">Scan using any phone camera for instant direct access</p>
+            </div>
+
+            <!-- Mode Selector: Judge Scoring Direct vs Public Live Standings -->
+            <div class="flex items-center justify-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+                <button type="button" id="event-qr-type-judge" class="flex-1 py-1.5 px-2 rounded-lg bg-white text-buksu-navy shadow-xs transition-all cursor-pointer">
+                    <i class="fa-solid fa-gavel me-1 text-buksu-gold"></i> Judge Sheet
+                </button>
+                <button type="button" id="event-qr-type-public" class="flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-buksu-navy transition-all cursor-pointer">
+                    <i class="fa-solid fa-trophy me-1 text-amber-500"></i> Public Board
+                </button>
+            </div>
+
+            <!-- QR Display Container -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center min-h-[260px] relative">
+                <div id="event-qr-loading" class="text-slate-400 text-xs flex flex-col items-center gap-2">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-purple-600"></i>
+                    <span>Generating secure QR code...</span>
+                </div>
+                <img id="event-qr-img" src="" alt="Event QR Code" class="w-52 h-52 object-contain hidden bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                <div id="event-qr-disabled-notice" class="hidden text-xs text-rose-600 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                    <i class="fa-solid fa-triangle-exclamation mb-1 text-base block"></i>
+                    <span>QR Code Generator API is disabled in Admin Settings.</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-100 text-slate-700 font-mono text-[11px] truncate">
+                    <span id="event-qr-url-text" class="truncate me-2 text-left">Loading URL...</span>
+                    <button type="button" id="copyEventQrUrlBtn" class="shrink-0 text-buksu-navy hover:text-buksu-navy-light font-bold cursor-pointer" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="printQrPlacardBtn" class="flex-1 py-2 px-3 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-buksu-gold/30">
+                        <i class="fa-solid fa-print text-buksu-gold"></i> Print Placard
+                    </button>
+                    <button type="button" id="downloadQrImgBtn" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-download"></i> Save PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: JUDGE SCORING SHEET (ACCESSIBLE TO JUDGE & ADMIN) -->
     <div id="judge-scoring-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-7xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
@@ -1711,7 +1839,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             <!-- Print Header (Official Institution Banner for window.print) -->
             <div id="tab-print-header" class="hidden print-only mb-6 border-b-2 border-slate-900 pb-4">
                 <div class="flex items-center justify-between gap-4">
-                    <img src="/assets/logo/DJS Logo.png" alt="Logo" class="w-16 h-16 object-contain shrink-0" onerror="this.style.display='none'">
+                    <img id="tab-print-logo" src="/assets/logo/DJS Logo.png" alt="Logo" class="w-16 h-16 object-contain shrink-0" onerror="this.style.display='none'">
                     <div class="text-center flex-1">
                         <h2 id="tab-print-institution" class="text-lg font-black uppercase tracking-wider text-slate-900">Bukidnon State University</h2>
                         <p class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Office of Student Affairs & Services &bull; Tabulation Committee</p>
@@ -1739,6 +1867,9 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button type="button" id="openTabulationQrBtn" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-purple-200">
+                        <i class="fa-solid fa-qrcode"></i> QR Access
+                    </button>
                     <button type="button" id="refreshTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
                         <i class="fa-solid fa-rotate-right"></i> Refresh
                     </button>
@@ -1771,6 +1902,20 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <p class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-8 text-center">Certified Correct and Approved by the Board of Judges & Tabulation Committee:</p>
                 <div class="grid grid-cols-3 gap-8 text-center" id="tab-signatories-grid">
                     <!-- Dynamic Signatories populated from settings.branding.signatories -->
+                </div>
+                <!-- Official Verification Seal -->
+                <div class="mt-8 pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+                    <div class="flex items-center gap-3">
+                        <img id="tab-print-qr-seal" src="" alt="Verification QR" class="w-14 h-14 object-contain border border-slate-300 p-0.5 rounded" onerror="this.style.display='none'">
+                        <div class="text-left">
+                            <span class="font-bold text-slate-800 uppercase block tracking-wider">Digital Verification Seal</span>
+                            <span>Scan with any mobile device to verify certified results online.</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="block font-mono text-slate-400">Security: QR Authenticated</span>
+                        <span class="block text-slate-600 font-semibold">Digitalized Judging System &bull; Tabulation Verified</span>
+                    </div>
                 </div>
             </div>
 

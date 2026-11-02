@@ -98,6 +98,8 @@ function populateSettingsForm(settings) {
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
     const emailToggle = document.getElementById('setting-toggle-email');
+    const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
+    const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
 
     if (googleAuthToggle) {
         googleAuthToggle.checked = (security.googleAuthEnabled !== false);
@@ -114,8 +116,44 @@ function populateSettingsForm(settings) {
         updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
     }
 
-    // Update live banner preview
+    if (qrcodeToggle) {
+        qrcodeToggle.checked = (security.qrCodeEnabled !== false);
+        updateSecurityToggleBadge('qrcode-status-badge', qrcodeToggle.checked);
+    }
+
+    if (cloudinaryToggle) {
+        cloudinaryToggle.checked = (security.cloudinaryEnabled !== false);
+        updateSecurityToggleBadge('cloudinary-status-badge', cloudinaryToggle.checked);
+    }
+
+    // Update live banner preview & logo previews
     updateBrandingPreview(branding);
+    updateLogoPreviewUI(branding.logoUrl);
+}
+
+function updateLogoPreviewUI(logoUrl) {
+    const previewImg = document.getElementById('setting-logo-preview-img');
+    const bannerPreviewImg = document.getElementById('setting-preview-logo-img');
+    const badge = document.getElementById('setting-logo-storage-badge');
+
+    const defaultLogo = '/assets/logo/DJS Logo.png';
+    const effectiveUrl = (logoUrl && logoUrl.trim()) ? logoUrl.trim() : defaultLogo;
+
+    if (previewImg) previewImg.src = effectiveUrl;
+    if (bannerPreviewImg) bannerPreviewImg.src = effectiveUrl;
+
+    if (badge) {
+        if (!logoUrl || logoUrl === defaultLogo) {
+            badge.textContent = 'Default Logo';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700';
+        } else if (logoUrl.includes('cloudinary.com')) {
+            badge.textContent = 'Cloudinary CDN';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300';
+        } else {
+            badge.textContent = 'Local Server Storage';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300';
+        }
+    }
 }
 
 function updateBrandingPreview(branding) {
@@ -152,6 +190,7 @@ function populateDiagnostics(diag) {
 export function initSettingsPanel() {
     initSubTabs();
     initSettingsForm();
+    initLogoUploader();
     initSecuritySettings();
     initBackupAndMaintenance();
 }
@@ -270,6 +309,105 @@ function initSettingsForm() {
     document.getElementById('refreshSettingsBtn')?.addEventListener('click', loadSystemSettings);
 }
 
+function initLogoUploader() {
+    const triggerBtn = document.getElementById('triggerLogoUploadBtn');
+    const fileInput = document.getElementById('setting-logo-file-input');
+    const resetBtn = document.getElementById('resetLogoDefaultBtn');
+
+    triggerBtn?.addEventListener('click', () => {
+        fileInput?.click();
+    });
+
+    fileInput?.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast("Invalid File", "Only PNG, JPG, WebP, or SVG images are supported.", "error");
+            fileInput.value = '';
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showToast("File Too Large", "Maximum image size is 5MB.", "error");
+            fileInput.value = '';
+            return;
+        }
+
+        const originalBtnHtml = triggerBtn.innerHTML;
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-buksu-gold"></i> Uploading...';
+
+        const formData = new FormData();
+        formData.append('logo_file', file);
+
+        try {
+            const resp = await fetch('/backend/crud/upload_logo.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (data.success && data.logoUrl) {
+                if (cachedSettings) {
+                    if (!cachedSettings.branding) cachedSettings.branding = {};
+                    cachedSettings.branding.logoUrl = data.logoUrl;
+                }
+                updateLogoPreviewUI(data.logoUrl);
+                const storageMethod = data.storage === 'cloudinary' ? 'Cloudinary CDN' : 'Local Storage';
+                showToast("Logo Uploaded", `Institution logo saved via ${storageMethod}.`, "create");
+            } else {
+                showToast("Upload Failed", data.message || "Failed to upload institution logo.", "error");
+            }
+        } catch (err) {
+            console.error("Logo upload error:", err);
+            showToast("Network Error", "Could not complete logo upload.", "error");
+        } finally {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalBtnHtml;
+            fileInput.value = '';
+        }
+    });
+
+    resetBtn?.addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to reset the institution logo to the default BukSU seal?")) {
+            return;
+        }
+
+        const originalBtnHtml = resetBtn.innerHTML;
+        resetBtn.disabled = true;
+        resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[11px]"></i> Resetting...';
+
+        const formData = new FormData();
+        formData.append('action', 'reset_default_logo');
+
+        try {
+            const resp = await fetch('/backend/crud/upload_logo.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                if (cachedSettings && cachedSettings.branding) {
+                    cachedSettings.branding.logoUrl = null;
+                }
+                updateLogoPreviewUI(null);
+                showToast("Logo Reset", "Reverted to default institution seal.", "archive");
+            } else {
+                showToast("Reset Failed", data.message || "Could not reset logo.", "error");
+            }
+        } catch (err) {
+            console.error("Logo reset error:", err);
+            showToast("Network Error", "Could not complete logo reset.", "error");
+        } finally {
+            resetBtn.disabled = false;
+            resetBtn.innerHTML = originalBtnHtml;
+        }
+    });
+}
+
 function initBackupAndMaintenance() {
     // One-Click Backup Export
     const backupBtn = document.getElementById('downloadBackupBtn');
@@ -371,6 +509,8 @@ function initSecuritySettings() {
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
     const emailToggle = document.getElementById('setting-toggle-email');
+    const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
+    const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
 
     if (googleAuthToggle) {
@@ -388,6 +528,18 @@ function initSecuritySettings() {
     if (emailToggle) {
         emailToggle.addEventListener('change', () => {
             updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
+        });
+    }
+
+    if (qrcodeToggle) {
+        qrcodeToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('qrcode-status-badge', qrcodeToggle.checked);
+        });
+    }
+
+    if (cloudinaryToggle) {
+        cloudinaryToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('cloudinary-status-badge', cloudinaryToggle.checked);
         });
     }
 
@@ -417,18 +569,34 @@ async function handleApplySecurityChanges() {
     const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
     const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
     const emailToggle = document.getElementById('setting-toggle-email');
+    const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
+    const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
 
     const newGoogleAuth = googleAuthToggle ? googleAuthToggle.checked : true;
     const newRecaptcha = recaptchaToggle ? recaptchaToggle.checked : true;
     const newEmail = emailToggle ? emailToggle.checked : true;
+    const newQrCode = qrcodeToggle ? qrcodeToggle.checked : true;
+    const newCloudinary = cloudinaryToggle ? cloudinaryToggle.checked : true;
 
-    const currSec = cachedSettings?.security || { googleAuthEnabled: true, recaptchaEnabled: true, emailServiceEnabled: true };
+    const currSec = cachedSettings?.security || {
+        googleAuthEnabled: true,
+        recaptchaEnabled: true,
+        emailServiceEnabled: true,
+        qrCodeEnabled: true,
+        cloudinaryEnabled: true
+    };
     const currGoogle = currSec.googleAuthEnabled !== false;
     const currRecaptcha = currSec.recaptchaEnabled !== false;
     const currEmail = currSec.emailServiceEnabled !== false;
+    const currQrCode = currSec.qrCodeEnabled !== false;
+    const currCloudinary = currSec.cloudinaryEnabled !== false;
 
-    if (newGoogleAuth === currGoogle && newRecaptcha === currRecaptcha && newEmail === currEmail) {
+    if (newGoogleAuth === currGoogle && 
+        newRecaptcha === currRecaptcha && 
+        newEmail === currEmail && 
+        newQrCode === currQrCode && 
+        newCloudinary === currCloudinary) {
         showToast("Notice", "No changes were made to security controls.", "info");
         return;
     }
@@ -441,7 +609,9 @@ async function handleApplySecurityChanges() {
     const res = await requestSecurityChange({
         googleAuthEnabled: newGoogleAuth,
         recaptchaEnabled: newRecaptcha,
-        emailServiceEnabled: newEmail
+        emailServiceEnabled: newEmail,
+        qrCodeEnabled: newQrCode,
+        cloudinaryEnabled: newCloudinary
     });
 
     if (applyBtn) {
@@ -456,27 +626,50 @@ async function handleApplySecurityChanges() {
             currRecaptcha,
             newRecaptcha,
             currEmail,
-            newEmail
+            newEmail,
+            currQrCode,
+            newQrCode,
+            currCloudinary,
+            newCloudinary
         });
     } else if (res.success) {
         if (res.security) {
             cachedSettings.security = res.security;
-            if (googleAuthToggle) {
-                googleAuthToggle.checked = (res.security.googleAuthEnabled !== false);
-                updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
-            }
-            if (recaptchaToggle) {
-                recaptchaToggle.checked = (res.security.recaptchaEnabled !== false);
-                updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
-            }
-            if (emailToggle) {
-                emailToggle.checked = (res.security.emailServiceEnabled !== false);
-                updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
-            }
+            applySecurityToggleStates(res.security);
         }
         showToast("Success", res.message || "Security settings updated.", "success");
     } else {
         showToast("Error", res.message || "Failed to update security controls.", "error");
+    }
+}
+
+function applySecurityToggleStates(sec) {
+    if (!sec) return;
+    const gToggle = document.getElementById('setting-toggle-google-auth');
+    const rToggle = document.getElementById('setting-toggle-recaptcha');
+    const eToggle = document.getElementById('setting-toggle-email');
+    const qToggle = document.getElementById('setting-toggle-qrcode');
+    const cToggle = document.getElementById('setting-toggle-cloudinary');
+
+    if (gToggle) {
+        gToggle.checked = (sec.googleAuthEnabled !== false);
+        updateSecurityToggleBadge('google-auth-status-badge', gToggle.checked);
+    }
+    if (rToggle) {
+        rToggle.checked = (sec.recaptchaEnabled !== false);
+        updateSecurityToggleBadge('recaptcha-status-badge', rToggle.checked);
+    }
+    if (eToggle) {
+        eToggle.checked = (sec.emailServiceEnabled !== false);
+        updateSecurityToggleBadge('email-status-badge', eToggle.checked);
+    }
+    if (qToggle) {
+        qToggle.checked = (sec.qrCodeEnabled !== false);
+        updateSecurityToggleBadge('qrcode-status-badge', qToggle.checked);
+    }
+    if (cToggle) {
+        cToggle.checked = (sec.cloudinaryEnabled !== false);
+        updateSecurityToggleBadge('cloudinary-status-badge', cToggle.checked);
     }
 }
 
@@ -500,9 +693,17 @@ function openSecurityConfirmModal(maskedEmail, diff) {
                 <span>Google reCAPTCHA v2:</span>
                 <span class="font-bold">${diff.currRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newRecaptcha ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
-            <div class="flex items-center justify-between py-1">
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
                 <span>Gmail / Email Service:</span>
                 <span class="font-bold">${diff.currEmail ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newEmail ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                <span>QR Code Generator API:</span>
+                <span class="font-bold">${diff.currQrCode ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newQrCode ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+            <div class="flex items-center justify-between py-1">
+                <span>Cloudinary Media API:</span>
+                <span class="font-bold">${diff.currCloudinary ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newCloudinary ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
         `;
     }
@@ -523,21 +724,7 @@ function closeSecurityConfirmModal() {
 
     // Reset toggles to cached state
     if (cachedSettings?.security) {
-        const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
-        const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
-        const emailToggle = document.getElementById('setting-toggle-email');
-        if (googleAuthToggle) {
-            googleAuthToggle.checked = (cachedSettings.security.googleAuthEnabled !== false);
-            updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
-        }
-        if (recaptchaToggle) {
-            recaptchaToggle.checked = (cachedSettings.security.recaptchaEnabled !== false);
-            updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
-        }
-        if (emailToggle) {
-            emailToggle.checked = (cachedSettings.security.emailServiceEnabled !== false);
-            updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
-        }
+        applySecurityToggleStates(cachedSettings.security);
     }
 }
 
@@ -569,22 +756,8 @@ async function handleConfirmSecurityOtp(e) {
         if (cachedSettings) {
             cachedSettings.security = res.security;
         }
-        const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
-        const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
-        const emailToggle = document.getElementById('setting-toggle-email');
         if (res.security) {
-            if (googleAuthToggle) {
-                googleAuthToggle.checked = (res.security.googleAuthEnabled !== false);
-                updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
-            }
-            if (recaptchaToggle) {
-                recaptchaToggle.checked = (res.security.recaptchaEnabled !== false);
-                updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
-            }
-            if (emailToggle) {
-                emailToggle.checked = (res.security.emailServiceEnabled !== false);
-                updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
-            }
+            applySecurityToggleStates(res.security);
         }
         const modal = document.getElementById('security-confirm-modal');
         if (modal) modal.classList.add('hidden');

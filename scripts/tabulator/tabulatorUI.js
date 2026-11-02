@@ -1,5 +1,6 @@
 import { getScores, unlockJudgeScore } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
+import { openEventQrModal } from "/scripts/admin/eventsUI.js";
 
 let currentEventId = null;
 let pollInterval = null;
@@ -28,6 +29,14 @@ export function initTabulatorUI() {
     // Print button
     document.getElementById('printTabulationBtn')?.addEventListener('click', () => {
         window.print();
+    });
+
+    // QR Access button
+    document.getElementById('openTabulationQrBtn')?.addEventListener('click', () => {
+        const eventName = document.getElementById('tabulation-event-title')?.textContent || `Competition #${currentEventId}`;
+        if (currentEventId) {
+            openEventQrModal(currentEventId, eventName);
+        }
     });
 }
 
@@ -113,6 +122,13 @@ function renderTabulationBoard(data) {
         }
     }
 
+    // Dynamic Institution Logo on Print Header
+    const printLogoEl = document.getElementById('tab-print-logo');
+    if (printLogoEl) {
+        printLogoEl.src = branding.logoUrl || '/assets/logo/DJS Logo.png';
+        printLogoEl.style.display = 'block';
+    }
+
     // Signatories
     const signatoriesContainer = document.getElementById('tab-signatories-grid');
     if (signatoriesContainer) {
@@ -132,6 +148,28 @@ function renderTabulationBoard(data) {
                 <span class="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mt-0.5">${escapeHtml(sig.role || 'Designated Signatory')}</span>
             </div>
         `).join('');
+    }
+
+    // Digital QR Verification Seal
+    const qrSealEl = document.getElementById('tab-print-qr-seal');
+    if (qrSealEl) {
+        if (settings.security?.qrCodeEnabled !== false && currentEventId) {
+            fetch(`/backend/crud/get_event_qr.php?event_id=${encodeURIComponent(currentEventId)}&type=public`)
+                .then(r => r.json())
+                .then(qrRes => {
+                    if (qrRes.success && qrRes.qr_code_url) {
+                        qrSealEl.src = qrRes.qr_code_url;
+                        qrSealEl.style.display = 'block';
+                    } else {
+                        qrSealEl.style.display = 'none';
+                    }
+                })
+                .catch(() => {
+                    qrSealEl.style.display = 'none';
+                });
+        } else {
+            qrSealEl.style.display = 'none';
+        }
     }
 
     // Header status & live indicator

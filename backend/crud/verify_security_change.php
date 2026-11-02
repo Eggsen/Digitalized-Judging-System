@@ -45,7 +45,9 @@ if (empty($token)) {
                 $newSecurity = [
                     'googleAuthEnabled' => !empty($pending['changes']['googleAuthEnabled']),
                     'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
-                    'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled'])
+                    'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled']),
+                    'qrCodeEnabled' => !empty($pending['changes']['qrCodeEnabled']),
+                    'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled'])
                 ];
 
                 $updatedBy = $pending['requested_by_username'] ?? 'Administrator';
@@ -69,7 +71,7 @@ if (empty($token)) {
                     $updatedBy,
                     'admin',
                     'VERIFY_SECURITY_SETTINGS',
-                    'Admin verified security settings via email link: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email Service=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF')
+                    'Admin verified security settings via email link: Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF') . ', QR=' . ($newSecurity['qrCodeEnabled'] ? 'ON' : 'OFF') . ', Cloudinary=' . ($newSecurity['cloudinaryEnabled'] ? 'ON' : 'OFF')
                 );
 
                 $success = true;
@@ -153,6 +155,28 @@ if (empty($token)) {
                             <i class="fa-solid fa-envelope text-slate-500"></i> Gmail / System Email
                         </span>
                         <?php if ($newSecurity['emailServiceEnabled']): ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
+                        <?php else: ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                        <span class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-qrcode text-slate-500"></i> QR Code Generation API
+                        </span>
+                        <?php if ($newSecurity['qrCodeEnabled']): ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
+                        <?php else: ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                        <span class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-slate-500"></i> Cloudinary Media API
+                        </span>
+                        <?php if ($newSecurity['cloudinaryEnabled']): ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
                         <?php else: ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>
