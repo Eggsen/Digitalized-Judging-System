@@ -36,30 +36,21 @@ if (!$data) {
     exit;
 }
 
-$username = trim($data['username'] ?? "");
 $email = trim($data['email'] ?? "");
 $role = strtolower(trim($data['role'] ?? ""));
 
-if ($username === "" || $email === "" || $role === "") {
+if ($email === "" || $role === "") {
     echo json_encode([
         "success" => false,
-        "message" => "Username, email, and role are required."
+        "message" => "Role and email are required."
     ]);
     exit;
 }
 
-if (!in_array($role, ['judge', 'tabulator'])) {
+if (!in_array($role, ['admin', 'judge', 'tabulator'])) {
     echo json_encode([
         "success" => false,
-        "message" => "Invalid role. You can only send invitations for Judge or Tabulator accounts."
-    ]);
-    exit;
-}
-
-if (strlen($username) < 3) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Username must be at least 3 characters long."
+        "message" => "Invalid role. You can only send invitations for Admin, Judge, or Tabulator accounts."
     ]);
     exit;
 }
@@ -73,15 +64,6 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 try {
-    $existingUser = $usersCollection->findOne(['username' => $username]);
-    if ($existingUser) {
-        echo json_encode([
-            "success" => false,
-            "message" => "Username already exists. Please choose a different username."
-        ]);
-        exit;
-    }
-
     $existingEmail = $usersCollection->findOne(['email' => $email]);
     if ($existingEmail) {
         echo json_encode([
@@ -93,16 +75,19 @@ try {
 
     $inviteToken = bin2hex(random_bytes(16));
 
-    // Build the pending invited user document
+    // Build the pending invited user document (no username; invited user inputs their name upon activation)
     $newUser = [
-        'username' => $username,
+        'first_name' => null,
+        'last_name' => null,
+        'name' => null,
+        'username' => null,
         'email' => $email,
         'password' => null,
         'role' => $role,
         'status' => 'pending',
         'invite_token' => $inviteToken,
         'is_active' => true,
-        'created_by' => $_SESSION['username'],
+        'created_by' => $_SESSION['username'] ?? 'admin',
         'created_at' => new MongoDB\BSON\UTCDateTime()
     ];
 
@@ -113,15 +98,17 @@ try {
     $inviteLink = "{$protocol}://{$host}/auth/accept-invitation.php?invite_token={$inviteToken}";
 
     // Send invitation email
-    $subject = "You're Invited! Set Up Your " . ucfirst($role) . " Account | BukSU Judging System";
+    $roleDisplay = ucfirst($role);
+    $inviter = htmlspecialchars($_SESSION['username'] ?? 'Admin');
+    $subject = "You're Invited! Set Up Your {$roleDisplay} Account | BukSU Judging System";
     $htmlBody = "
         <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; background: #ffffff;'>
             <h2 style='color: #0f172a; margin-top: 0;'>Welcome to BukSU Digitalized Judging System</h2>
-            <p style='color: #334155; font-size: 14px;'>Hello <strong>{$username}</strong>,</p>
-            <p style='color: #334155; font-size: 14px;'>You have been invited by Administrator <strong>{$_SESSION['username']}</strong> to join as an official <strong>" . ucfirst($role) . "</strong>.</p>
-            <p style='color: #334155; font-size: 14px;'>Click the button below to set up your desired password and activate your account:</p>
+            <p style='color: #334155; font-size: 14px;'>Hello,</p>
+            <p style='color: #334155; font-size: 14px;'>You have been invited by Administrator <strong>{$inviter}</strong> to join as an official <strong>{$roleDisplay}</strong>.</p>
+            <p style='color: #334155; font-size: 14px;'>Click the button below to provide your first and last name, set up your password, and activate your account:</p>
             <div style='margin: 24px 0; text-align: center;'>
-                <a href='{$inviteLink}' style='background-color: #1e1b4b; color: #fbbf24; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 14px;'>Accept Invitation & Set Password</a>
+                <a href='{$inviteLink}' style='background-color: #1e1b4b; color: #fbbf24; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 14px;'>Accept Invitation & Set Up Account</a>
             </div>
             <p style='color: #64748b; font-size: 12px;'>Or copy and paste this URL into your browser:<br><a href='{$inviteLink}' style='color: #4f46e5;'>{$inviteLink}</a></p>
             <hr style='border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;'>
@@ -134,10 +121,9 @@ try {
     if ($result->getInsertedCount() > 0) {
         echo json_encode([
             "success" => true,
-            "message" => "Invitation sent to {$email} for " . ucfirst($role) . " \"{$username}\".",
+            "message" => "Invitation generated for {$roleDisplay} ({$email}).",
             "invite_token" => $inviteToken,
             "invite_link" => $inviteLink,
-            "username" => $username,
             "email" => $email,
             "role" => $role
         ]);

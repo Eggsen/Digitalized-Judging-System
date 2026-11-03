@@ -7,6 +7,9 @@ echo "Seeding users, events, contestants, criteria, and scores into MongoDB...\n
 // 1. Users
 $defaultUsers = [
     [
+        'first_name' => 'System',
+        'last_name' => 'Admin',
+        'name' => 'System Admin',
         'username' => 'Admin',
         'email' => 'admin@buksu.edu.ph',
         'password' => password_hash('adminpassword123', PASSWORD_DEFAULT),
@@ -16,6 +19,9 @@ $defaultUsers = [
         'created_at' => new MongoDB\BSON\UTCDateTime()
     ],
     [
+        'first_name' => 'Senior',
+        'last_name' => 'Judge',
+        'name' => 'Senior Judge',
         'username' => 'Judge1',
         'email' => 'judge1@buksu.edu.ph',
         'password' => password_hash('judgepassword123', PASSWORD_DEFAULT),
@@ -25,6 +31,9 @@ $defaultUsers = [
         'created_at' => new MongoDB\BSON\UTCDateTime()
     ],
     [
+        'first_name' => 'Official',
+        'last_name' => 'Tabulator',
+        'name' => 'Official Tabulator',
         'username' => 'Tabulator1',
         'email' => 'tabulator1@buksu.edu.ph',
         'password' => password_hash('tabulatorpassword123', PASSWORD_DEFAULT),
@@ -47,6 +56,9 @@ foreach ($defaultUsers as $userData) {
         $usersCollection->updateOne(
             ['_id' => $existing['_id']],
             ['$set' => [
+                'first_name' => $userData['first_name'],
+                'last_name' => $userData['last_name'],
+                'name' => $userData['name'],
                 'password' => $userData['password'],
                 'role' => $userData['role'],
                 'email' => $userData['email'],

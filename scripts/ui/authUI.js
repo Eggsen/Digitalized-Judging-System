@@ -8,21 +8,10 @@ function initLandingPage() {
     const loginCard = document.getElementById('login-card');
     const acceptInviteCard = document.getElementById('accept-invitation-card');
     const resetTokenCard = document.getElementById('reset-token-card');
-    const registerCard = document.getElementById('register-admin-card');
 
     const togglePasswordBtn = document.getElementById('toggle-password-btn');
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', () => togglePasswordVisibility('password-input', 'toggle-password-icon'));
-    }
-
-    const openRegisterBtn = document.getElementById('open-register-admin-btn');
-    if (openRegisterBtn) {
-        openRegisterBtn.addEventListener('click', showRegisterAdminCard);
-    }
-
-    const backFromRegisterBtn = document.getElementById('back-from-register-btn');
-    if (backFromRegisterBtn) {
-        backFromRegisterBtn.addEventListener('click', hideRegisterAdminCard);
     }
 
     // Ensure login recaptcha is initialized
@@ -142,8 +131,8 @@ async function checkInviteToken(token) {
     const res = await verifyInviteToken(token);
 
     if (res.success) {
-        if (usernameDisplay) usernameDisplay.textContent = `Account: ${res.username}`;
-        if (roleDisplay) roleDisplay.textContent = `Role: Official ${res.role.charAt(0).toUpperCase() + res.role.slice(1)}`;
+        if (usernameDisplay) usernameDisplay.innerHTML = `<i class="fa-solid fa-envelope me-1.5 text-buksu-navy"></i>Invitation for: ${res.email || res.username || 'User'}`;
+        if (roleDisplay) roleDisplay.textContent = `Role: Official ${res.role ? res.role.charAt(0).toUpperCase() + res.role.slice(1) : ''}`;
         if (noticeWrap) noticeWrap.classList.add('hidden');
         if (btn) btn.disabled = false;
     } else {
@@ -161,10 +150,17 @@ async function checkInviteToken(token) {
 
 async function handleAcceptInvite() {
     const token = document.getElementById('invite-token-input')?.value || '';
+    const firstName = document.getElementById('invite-firstname-input')?.value.trim() || '';
+    const lastName = document.getElementById('invite-lastname-input')?.value.trim() || '';
     const password = document.getElementById('invite-password-input')?.value || '';
     const confirmPassword = document.getElementById('invite-confirm-password-input')?.value || '';
     const btn = document.getElementById('acceptInviteBtn');
     const btnText = document.getElementById('invite-btn-text');
+
+    if (!firstName || !lastName) {
+        showInviteNotice('warning', 'Please enter both your first and last name.');
+        return;
+    }
 
     if (!password || !confirmPassword) {
         showInviteNotice('warning', 'Please fill in both password fields.');
@@ -182,23 +178,27 @@ async function handleAcceptInvite() {
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = "Saving Password...";
+    if (btnText) btnText.textContent = "Saving Account...";
 
     const res = await acceptInvitation({
         token,
+        first_name: firstName,
+        last_name: lastName,
         password,
         confirm_password: confirmPassword
     });
 
     if (btn) btn.disabled = false;
-    if (btnText) btnText.textContent = "Save Password & Activate";
+    if (btnText) btnText.textContent = "Save Profile & Activate Account";
 
     if (res.success) {
-        showInviteNotice('success', res.message || "Password updated successfully!");
+        showInviteNotice('success', res.message || "Account activated successfully!");
 
         setTimeout(() => {
             const usernameInput = document.getElementById('username-input');
-            if (usernameInput && res.username) usernameInput.value = res.username;
+            if (usernameInput && (res.email || res.username)) {
+                usernameInput.value = res.email || res.username;
+            }
 
             window.history.replaceState({}, document.title, window.location.pathname);
 
@@ -214,7 +214,7 @@ async function handleAcceptInvite() {
             }
         }, 1500);
     } else {
-        showInviteNotice('error', res.message || "Failed to save password.");
+        showInviteNotice('error', res.message || "Failed to save account details.");
     }
 }
 
@@ -349,26 +349,4 @@ function showResetTokenNotice(type, message) {
     noticeWrap.className = `my-4 px-3 py-2 rounded-xl text-xs font-semibold ${styles[type] || styles.error}`;
     notice.innerHTML = `<i class="fa-solid ${icons[type] || icons.error} me-1.5"></i>${message}`;
     noticeWrap.classList.remove('hidden');
-}
-
-function showRegisterAdminCard() {
-    const loginCard = document.getElementById('login-card');
-    const registerCard = document.getElementById('register-admin-card');
-    if (loginCard && registerCard) {
-        loginCard.classList.add('hidden');
-        registerCard.classList.remove('hidden');
-        registerCard.classList.add('animate-fade-in');
-        renderRecaptchaWidget('register-recaptcha');
-    }
-}
-
-function hideRegisterAdminCard() {
-    const loginCard = document.getElementById('login-card');
-    const registerCard = document.getElementById('register-admin-card');
-    if (loginCard && registerCard) {
-        registerCard.classList.add('hidden');
-        loginCard.classList.remove('hidden');
-        loginCard.classList.add('animate-fade-in');
-        renderRecaptchaWidget('login-recaptcha');
-    }
 }

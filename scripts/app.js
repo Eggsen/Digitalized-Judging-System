@@ -1,4 +1,4 @@
-import { loginUser, registerAdmin } from "./auth/authAPI.js";
+import { loginUser } from "./auth/authAPI.js";
 import { showNotice, togglePasswordVisibility, getRecaptchaResponse, resetRecaptchaWidget, renderRecaptchaWidget } from "./utils/index.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -51,83 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    const registerAdminForm = document.getElementById("registerAdminForm");
-    const regNoticeText = document.getElementById("register-notice-text");
-
-    if (registerAdminForm) {
-        registerAdminForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const username = document.getElementById("reg-username-input")?.value.trim() || "";
-            const email = document.getElementById("reg-email-input")?.value.trim() || "";
-            const password = document.getElementById("reg-password-input")?.value || "";
-            const confirmPassword = document.getElementById("reg-confirm-password-input")?.value || "";
-
-            if (!username || !password) {
-                showNotice(regNoticeText, "Username and password are required.", "warning");
-                return;
-            }
-
-            if (password.length < 6) {
-                showNotice(regNoticeText, "Password must be at least 6 characters long.", "warning");
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                showNotice(regNoticeText, "Passwords do not match.", "error");
-                return;
-            }
-
-            const recaptchaToken = getRecaptchaResponse('register-recaptcha');
-            if (window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_ENABLED !== false && !recaptchaToken) {
-                showNotice(regNoticeText, "Please verify that you are not a robot.", "warning");
-                return;
-            }
-
-            const regBtn = document.getElementById("registerAdminBtn");
-            const regBtnText = document.getElementById("reg-btn-text");
-            if (regBtn) regBtn.disabled = true;
-            if (regBtnText) regBtnText.textContent = "Registering...";
-
-            showNotice(regNoticeText, "Creating Admin account...", "info");
-
-            const response = await registerAdmin({ username, email, password, confirm_password: confirmPassword, recaptcha_response: recaptchaToken });
-
-            if (regBtn) regBtn.disabled = false;
-            if (regBtnText) regBtnText.textContent = "Register Admin Account";
-
-            if (response && response.success) {
-                showNotice(regNoticeText, response.message || "Admin registered successfully!", "success");
-                setTimeout(() => {
-                    // Populate login username input and switch back to login card
-                    const usernameInput = document.getElementById("username-input");
-                    if (usernameInput) usernameInput.value = username;
-
-                    const loginCard = document.getElementById("login-card");
-                    const registerCard = document.getElementById("register-admin-card");
-                    if (loginCard && registerCard) {
-                        registerCard.classList.add("hidden");
-                        loginCard.classList.remove("hidden");
-                        loginCard.classList.add("animate-fade-in");
-                        renderRecaptchaWidget('login-recaptcha');
-                    }
-                }, 1200);
-            } else {
-                resetRecaptchaWidget('register-recaptcha');
-                showNotice(regNoticeText, response ? response.message : "Registration failed.", "error");
-            }
-        });
-    }
-
     document.getElementById('toggle-password-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('password-input', 'toggle-password-icon');
-    });
-
-    document.getElementById('toggle-reg-password-btn')?.addEventListener('click', () => {
-        togglePasswordVisibility('reg-password-input', 'toggle-reg-password-icon');
-    });
-
-    document.getElementById('toggle-reg-confirm-pw-btn')?.addEventListener('click', () => {
-        togglePasswordVisibility('reg-confirm-password-input', 'toggle-reg-confirm-pw-icon');
     });
 });

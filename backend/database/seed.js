@@ -13,6 +13,9 @@ db.users.updateOne(
   { username: "Admin" },
   {
     $set: {
+      first_name: "System",
+      last_name: "Admin",
+      name: "System Admin",
       username: "Admin",
       email: "admin@buksu.edu.ph",
       password: "<hashed-password>",
@@ -30,6 +33,9 @@ db.users.updateOne(
   { username: "Judge1" },
   {
     $set: {
+      first_name: "Senior",
+      last_name: "Judge",
+      name: "Senior Judge",
       username: "Judge1",
       email: "judge1@buksu.edu.ph",
       password: "<hashed-password>",
@@ -46,6 +52,9 @@ db.users.updateOne(
   { username: "Tabulator1" },
   {
     $set: {
+      first_name: "Official",
+      last_name: "Tabulator",
+      name: "Official Tabulator",
       username: "Tabulator1",
       email: "tabulator1@buksu.edu.ph",
       password: "<hashed-password>",

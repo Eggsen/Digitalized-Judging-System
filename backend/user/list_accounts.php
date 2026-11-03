@@ -46,9 +46,9 @@ function formatMongoDate($val) {
 }
 
 try {
-    // Get all non-admin accounts (judges and tabulators)
+    // Get all system accounts (admins, judges, and tabulators)
     $cursor = $usersCollection->find(
-        ['role' => ['$in' => ['judge', 'tabulator']]],
+        ['role' => ['$in' => ['admin', 'judge', 'tabulator']]],
         ['projection' => ['password' => 0]] // Exclude password from response
     );
 
@@ -59,11 +59,20 @@ try {
     foreach ($cursor as $user) {
         $status = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
         $token = $user['invite_token'] ?? null;
-        $inviteLink = $token ? "{$protocol}://{$host}/index.php?invite_token={$token}" : null;
+        $inviteLink = $token ? "{$protocol}://{$host}/auth/accept-invitation.php?invite_token={$token}" : null;
+
+        $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+        $displayName = !empty($fullName) ? $fullName : ($user['name'] ?? $user['username'] ?? '');
+        if (empty($displayName)) {
+            $displayName = $status === 'pending' ? 'Pending Activation' : ($user['email'] ?? 'User');
+        }
 
         $accounts[] = [
             'id' => (string) $user['_id'],
-            'username' => $user['username'] ?? '',
+            'username' => $displayName,
+            'first_name' => $user['first_name'] ?? '',
+            'last_name' => $user['last_name'] ?? '',
+            'name' => $fullName,
             'email' => $user['email'] ?? '',
             'role' => $user['role'] ?? '',
             'status' => $status,

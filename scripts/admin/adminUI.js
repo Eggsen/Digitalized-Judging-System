@@ -30,7 +30,7 @@ async function loadAccounts() {
     tbody.innerHTML = res.accounts.map(account => `
         <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
             <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
-                <i class="fa-solid fa-user text-slate-400 dark:text-slate-500 me-1.5"></i>${account.username}
+                <i class="fa-solid fa-user text-slate-400 dark:text-slate-500 me-1.5"></i>${account.first_name ? `${account.first_name} ${account.last_name}` : (account.username || account.name || 'Pending Activation')}
                 ${account.email ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
                 ${account.created_at ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
                 ${account.activated_at ? `<div class="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
@@ -130,16 +130,15 @@ function initAdminPanel() {
     const createForm = document.getElementById('createAccountForm');
     createForm?.addEventListener('submit', async () => {
         const role = document.getElementById('create-role').value;
-        const username = document.getElementById('create-username').value.trim();
         const email = document.getElementById('create-email').value.trim();
 
         const noticeWrap = document.getElementById('admin-create-notice-wrap');
         const notice = document.getElementById('admin-create-notice');
 
-        if (!username || !email) {
+        if (!email) {
             if (noticeWrap && notice) {
                 noticeWrap.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200';
-                notice.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1.5"></i>Both Username and Email are required.';
+                notice.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1.5"></i>Please enter a valid email address.';
                 noticeWrap.classList.remove('hidden');
             }
             return;
@@ -150,7 +149,7 @@ function initAdminPanel() {
         btn.disabled = true;
         btnText.textContent = 'Generating Invitation...';
 
-        const res = await createAccount({ role, username, email });
+        const res = await createAccount({ role, email });
 
         btn.disabled = false;
         btnText.textContent = 'Send Invitation';
@@ -186,7 +185,6 @@ function initAdminPanel() {
         }
 
         if (res.success) {
-            document.getElementById('create-username').value = '';
             document.getElementById('create-email').value = '';
             await loadAccounts();
         }

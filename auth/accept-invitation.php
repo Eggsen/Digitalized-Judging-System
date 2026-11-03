@@ -59,7 +59,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
 
             <div>
                 <h2 class="text-2xl font-extrabold text-buksu-navy tracking-tight">Accept Account Setup</h2>
-                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Set up your password to activate your official BukSU DJS account.</p>
+                <p class="text-xs text-slate-500 mt-1 font-normal leading-relaxed">Enter your first and last name, and choose a password to activate your official BukSU DJS account.</p>
             </div>
 
             <div class="my-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
@@ -78,8 +78,29 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
             <form id="acceptInviteForm" onsubmit="return false;" class="space-y-4">
                 <input type="hidden" id="invite-token-input" value="<?= $inviteToken ?>">
 
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-buksu-navy mb-1.5">First Name <span class="text-rose-500">*</span></label>
+                        <div class="relative rounded-xl">
+                            <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <input type="text" id="invite-firstname-input" placeholder="e.g. Juan" class="w-full ps-9 pe-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Last Name <span class="text-rose-500">*</span></label>
+                        <div class="relative rounded-xl">
+                            <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <input type="text" id="invite-lastname-input" placeholder="e.g. Dela Cruz" class="w-full ps-9 pe-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        </div>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password</label>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password <span class="text-rose-500">*</span></label>
                     <div class="relative rounded-xl">
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i class="fa-solid fa-lock"></i>
@@ -92,7 +113,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm Password</label>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm Password <span class="text-rose-500">*</span></label>
                     <div class="relative rounded-xl">
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i class="fa-solid fa-shield-halved"></i>
@@ -106,7 +127,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
 
                 <button type="submit" id="acceptInviteBtn" disabled class="w-full py-3 px-4 bg-buksu-navy hover:bg-buksu-navy-light disabled:opacity-50 text-buksu-gold font-bold text-xs rounded-xl shadow-lg shadow-buksu-navy/20 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer mt-2">
                     <i class="fa-solid fa-check-circle"></i>
-                    <span id="invite-btn-text">Save Password & Activate Account</span>
+                    <span id="invite-btn-text">Save Profile & Activate Account</span>
                 </button>
             </form>
 
