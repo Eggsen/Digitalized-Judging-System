@@ -116,15 +116,29 @@ try {
     }
 
     // Set session data
+    $sessionToken = bin2hex(random_bytes(16));
     $_SESSION['user_id'] = (string)$user['_id'];
     $_SESSION['username'] = $user['username'] ?? $identifier;
     $_SESSION['email'] = $user['email'] ?? '';
     $_SESSION['role'] = strtolower($user['role'] ?? 'user');
+    $_SESSION['session_token'] = $sessionToken;
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
+
     if (isset($user['preferences']) && (is_array($user['preferences']) || is_object($user['preferences']))) {
         $_SESSION['preferences'] = (array)$user['preferences'];
     } else {
         $_SESSION['preferences'] = ['theme' => 'light', 'colorRule' => 'normal', 'navPlacement' => 'top'];
     }
+
+    // Persist active session token in database for real-time revocation support
+    $usersCollection->updateOne(
+        ['_id' => $user['_id']],
+        ['$set' => [
+            'session_token' => $sessionToken,
+            'last_login' => new MongoDB\BSON\UTCDateTime()
+        ]]
+    );
 
     logSystemAction(
         $_SESSION['user_id'],

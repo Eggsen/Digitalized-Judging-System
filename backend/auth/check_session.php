@@ -2,11 +2,11 @@
 
 header("Content-Type: application/json");
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . "/../utils/session_guard.php";
 
-if (isset($_SESSION['user_id']) && isset($_SESSION['username'])) {
+$isValid = validateUserSession(false);
+
+if ($isValid && isset($_SESSION['user_id']) && isset($_SESSION['username'])) {
     echo json_encode([
         "authenticated" => true,
         "user" => [
@@ -18,6 +18,7 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['username'])) {
     ]);
 } else {
     echo json_encode([
-        "authenticated" => false
+        "authenticated" => false,
+        "message" => "Session is invalid or has expired."
     ]);
 }

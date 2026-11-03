@@ -74,6 +74,7 @@ try {
     }
 
     $inviteToken = bin2hex(random_bytes(16));
+    $inviteExpiresAt = new MongoDB\BSON\UTCDateTime((time() + (7 * 86400)) * 1000); // 7-day token validity window
 
     // Build the pending invited user document (no username; invited user inputs their name upon activation)
     $newUser = [
@@ -86,6 +87,7 @@ try {
         'role' => $role,
         'status' => 'pending',
         'invite_token' => $inviteToken,
+        'invite_expires_at' => $inviteExpiresAt,
         'is_active' => true,
         'created_by' => $_SESSION['username'] ?? 'admin',
         'created_at' => new MongoDB\BSON\UTCDateTime()

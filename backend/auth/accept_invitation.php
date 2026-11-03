@@ -25,6 +25,18 @@ if ($method === "GET") {
             exit;
         }
 
+        // Check 7-day token expiration
+        if (isset($user['invite_expires_at']) && $user['invite_expires_at'] instanceof MongoDB\BSON\UTCDateTime) {
+            $expTimestamp = $user['invite_expires_at']->toDateTime()->getTimestamp();
+            if (time() > $expTimestamp) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "This invitation link expired after 7 days. Please request a new invitation link from your administrator."
+                ]);
+                exit;
+            }
+        }
+
         $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         $displayName = !empty($fullName) ? $fullName : ($user['name'] ?? $user['username'] ?? $user['email'] ?? '');
 
@@ -106,6 +118,18 @@ if ($method === "GET") {
             exit;
         }
 
+        // Check 7-day token expiration
+        if (isset($user['invite_expires_at']) && $user['invite_expires_at'] instanceof MongoDB\BSON\UTCDateTime) {
+            $expTimestamp = $user['invite_expires_at']->toDateTime()->getTimestamp();
+            if (time() > $expTimestamp) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "This invitation link expired after 7 days. Please request a new invitation link from your administrator."
+                ]);
+                exit;
+            }
+        }
+
         $fullName = trim($firstName . ' ' . $lastName);
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
@@ -123,7 +147,8 @@ if ($method === "GET") {
                     'activated_at' => new MongoDB\BSON\UTCDateTime()
                 ],
                 '$unset' => [
-                    'invite_token' => ""
+                    'invite_token' => "",
+                    'invite_expires_at' => ""
                 ]
             ]
         );

@@ -61,6 +61,12 @@ function initLandingPage() {
             case 'account_disabled':
                 errorMsg = 'Your account has been disabled. Please contact the administrator.';
                 break;
+            case 'session_expired':
+                errorMsg = 'Your session has expired after 7 days for security. Please sign in again.';
+                break;
+            case 'session_revoked':
+                errorMsg = 'Your session was ended or revoked by an administrator. Please sign in again.';
+                break;
             case 'oauth_disabled':
                 errorMsg = 'Google Sign-In is currently disabled by the system administrator.';
                 break;

@@ -58,3 +58,33 @@ export async function updateRole(userId, role) {
     }
 }
 
+export async function revokeInvitation(userId) {
+    try {
+        const response = await fetch("/backend/user/revoke_invitation.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Revoke invitation API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+
+export async function revokeUserSessions(userId) {
+    try {
+        const response = await fetch("/backend/user/revoke_sessions.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Revoke sessions API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+

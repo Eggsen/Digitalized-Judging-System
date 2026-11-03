@@ -1,13 +1,7 @@
 <?php
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-if (!isset($_SESSION['user_id']) || empty($_SESSION['username'])) {
-    header("Location: /auth/login.php");
-    exit;
-}
+require_once __DIR__ . "/backend/utils/session_guard.php";
+validateUserSession(true);
 
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 $email = htmlspecialchars($_SESSION['email'] ?? '');

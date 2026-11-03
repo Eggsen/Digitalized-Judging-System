@@ -12,6 +12,12 @@ export function getRoleBadge(role) {
 }
 
 export function getStatusBadge(isActive, status) {
+    if (status === 'revoked') {
+        return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-semibold border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span>Revoked</span>';
+    }
+    if (status === 'expired') {
+        return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-semibold border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"></span>Expired Invite</span>';
+    }
     if (!isActive) {
         return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-500 text-[11px] font-semibold border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"></span>Disabled</span>';
     }

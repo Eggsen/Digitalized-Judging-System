@@ -59,12 +59,20 @@ try {
     foreach ($cursor as $user) {
         $status = $user['status'] ?? (empty($user['password']) ? 'pending' : 'active');
         $token = $user['invite_token'] ?? null;
-        $inviteLink = $token ? "{$protocol}://{$host}/auth/accept-invitation.php?invite_token={$token}" : null;
+
+        // Check if pending invitation has expired
+        if ($status === 'pending' && isset($user['invite_expires_at']) && $user['invite_expires_at'] instanceof MongoDB\BSON\UTCDateTime) {
+            if (time() > $user['invite_expires_at']->toDateTime()->getTimestamp()) {
+                $status = 'expired';
+            }
+        }
+
+        $inviteLink = ($token && $status === 'pending') ? "{$protocol}://{$host}/auth/accept-invitation.php?invite_token={$token}" : null;
 
         $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
         $displayName = !empty($fullName) ? $fullName : ($user['name'] ?? $user['username'] ?? '');
         if (empty($displayName)) {
-            $displayName = $status === 'pending' ? 'Pending Activation' : ($user['email'] ?? 'User');
+            $displayName = ($status === 'pending' || $status === 'expired') ? 'Pending Activation' : ($user['email'] ?? 'User');
         }
 
         $accounts[] = [

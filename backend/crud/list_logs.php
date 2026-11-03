@@ -94,7 +94,9 @@ function formatLogActionLabel($rawAction) {
         'logout'                    => 'Signed out',
         'password_reset'            => 'Reset password',
         'invite_user'               => 'Sent account invitation',
-        'accept_invitation'         => 'Activated account'
+        'accept_invitation'         => 'Activated account',
+        'revoke_invitation'         => 'Revoked account invitation',
+        'revoke_sessions'           => 'Terminated active sessions'
     ];
 
     if (isset($map[$normalized])) {

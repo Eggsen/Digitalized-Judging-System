@@ -68,9 +68,14 @@ try {
         exit;
     }
 
+    $updateSet = ['is_active' => $isActive];
+    if (!$isActive) {
+        $updateSet['session_token'] = bin2hex(random_bytes(16)); // force logout active sessions
+    }
+
     $result = $usersCollection->updateOne(
         ['_id' => $objectId],
-        ['$set' => ['is_active' => $isActive]]
+        ['$set' => $updateSet]
     );
 
     if ($result->getModifiedCount() > 0) {

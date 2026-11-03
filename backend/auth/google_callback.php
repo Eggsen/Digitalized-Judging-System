@@ -157,11 +157,13 @@ try {
         exit;
     }
 
-    // 5. Update user document with google_id, last_login, and activate status if pending
+    // 5. Update user document with google_id, last_login, session_token and activate status if pending
+    $sessionToken = bin2hex(random_bytes(16));
     $updateFields = [
-        'google_id'   => (string)($googleUser['sub'] ?? ''),
-        'last_login'  => new MongoDB\BSON\UTCDateTime(),
-        'status'      => 'active'
+        'google_id'     => (string)($googleUser['sub'] ?? ''),
+        'last_login'    => new MongoDB\BSON\UTCDateTime(),
+        'session_token' => $sessionToken,
+        'status'        => 'active'
     ];
 
     if (!empty($googleUser['picture']) && empty($user['avatar'])) {
@@ -178,6 +180,9 @@ try {
     $_SESSION['username'] = $user['username'] ?? explode('@', $googleEmail)[0];
     $_SESSION['email'] = $user['email'] ?? $googleEmail;
     $_SESSION['role'] = strtolower($user['role'] ?? 'user');
+    $_SESSION['session_token'] = $sessionToken;
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
 
     if (isset($user['preferences']) && (is_array($user['preferences']) || is_object($user['preferences']))) {
         $_SESSION['preferences'] = (array)$user['preferences'];

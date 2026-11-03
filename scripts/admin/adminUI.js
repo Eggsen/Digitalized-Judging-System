@@ -1,4 +1,4 @@
-import { createAccount, listAccounts, updatePermissions, updateRole } from "/scripts/admin/adminAPI.js";
+import { createAccount, listAccounts, updatePermissions, updateRole, revokeInvitation, revokeUserSessions } from "/scripts/admin/adminAPI.js";
 import { showNotice } from "/scripts/utils/index.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
@@ -49,14 +49,23 @@ async function loadAccounts() {
             </td>
             <td class="px-4 py-3 text-center align-middle">${getStatusBadge(account.is_active, account.status)}</td>
             <td class="px-4 py-3 text-center align-middle">
-                <div class="flex items-center justify-center gap-1.5">
-                    ${account.status === 'pending' && account.invite_link
-                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-slate-100 text-buksu-navy hover:bg-slate-200 font-bold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1 text-buksu-navy"></i>Copy Link</button>`
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    ${(account.status === 'pending' || account.status === 'expired') && account.invite_link
+                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-slate-100 text-buksu-navy hover:bg-slate-200 font-bold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1 text-buksu-navy"></i>Copy</button>`
                         : ''
                     }
-                    ${account.is_active
-                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>`
-                        : `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                    ${(account.status === 'pending' || account.status === 'expired')
+                        ? `<button class="revoke-invite-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Cancel and invalidate this invitation link"><i class="fa-solid fa-ban me-1"></i>Revoke</button>`
+                        : ''
+                    }
+                    ${account.status === 'active' && account.is_active
+                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>
+                           <button class="revoke-session-btn px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Terminate active logins and force re-login"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out</button>`
+                        : ''
+                    }
+                    ${account.status === 'active' && !account.is_active
+                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                        : ''
                     }
                 </div>
             </td>
@@ -121,6 +130,52 @@ async function loadAccounts() {
                 await loadAccounts();
             } else {
                 btn.disabled = false;
+            }
+        });
+    });
+
+    document.querySelectorAll('.revoke-invite-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this invitation';
+            if (!confirm(`Are you sure you want to revoke the invitation link for ${targetName}? The link will become immediately invalid.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await revokeInvitation(userId);
+            if (res.success) {
+                showToast("Invitation Revoked", res.message, "archive");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-ban me-1"></i>Revoke';
+            }
+        });
+    });
+
+    document.querySelectorAll('.revoke-session-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this user';
+            if (!confirm(`Force sign out ${targetName} from all active devices? They will be prompted to log in again immediately.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await revokeUserSessions(userId);
+            if (res.success) {
+                showToast("Sessions Terminated", res.message, "success");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out';
             }
         });
     });
