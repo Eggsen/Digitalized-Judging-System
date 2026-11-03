@@ -139,6 +139,7 @@ export function switchUserTab(targetTab) {
     }
 
     if (targetTab === 'user-events-tab') loadUserAssignedEvents();
+    if (targetTab === 'user-logs-tab') loadAuditLogs('user-logs-tbody');
 }
 
 function initUserTabs() {
@@ -150,6 +151,8 @@ function initUserTabs() {
             if (targetTab) switchUserTab(targetTab);
         });
     });
+
+    document.getElementById('refreshUserLogsBtn')?.addEventListener('click', () => loadAuditLogs('user-logs-tbody'));
 }
 
 /* -------------------------------------------------------------
@@ -354,38 +357,96 @@ async function loadJudgeAssignments() {
 }
 
 /* -------------------------------------------------------------
- * SYSTEM AUDIT LOGS VIEW
+ * SYSTEM & USER AUDIT LOGS VIEW
  * ------------------------------------------------------------- */
-async function loadAuditLogs() {
-    const tbody = document.getElementById('logs-tbody');
+function getActionBadge(actionName, rawAction) {
+    const text = actionName || rawAction || 'Activity';
+    const act = (rawAction || actionName || '').toLowerCase();
+
+    let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+    let icon = 'fa-regular fa-clock';
+
+    if (act.includes('submit')) {
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+        icon = 'fa-solid fa-paper-plane';
+    } else if (act.includes('draft') || act.includes('save')) {
+        badgeClass = 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800';
+        icon = 'fa-solid fa-floppy-disk';
+    } else if (act.includes('unlock')) {
+        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
+        icon = 'fa-solid fa-lock-open';
+    } else if (act.includes('lock')) {
+        badgeClass = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+        icon = 'fa-solid fa-lock';
+    } else if (act.includes('delete') || act.includes('clear') || act.includes('decline') || act.includes('remove')) {
+        badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800';
+        icon = 'fa-solid fa-trash';
+    } else if (act.includes('create') || act.includes('add') || act.includes('register') || act.includes('accept_invitation') || act.includes('activated')) {
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+        icon = 'fa-solid fa-circle-plus';
+    } else if (act.includes('edit') || act.includes('update') || act.includes('adjust') || act.includes('configure')) {
+        badgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800';
+        icon = 'fa-solid fa-pen-to-square';
+    } else if (act.includes('assign')) {
+        badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800';
+        icon = 'fa-solid fa-user-check';
+    } else if (act.includes('login') || act.includes('sign in')) {
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+        icon = 'fa-solid fa-right-to-bracket';
+    } else if (act.includes('logout') || act.includes('sign out')) {
+        badgeClass = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+        icon = 'fa-solid fa-right-from-bracket';
+    } else if (act.includes('archive')) {
+        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
+        icon = 'fa-solid fa-box-archive';
+    }
+
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border ${badgeClass}"><i class="${icon} text-[10px]"></i><span>${escapeHtml(text)}</span></span>`;
+}
+
+export async function loadAuditLogs(tbodyId = 'logs-tbody') {
+    const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading audit logs...</td></tr>`;
+    const isUserTable = tbodyId === 'user-logs-tbody';
+    const colSpan = isUserTable ? 3 : 4;
+
+    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading activity logs...</td></tr>`;
 
     const res = await listLogs();
     if (!res.success || !res.logs) {
-        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-rose-500 text-xs">${res.message || 'Failed to fetch logs.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-rose-500 text-xs">${res.message || 'Failed to fetch logs.'}</td></tr>`;
         return;
     }
 
     if (res.logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">No audit logs recorded yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-slate-400 text-xs">No activity records logged yet.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = res.logs.map(log => `
-        <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
-            <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
-            <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
-                ${escapeHtml(log.username)}
-                <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
-            </td>
-            <td class="px-4 py-3 text-center align-middle">
-                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 text-buksu-navy dark:text-buksu-gold border border-slate-200 dark:border-slate-700">${escapeHtml(log.action)}</span>
-            </td>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = res.logs.map(log => {
+        const actionBadge = getActionBadge(log.action, log.rawAction);
+        if (isUserTable) {
+            return `
+                <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
+                    <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
+                    <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${actionBadge}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
+                </tr>
+            `;
+        }
+        return `
+            <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
+                <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle whitespace-nowrap">
+                    ${escapeHtml(log.username)}
+                    <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
+                </td>
+                <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${actionBadge}</td>
+                <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 /* -------------------------------------------------------------

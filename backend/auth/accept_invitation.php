@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . "/../database/config.php";
+require_once __DIR__ . "/../utils/logger.php";
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -78,8 +79,23 @@ if ($method === "GET") {
         exit;
     }
 
-    if (strlen($password) < 6) {
-        echo json_encode(["success" => false, "message" => "Password must be at least 6 characters long."]);
+    if (strlen($password) < 8) {
+        echo json_encode(["success" => false, "message" => "Password must be at least 8 characters long."]);
+        exit;
+    }
+
+    if (!preg_match('/[A-Z]/', $password)) {
+        echo json_encode(["success" => false, "message" => "Password must include at least one capital letter (A-Z)."]);
+        exit;
+    }
+
+    if (!preg_match('/[0-9]/', $password)) {
+        echo json_encode(["success" => false, "message" => "Password must include at least one number (0-9)."]);
+        exit;
+    }
+
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        echo json_encode(["success" => false, "message" => "Password must include at least one special character (e.g. !@#$%^&*)."]);
         exit;
     }
 
@@ -113,6 +129,14 @@ if ($method === "GET") {
         );
 
         if ($updateResult->getModifiedCount() > 0) {
+            logSystemAction(
+                (string)$user['_id'],
+                $fullName,
+                $user['role'] ?? 'user',
+                'ACCEPT_INVITATION',
+                "Activated account and completed profile setup."
+            );
+
             echo json_encode([
                 "success" => true,
                 "message" => "Profile and password set successfully! You can now log in.",

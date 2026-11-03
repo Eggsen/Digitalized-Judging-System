@@ -201,6 +201,10 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <i class="fa-solid fa-clipboard-list text-buksu-gold w-4 text-center"></i>
                         <span>Assigned Competitions</span>
                     </button>
+                    <button type="button" data-tab="user-logs-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400 w-4 text-center"></i>
+                        <span>My Activity Logs</span>
+                    </button>
                     <button type="button" data-tab="user-preferences-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
                         <i class="fa-solid fa-sliders text-slate-400 w-4 text-center"></i>
                         <span>Preferences</span>
@@ -282,6 +286,9 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             <div class="flex items-center gap-2 overflow-x-auto" id="user-tabs">
                                 <button data-tab="user-events-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
                                     <i class="fa-solid fa-clipboard-list me-1.5 text-buksu-gold"></i> Assigned Competitions
+                                </button>
+                                <button data-tab="user-logs-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                    <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> My Activity Logs
                                 </button>
                                 <button data-tab="user-preferences-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
                                     <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences
@@ -1081,6 +1088,40 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i>
                         <p class="text-xs">Loading assigned competitions...</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- JUDGE / TABULATOR VIEW: MY ACTIVITY LOGS -->
+            <div id="user-logs-tab" class="user-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
+                <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy"></i> My Activity History
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Chronological record of your actions, submitted scores, and recent activity.</p>
+                    </div>
+                    <button id="refreshUserLogsBtn" class="text-xs text-slate-500 hover:text-buksu-navy font-semibold flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase whitespace-nowrap">Timestamp</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-500 uppercase whitespace-nowrap">Activity</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-logs-tbody">
+                            <tr>
+                                <td colspan="3" class="px-4 py-6 text-center text-slate-400">
+                                    <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading activity logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

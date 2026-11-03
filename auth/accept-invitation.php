@@ -105,10 +105,35 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i class="fa-solid fa-lock"></i>
                         </div>
-                        <input type="password" id="invite-password-input" placeholder="Create new password (min. 6 chars)" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <input type="password" id="invite-password-input" placeholder="Create strong password (min. 8 chars)" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
                         <button type="button" id="toggle-invite-password-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
                             <i id="toggle-invite-password-icon" class="fa-solid fa-eye"></i>
                         </button>
+                    </div>
+
+                    <!-- Password Requirements Box -->
+                    <div id="password-requirements-box" class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] space-y-1.5">
+                        <div class="font-bold text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved text-buksu-navy"></i> Password Requirements:
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-slate-500 font-medium pt-0.5">
+                            <div id="req-length" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>At least 8 characters</span>
+                            </div>
+                            <div id="req-capital" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 capital letter (A-Z)</span>
+                            </div>
+                            <div id="req-number" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 number (0-9)</span>
+                            </div>
+                            <div id="req-special" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 special symbol (!@#$)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

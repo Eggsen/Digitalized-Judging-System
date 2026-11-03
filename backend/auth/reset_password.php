@@ -184,8 +184,23 @@ if ($action === "request_reset") {
         exit;
     }
 
-    if (strlen($newPassword) < 6) {
-        echo json_encode(["success" => false, "message" => "Password must be at least 6 characters long."]);
+    if (strlen($newPassword) < 8) {
+        echo json_encode(["success" => false, "message" => "Password must be at least 8 characters long."]);
+        exit;
+    }
+
+    if (!preg_match('/[A-Z]/', $newPassword)) {
+        echo json_encode(["success" => false, "message" => "Password must contain at least one capital letter (A-Z)."]);
+        exit;
+    }
+
+    if (!preg_match('/[0-9]/', $newPassword)) {
+        echo json_encode(["success" => false, "message" => "Password must contain at least one number (0-9)."]);
+        exit;
+    }
+
+    if (!preg_match('/[^A-Za-z0-9]/', $newPassword)) {
+        echo json_encode(["success" => false, "message" => "Password must contain at least one special character (e.g. !@#$%^&*)."]);
         exit;
     }
 

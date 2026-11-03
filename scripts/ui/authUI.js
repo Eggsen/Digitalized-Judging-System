@@ -25,6 +25,14 @@ function initLandingPage() {
         togglePasswordVisibility('invite-confirm-password-input', 'toggle-invite-confirm-pw-icon');
     });
 
+    // Real-time password requirement indicator on account setup
+    const invitePasswordInput = document.getElementById('invite-password-input');
+    if (invitePasswordInput) {
+        invitePasswordInput.addEventListener('input', () => {
+            checkPasswordRequirements(invitePasswordInput.value);
+        });
+    }
+
     document.getElementById('toggle-reset-token-pw-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('reset-token-password-input', 'toggle-reset-token-pw-icon');
     });
@@ -148,6 +156,33 @@ async function checkInviteToken(token) {
     }
 }
 
+function updateRequirementBadge(elementId, isValid) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const icon = el.querySelector('i');
+    if (isValid) {
+        el.className = 'flex items-center gap-1.5 transition-colors text-emerald-600 font-bold';
+        if (icon) icon.className = 'fa-solid fa-circle-check text-[10px] text-emerald-500';
+    } else {
+        el.className = 'flex items-center gap-1.5 transition-colors text-slate-500 font-medium';
+        if (icon) icon.className = 'fa-regular fa-circle text-[10px] text-slate-400';
+    }
+}
+
+export function checkPasswordRequirements(password) {
+    const hasLength = password.length >= 8;
+    const hasCapital = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    updateRequirementBadge('req-length', hasLength);
+    updateRequirementBadge('req-capital', hasCapital);
+    updateRequirementBadge('req-number', hasNumber);
+    updateRequirementBadge('req-special', hasSpecial);
+
+    return hasLength && hasCapital && hasNumber && hasSpecial;
+}
+
 async function handleAcceptInvite() {
     const token = document.getElementById('invite-token-input')?.value || '';
     const firstName = document.getElementById('invite-firstname-input')?.value.trim() || '';
@@ -172,8 +207,23 @@ async function handleAcceptInvite() {
         return;
     }
 
-    if (password.length < 6) {
-        showInviteNotice('warning', 'Password must be at least 6 characters long.');
+    if (password.length < 8) {
+        showInviteNotice('warning', 'Password must be at least 8 characters long.');
+        return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one capital letter (A-Z).');
+        return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one number (0-9).');
+        return;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one special character (e.g. !@#$%^&*).');
         return;
     }
 

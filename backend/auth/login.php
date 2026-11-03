@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . "/../database/config.php";
 require_once __DIR__ . "/recaptcha.php";
+require_once __DIR__ . "/../utils/logger.php";
 
 if ($_SERVER['REQUEST_METHOD'] !== "POST") {
     echo json_encode([
@@ -124,6 +125,14 @@ try {
     } else {
         $_SESSION['preferences'] = ['theme' => 'light', 'colorRule' => 'normal', 'navPlacement' => 'top'];
     }
+
+    logSystemAction(
+        $_SESSION['user_id'],
+        $_SESSION['username'],
+        $_SESSION['role'],
+        'LOGIN',
+        "Signed in successfully."
+    );
 
     echo json_encode([
         "success" => true,
