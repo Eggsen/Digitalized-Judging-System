@@ -83,9 +83,22 @@ export async function deleteArchivedEvent(data) {
     }
 }
 
-export async function listLogs() {
+export async function listLogs(params = {}) {
     try {
-        const res = await fetch("/backend/crud/list_logs.php", { credentials: "include" });
+        const query = new URLSearchParams();
+        if (params.page !== undefined && params.page !== null && params.page !== '') {
+            query.set('page', params.page);
+        }
+        if (params.limit !== undefined && params.limit !== null && params.limit !== '') {
+            query.set('limit', params.limit);
+        }
+        if (params.search !== undefined && params.search !== null && params.search !== '') {
+            query.set('search', params.search);
+        }
+
+        const qs = query.toString();
+        const url = `/backend/crud/list_logs.php${qs ? `?${qs}` : ''}`;
+        const res = await fetch(url, { credentials: "include" });
         return await res.json();
     } catch (e) {
         console.error("listLogs API error: ", e);

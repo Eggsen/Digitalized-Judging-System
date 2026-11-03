@@ -94,7 +94,7 @@ function initAdminTabs() {
 
     document.getElementById('event-status-filter')?.addEventListener('change', loadAdminEvents);
     document.getElementById('refreshEventsBtn')?.addEventListener('click', loadAdminEvents);
-    document.getElementById('refreshLogsBtn')?.addEventListener('click', loadAuditLogs);
+    document.getElementById('refreshLogsBtn')?.addEventListener('click', () => loadAuditLogs('logs-tbody'));
 }
 
 /* -------------------------------------------------------------
@@ -407,23 +407,257 @@ function getActionBadge(actionName, rawAction) {
     return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border ${badgeClass}"><i class="${icon} text-[10px]"></i><span>${escapeHtml(text)}</span></span>`;
 }
 
-export async function loadAuditLogs(tbodyId = 'logs-tbody') {
+/* -------------------------------------------------------------
+ * SYSTEM & USER AUDIT LOGS VIEW (SEARCH, PAGINATION, ROWS FILTER)
+ * ------------------------------------------------------------- */
+const auditLogsState = {
+    'logs-tbody': {
+        page: 1,
+        limit: 25,
+        search: '',
+        total: 0,
+        unfilteredTotal: 0,
+        totalPages: 1,
+        searchInputId: 'logs-search-input',
+        clearBtnId: 'logs-search-clear-btn',
+        pageSizeId: 'logs-page-size',
+        infoId: 'logs-pagination-info',
+        controlsId: 'logs-pagination-controls',
+        reqId: 0,
+        initialized: false
+    },
+    'user-logs-tbody': {
+        page: 1,
+        limit: 25,
+        search: '',
+        total: 0,
+        unfilteredTotal: 0,
+        totalPages: 1,
+        searchInputId: 'user-logs-search-input',
+        clearBtnId: 'user-logs-search-clear-btn',
+        pageSizeId: 'user-logs-page-size',
+        infoId: 'user-logs-pagination-info',
+        controlsId: 'user-logs-pagination-controls',
+        reqId: 0,
+        initialized: false
+    }
+};
+
+function initAuditLogsControls(tbodyId = 'logs-tbody') {
+    const state = auditLogsState[tbodyId];
+    if (!state || state.initialized) return;
+
+    const searchInput = document.getElementById(state.searchInputId);
+    const clearBtn = document.getElementById(state.clearBtnId);
+    const pageSizeSelect = document.getElementById(state.pageSizeId);
+
+    if (searchInput) {
+        let debounceTimer = null;
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (clearBtn) {
+                if (val.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                state.search = val;
+                state.page = 1;
+                loadAuditLogs(tbodyId, 1);
+            }, 300);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                state.search = searchInput.value.trim();
+                state.page = 1;
+                loadAuditLogs(tbodyId, 1);
+            }
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            clearBtn.classList.add('hidden');
+            if (state.search !== '') {
+                state.search = '';
+                state.page = 1;
+                loadAuditLogs(tbodyId, 1);
+            }
+        });
+    }
+
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', (e) => {
+            const newLimit = parseInt(e.target.value, 10);
+            if ([10, 25, 50, 100].includes(newLimit)) {
+                state.limit = newLimit;
+                state.page = 1;
+                loadAuditLogs(tbodyId, 1);
+            }
+        });
+    }
+
+    state.initialized = true;
+}
+
+function getPaginationPageList(current, total) {
+    if (total <= 7) {
+        const pages = [];
+        for (let i = 1; i <= total; i++) pages.push(i);
+        return pages;
+    }
+    if (current <= 4) {
+        return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+        return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+}
+
+function renderAuditLogsPagination(tbodyId = 'logs-tbody') {
+    const state = auditLogsState[tbodyId] || auditLogsState['logs-tbody'];
+
+    // Update "Showing 1 to 100 of 3684 items." counter
+    const infoEl = document.getElementById(state.infoId);
+    if (infoEl) {
+        if (state.total === 0) {
+            infoEl.textContent = state.search ? 'Showing 0 items.' : 'Showing 0 items.';
+        } else {
+            const start = (state.page - 1) * state.limit + 1;
+            const end = Math.min(state.page * state.limit, state.total);
+            if (state.search && state.unfilteredTotal && state.unfilteredTotal > state.total) {
+                infoEl.textContent = `Showing ${start} to ${end} of ${state.total} items (filtered from ${state.unfilteredTotal} total items).`;
+            } else {
+                infoEl.textContent = `Showing ${start} to ${end} of ${state.total} items.`;
+            }
+        }
+    }
+
+    // Render pagination buttons
+    const controlsEl = document.getElementById(state.controlsId);
+    if (!controlsEl) return;
+
+    if (state.total === 0 || state.totalPages <= 1) {
+        controlsEl.innerHTML = '';
+        return;
+    }
+
+    const currentPage = state.page;
+    const totalPages = state.totalPages;
+    const pages = getPaginationPageList(currentPage, totalPages);
+
+    let html = '';
+
+    // Previous Button
+    const prevDisabled = currentPage <= 1;
+    html += `
+        <button type="button" class="logs-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${currentPage - 1}" ${prevDisabled ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            <span class="hidden sm:inline">Previous</span>
+        </button>
+    `;
+
+    // Page Numbers
+    pages.forEach(p => {
+        if (p === '...') {
+            html += `<span class="px-2 py-1 text-slate-400 dark:text-slate-500 font-bold select-none text-xs">...</span>`;
+        } else if (p === currentPage) {
+            html += `
+                <button type="button" class="w-8 h-8 rounded-xl bg-buksu-navy dark:bg-buksu-gold text-white dark:text-buksu-navy font-black shadow-xs border border-buksu-navy dark:border-buksu-gold text-xs cursor-default">
+                    ${p}
+                </button>
+            `;
+        } else {
+            html += `
+                <button type="button" class="logs-page-btn w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs cursor-pointer" data-page="${p}">
+                    ${p}
+                </button>
+            `;
+        }
+    });
+
+    // Next Button
+    const nextDisabled = currentPage >= totalPages;
+    html += `
+        <button type="button" class="logs-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${currentPage + 1}" ${nextDisabled ? 'disabled' : ''}>
+            <span class="hidden sm:inline">Next</span>
+            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+    `;
+
+    controlsEl.innerHTML = html;
+
+    controlsEl.querySelectorAll('.logs-page-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = parseInt(btn.dataset.page, 10);
+            if (target && target >= 1 && target <= totalPages && target !== currentPage) {
+                loadAuditLogs(tbodyId, target);
+            }
+        });
+    });
+}
+
+export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
+    if (typeof tbodyId !== 'string') {
+        tbodyId = 'logs-tbody';
+    }
+
+    initAuditLogsControls(tbodyId);
+
+    const state = auditLogsState[tbodyId] || auditLogsState['logs-tbody'];
+    if (targetPage !== null && !isNaN(targetPage)) {
+        state.page = Math.max(1, parseInt(targetPage, 10));
+    }
+
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
     const isUserTable = tbodyId === 'user-logs-tbody';
     const colSpan = isUserTable ? 3 : 4;
 
-    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading activity logs...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading activity logs...</td></tr>`;
 
-    const res = await listLogs();
+    const currentReqId = ++state.reqId;
+
+    const res = await listLogs({
+        page: state.page,
+        limit: state.limit,
+        search: state.search
+    });
+
+    if (currentReqId !== state.reqId) return;
+
     if (!res.success || !res.logs) {
-        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-rose-500 text-xs">${res.message || 'Failed to fetch logs.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-rose-500 text-xs">${escapeHtml(res.message || 'Failed to fetch logs.')}</td></tr>`;
+        state.total = 0;
+        state.totalPages = 1;
+        renderAuditLogsPagination(tbodyId);
         return;
     }
 
+    state.total = typeof res.total === 'number' ? res.total : res.logs.length;
+    state.unfilteredTotal = typeof res.unfilteredTotal === 'number' ? res.unfilteredTotal : state.total;
+    state.totalPages = typeof res.totalPages === 'number' ? res.totalPages : 1;
+    state.page = typeof res.page === 'number' ? res.page : state.page;
+
     if (res.logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-6 text-center text-slate-400 text-xs">No activity records logged yet.</td></tr>`;
+        const emptyMsg = state.search 
+            ? `No activity records found matching "${escapeHtml(state.search)}".` 
+            : `No activity records logged yet.`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500 text-xs"><i class="fa-solid fa-inbox text-slate-300 dark:text-slate-600 text-xl block mb-1"></i>${emptyMsg}</td></tr>`;
+        renderAuditLogsPagination(tbodyId);
         return;
     }
 
@@ -432,7 +666,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody') {
         if (isUserTable) {
             return `
                 <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
-                    <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
+                    <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
                     <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${actionBadge}</td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
                 </tr>
@@ -440,7 +674,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody') {
         }
         return `
             <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
-                <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${log.timestamp}</td>
+                <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle whitespace-nowrap">
                     ${escapeHtml(log.username)}
                     <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
@@ -450,6 +684,8 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody') {
             </tr>
         `;
     }).join('');
+
+    renderAuditLogsPagination(tbodyId);
 }
 
 /* -------------------------------------------------------------

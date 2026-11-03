@@ -432,27 +432,64 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             </div>
 
             <!-- TAB 4: SYSTEM AUDIT LOGS -->
-            <div id="logs-tab" class="admin-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
-                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+            <div id="logs-tab" class="admin-tab-content bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 sm:p-8 hidden">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
                     <div>
-                        <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy"></i> System Audit Logs
+                        <h2 class="text-xl font-extrabold text-buksu-navy dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy dark:text-buksu-gold"></i> System Audit Logs
                         </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Chronological record of system actions, event creations, edits, archiving, and access updates.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Chronological record of system actions, event creations, edits, archiving, and access updates.</p>
                     </div>
-                    <button id="refreshLogsBtn" class="text-xs text-slate-500 hover:text-buksu-navy font-semibold flex items-center gap-1 cursor-pointer">
+                    <button id="refreshLogsBtn" class="text-xs text-slate-500 dark:text-slate-400 hover:text-buksu-navy dark:hover:text-buksu-gold font-semibold flex items-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-rotate-right"></i> Refresh
                     </button>
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                <!-- Search and Rows Filter Bar -->
+                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                    <div class="relative flex-1 min-w-[240px] max-w-md">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="logs-search-input" 
+                            placeholder="Search audit logs by user, action, details..." 
+                            class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 transition-all"
+                        >
+                        <button 
+                            type="button" 
+                            id="logs-search-clear-btn" 
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer hidden" 
+                            title="Clear search"
+                        >
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="logs-page-size" class="font-semibold whitespace-nowrap">Show</label>
+                        <select 
+                            id="logs-page-size" 
+                            class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                        >
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="font-semibold whitespace-nowrap">rows</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
                     <table class="w-full text-xs">
                         <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200">
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase">Timestamp</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase">User</th>
-                                <th class="px-4 py-3 text-center font-semibold text-slate-500 uppercase">Action</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase">Details</th>
+                            <tr class="bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-700">
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Timestamp</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">User</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase">Action</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Details</th>
                             </tr>
                         </thead>
                         <tbody id="logs-tbody">
@@ -463,6 +500,15 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination Footer Container -->
+                <div class="flex items-center justify-between flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <div id="logs-pagination-info" class="text-slate-500 dark:text-slate-400 font-medium">
+                        Showing 0 items.
+                    </div>
+                    <div id="logs-pagination-controls" class="flex items-center gap-1.5 flex-wrap">
+                    </div>
                 </div>
             </div>
 
@@ -1086,26 +1132,63 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
             </div>
 
             <!-- JUDGE / TABULATOR VIEW: MY ACTIVITY LOGS -->
-            <div id="user-logs-tab" class="user-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
-                <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
+            <div id="user-logs-tab" class="user-tab-content bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 sm:p-8 hidden">
+                <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
                     <div>
-                        <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy"></i> My Activity History
+                        <h2 class="text-xl font-extrabold text-buksu-navy dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-buksu-navy dark:text-buksu-gold"></i> My Activity History
                         </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Chronological record of your actions, submitted scores, and recent activity.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Chronological record of your actions, submitted scores, and recent activity.</p>
                     </div>
-                    <button id="refreshUserLogsBtn" class="text-xs text-slate-500 hover:text-buksu-navy font-semibold flex items-center gap-1 cursor-pointer">
+                    <button id="refreshUserLogsBtn" class="text-xs text-slate-500 dark:text-slate-400 hover:text-buksu-navy dark:hover:text-buksu-gold font-semibold flex items-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-rotate-right"></i> Refresh
                     </button>
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                <!-- Search and Rows Filter Bar -->
+                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                    <div class="relative flex-1 min-w-[240px] max-w-md">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="user-logs-search-input" 
+                            placeholder="Search activity logs by action, details..." 
+                            class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 transition-all"
+                        >
+                        <button 
+                            type="button" 
+                            id="user-logs-search-clear-btn" 
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer hidden" 
+                            title="Clear search"
+                        >
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="user-logs-page-size" class="font-semibold whitespace-nowrap">Show</label>
+                        <select 
+                            id="user-logs-page-size" 
+                            class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                        >
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="font-semibold whitespace-nowrap">rows</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
                     <table class="w-full text-xs">
                         <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200">
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase whitespace-nowrap">Timestamp</th>
-                                <th class="px-4 py-3 text-center font-semibold text-slate-500 uppercase whitespace-nowrap">Activity</th>
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 uppercase">Details</th>
+                            <tr class="bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-700">
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">Timestamp</th>
+                                <th class="px-4 py-3 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">Activity</th>
+                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Details</th>
                             </tr>
                         </thead>
                         <tbody id="user-logs-tbody">
@@ -1116,6 +1199,15 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination Footer Container -->
+                <div class="flex items-center justify-between flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <div id="user-logs-pagination-info" class="text-slate-500 dark:text-slate-400 font-medium">
+                        Showing 0 items.
+                    </div>
+                    <div id="user-logs-pagination-controls" class="flex items-center gap-1.5 flex-wrap">
+                    </div>
                 </div>
             </div>
 
