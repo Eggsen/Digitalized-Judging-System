@@ -40,10 +40,11 @@ function initLandingPage() {
         togglePasswordVisibility('reset-token-confirm-pw-input', 'toggle-reset-token-confirm-pw-icon');
     });
 
-    // Check URL query parameters for tokens or OAuth errors
+    // Check URL query parameters or hidden inputs for tokens or OAuth errors
     const urlParams = new URLSearchParams(window.location.search);
-    const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
-    const resetToken = urlParams.get('reset_token');
+    const tokenFromInput = document.getElementById('invite-token-input')?.value?.trim();
+    const inviteToken = urlParams.get('invite_token') || urlParams.get('token') || tokenFromInput;
+    const resetToken = urlParams.get('reset_token') || document.getElementById('reset-token-input')?.value?.trim();
     const oauthError = urlParams.get('error');
     const oauthEmail = urlParams.get('email');
 
@@ -94,18 +95,28 @@ function initLandingPage() {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    if (inviteToken && acceptInviteCard) {
+    if (acceptInviteCard) {
         if (loginCard) loginCard.classList.add('hidden');
-        if (registerCard) registerCard.classList.add('hidden');
         acceptInviteCard.classList.remove('hidden');
-        acceptInviteCard.classList.add('animate-fade-in');
 
-        const tokenInput = document.getElementById('invite-token-input');
-        if (tokenInput) tokenInput.value = inviteToken;
-        checkInviteToken(inviteToken);
+        if (inviteToken) {
+            const tokenInput = document.getElementById('invite-token-input');
+            if (tokenInput && !tokenInput.value) tokenInput.value = inviteToken;
+            checkInviteToken(inviteToken);
+        } else {
+            const usernameDisplay = document.getElementById('invite-username-display');
+            const roleDisplay = document.getElementById('invite-role-display');
+            const btn = document.getElementById('acceptInviteBtn');
+            if (usernameDisplay) {
+                usernameDisplay.innerHTML = '<span class="text-amber-600 font-bold"><i class="fa-solid fa-triangle-exclamation me-1.5"></i>Missing Invitation Token</span>';
+            }
+            if (roleDisplay) {
+                roleDisplay.textContent = 'Please open the invitation link provided in your email or by your administrator.';
+            }
+            if (btn) btn.disabled = true;
+        }
     } else if (resetToken && resetTokenCard) {
         if (loginCard) loginCard.classList.add('hidden');
-        if (registerCard) registerCard.classList.add('hidden');
         resetTokenCard.classList.remove('hidden');
         resetTokenCard.classList.add('animate-fade-in');
 
