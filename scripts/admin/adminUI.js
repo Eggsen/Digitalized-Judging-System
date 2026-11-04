@@ -210,12 +210,17 @@ function initAdminPanel() {
         btnText.textContent = 'Send Invitation';
 
         if (noticeWrap && notice) {
-            noticeWrap.className = `mb-3 p-3 rounded-xl text-xs font-semibold ${res.success ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-rose-600 bg-rose-50 border border-rose-200'}`;
+            const isEmailOk = res.email_sent !== false;
+            const bannerColor = res.success 
+                ? (isEmailOk ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-amber-800 bg-amber-50 border border-amber-300')
+                : 'text-rose-600 bg-rose-50 border border-rose-200';
+            noticeWrap.className = `mb-3 p-3 rounded-xl text-xs font-semibold ${bannerColor}`;
 
             if (res.success && res.invite_link) {
+                const icon = isEmailOk ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-amber-600';
                 notice.innerHTML = `
-                    <div class="mb-1.5 font-bold"><i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> ${res.message}</div>
-                    <div class="text-[11px] font-normal mb-2 text-slate-600">Send this invitation link to the user so they can set their password:</div>
+                    <div class="mb-1.5 font-bold"><i class="fa-solid ${icon} me-1"></i> ${res.message}</div>
+                    <div class="text-[11px] font-normal mb-2 text-slate-600">You can also copy and send this invitation link directly to the user:</div>
                     <div class="flex items-center gap-1.5">
                         <input type="text" readonly value="${res.invite_link}" id="new-invite-link-input" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono text-slate-800 focus:outline-none" />
                         <button type="button" id="copy-new-invite-btn" class="px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0">

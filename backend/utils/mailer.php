@@ -42,12 +42,14 @@ function sendSystemEmail($toEmail, $subject, $htmlMessage, $bypassSettingCheck =
         }
     }
 
-    $smtpHost = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+    $smtpHost = trim($_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com');
     $smtpPort = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
-    $smtpUsername = $_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: '';
-    $smtpPassword = $_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: '';
-    $smtpFromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL') ?: $smtpUsername;
-    $smtpFromName = $_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'BukSU Judging System';
+    $smtpUsername = trim($_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: '');
+    $rawPassword = trim($_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: '');
+    // Google App Passwords are 16 letters, often copied with spaces (e.g. "abcd efgh ijkl mnop"). Strip spaces automatically.
+    $smtpPassword = str_replace(' ', '', $rawPassword);
+    $smtpFromEmail = trim($_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL') ?: $smtpUsername);
+    $smtpFromName = trim($_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'BukSU Judging System');
 
     $mailSent = false;
     $errorMessage = null;
@@ -60,8 +62,20 @@ function sendSystemEmail($toEmail, $subject, $htmlMessage, $bypassSettingCheck =
             $mail->SMTPAuth   = true;
             $mail->Username   = $smtpUsername;
             $mail->Password   = $smtpPassword;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            if ($smtpPort === 465) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } else {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            }
             $mail->Port       = $smtpPort;
+            $mail->Timeout    = 10;
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ];
 
             $mail->setFrom($smtpFromEmail ?: $smtpUsername, $smtpFromName);
             $mail->addAddress($toEmail);

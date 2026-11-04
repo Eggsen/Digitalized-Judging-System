@@ -119,12 +119,19 @@ try {
         </div>
     ";
 
-    sendSystemEmail($email, $subject, $htmlBody);
+    $emailResult = sendSystemEmail($email, $subject, $htmlBody);
+    $emailSent = !empty($emailResult['sent']);
 
     if ($result->getInsertedCount() > 0) {
+        $msg = $emailSent 
+            ? "Invitation email successfully sent to {$email}." 
+            : "Invitation created, but automated email could not be sent" . (!empty($emailResult['error']) ? ": {$emailResult['error']}" : " (check SMTP settings)") . ". Please copy and share the link below manually.";
+
         echo json_encode([
             "success" => true,
-            "message" => "Invitation generated for {$roleDisplay} ({$email}).",
+            "email_sent" => $emailSent,
+            "email_error" => $emailResult['error'] ?? null,
+            "message" => $msg,
             "invite_token" => $inviteToken,
             "invite_link" => $inviteLink,
             "email" => $email,
