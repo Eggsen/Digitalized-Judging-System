@@ -85,18 +85,29 @@ async function handleResetRequestSubmit() {
 
     if (res.success) {
         if (noticeWrap && notice) {
-            noticeWrap.className = 'mb-4 p-3 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200';
+            const isEmailSent = res.email_sent !== false;
+            noticeWrap.className = `mb-4 p-3 rounded-xl text-xs font-semibold ${isEmailSent ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-amber-800 bg-amber-50 border border-amber-300'}`;
             notice.innerHTML = `
-                <div class="mb-1 font-bold"><i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> ${res.message}</div>
+                <div class="mb-1 font-bold"><i class="fa-solid ${isEmailSent ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-amber-600'} me-1"></i> ${res.message}</div>
                 ${res.reset_link ? `
-                    <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Testing reset link:</div>
+                    <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Direct password reset link:</div>
                     <div class="flex items-center gap-1.5">
                         <input type="text" readonly value="${res.reset_link}" id="demo-reset-link" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800 focus:outline-none" />
-                        <a href="${res.reset_link}" class="px-2.5 py-1 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded text-[11px] transition-colors shrink-0">Open Link</a>
+                        <button type="button" id="copy-reset-link-btn" class="px-2.5 py-1 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded text-[11px] transition-colors shrink-0 cursor-pointer">Copy</button>
+                        <a href="${res.reset_link}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-[11px] transition-colors shrink-0 border border-slate-300">Open</a>
                     </div>
                 ` : ''}
             `;
             noticeWrap.classList.remove('hidden');
+
+            document.getElementById('copy-reset-link-btn')?.addEventListener('click', () => {
+                const input = document.getElementById('demo-reset-link');
+                if (input && navigator.clipboard) {
+                    navigator.clipboard.writeText(input.value);
+                    const btn = document.getElementById('copy-reset-link-btn');
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied!';
+                }
+            });
         }
     } else {
         resetRecaptchaWidget('reset-recaptcha');
