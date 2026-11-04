@@ -88,3 +88,18 @@ export async function revokeUserSessions(userId) {
     }
 }
 
+export async function deleteAccount(userId) {
+    try {
+        const response = await fetch("/backend/user/delete_account.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Delete account API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+

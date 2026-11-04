@@ -1,4 +1,4 @@
-import { createAccount, listAccounts, updatePermissions, updateRole, revokeInvitation, revokeUserSessions } from "/scripts/admin/adminAPI.js";
+import { createAccount, listAccounts, updatePermissions, updateRole, revokeInvitation, revokeUserSessions, deleteAccount } from "/scripts/admin/adminAPI.js";
 import { showNotice } from "/scripts/utils/index.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
@@ -65,6 +65,10 @@ async function loadAccounts() {
                     }
                     ${account.status === 'active' && !account.is_active
                         ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                        : ''
+                    }
+                    ${account.status === 'revoked'
+                        ? `<button class="delete-account-btn px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 font-bold transition-colors cursor-pointer border border-rose-200 dark:border-rose-800 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Permanently delete this revoked account"><i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove</button>`
                         : ''
                     }
                 </div>
@@ -176,6 +180,29 @@ async function loadAccounts() {
                 showToast("Action Failed", res.message, "error");
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out';
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-account-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this account';
+            if (!confirm(`Are you sure you want to permanently remove the revoked account for "${targetName}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await deleteAccount(userId);
+            if (res.success) {
+                showToast("Account Removed", res.message, "archive");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove';
             }
         });
     });

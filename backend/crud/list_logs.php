@@ -88,6 +88,7 @@ $actionMap = [
     'invite_user'               => 'Sent account invitation',
     'accept_invitation'         => 'Activated account',
     'revoke_invitation'         => 'Revoked account invitation',
+    'delete_account'            => 'Removed user account',
     'revoke_sessions'           => 'Terminated active sessions'
 ];
 
