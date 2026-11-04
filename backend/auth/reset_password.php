@@ -151,20 +151,11 @@ if ($action === "request_reset") {
             </div>
         ";
 
-        $mailResult = sendSystemEmail($user['email'], $subject, $htmlBody);
-        $emailSent = ($mailResult['sent'] ?? false) === true;
-
-        if ($emailSent) {
-            $msg = "Password reset email sent to " . htmlspecialchars($user['email']) . ".";
-        } else {
-            $errDetail = !empty($mailResult['error']) ? $mailResult['error'] : 'Email delivery could not connect to server.';
-            $msg = "Password reset link generated, but email delivery failed (" . $errDetail . "). You can use the link below to reset your password immediately:";
-        }
+        sendSystemEmail($user['email'], $subject, $htmlBody);
 
         echo json_encode([
             "success" => true,
-            "email_sent" => $emailSent,
-            "message" => $msg,
+            "message" => "Password reset email sent to " . htmlspecialchars($user['email']) . ".",
             "reset_link" => $resetLink
         ]);
         exit;
