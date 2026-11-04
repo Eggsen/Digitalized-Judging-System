@@ -39,14 +39,25 @@ export function clearLoginForm() {
     clearFormInputs(['username-input', 'password-input']);
 
     const passwordInput = document.getElementById('password-input');
-    const icon = document.getElementById('toggle-password-icon');
+    let icon = document.getElementById('toggle-password-icon');
     const noticeText = document.getElementById('notice-text');
 
     if (passwordInput) {
         passwordInput.type = 'password';
     }
+    if (!icon && passwordInput && passwordInput.parentElement) {
+        icon = passwordInput.parentElement.querySelector('button i, button svg, [id="toggle-password-icon"]');
+    }
     if (icon) {
-        icon.setAttribute('class', 'fa-solid fa-eye');
+        const parent = icon.parentElement;
+        if (parent) {
+            const freshIcon = document.createElement('i');
+            freshIcon.id = 'toggle-password-icon';
+            freshIcon.className = 'fa-solid fa-eye';
+            parent.replaceChild(freshIcon, icon);
+        } else {
+            icon.className = 'fa-solid fa-eye';
+        }
     }
     if (noticeText && noticeText.parentElement) {
         noticeText.parentElement.classList.add('hidden');
@@ -61,15 +72,28 @@ export function clearLoginForm() {
  */
 export function togglePasswordVisibility(passwordInputId = 'password-input', iconId = 'toggle-password-icon') {
     const passwordInput = document.getElementById(passwordInputId);
-    const icon = document.getElementById(iconId);
+    if (!passwordInput) return;
 
-    if (!passwordInput || !icon) return;
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
 
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.setAttribute('class', 'fa-solid fa-eye-slash');
-    } else {
-        passwordInput.type = 'password';
-        icon.setAttribute('class', 'fa-solid fa-eye');
+    const newIconClass = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+
+    let icon = document.getElementById(iconId);
+    if (!icon && passwordInput.parentElement) {
+        icon = passwordInput.parentElement.querySelector(`button i, button svg, [id="${iconId}"]`);
+    }
+
+    if (icon) {
+        // If FontAwesome converted <i> into an <svg>, replacing with a fresh <i> tag ensures FontAwesome re-renders the new icon correctly
+        const parent = icon.parentElement;
+        if (parent) {
+            const freshIcon = document.createElement('i');
+            freshIcon.id = iconId;
+            freshIcon.className = newIconClass;
+            parent.replaceChild(freshIcon, icon);
+        } else {
+            icon.className = newIconClass;
+        }
     }
 }

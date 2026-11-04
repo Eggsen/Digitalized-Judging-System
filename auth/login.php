@@ -25,7 +25,7 @@ $recaptchaSiteKey = $recaptchaEnabled ? ($_ENV['RECAPTCHA_SITE_KEY'] ?? '') : ''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" href="/assets/logo/DJS Logo.png">
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <script>
         window.EMAIL_SERVICE_ENABLED = <?= json_encode((bool)$emailServiceEnabled) ?>;
         window.RECAPTCHA_ENABLED = <?= json_encode((bool)$recaptchaEnabled) ?>;

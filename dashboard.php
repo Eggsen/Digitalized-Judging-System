@@ -28,6 +28,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <title><?= $badgeInfo['title'] ?> | BukSU DJS</title>
     <script>
         (function() {

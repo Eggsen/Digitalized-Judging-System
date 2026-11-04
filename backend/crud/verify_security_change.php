@@ -90,7 +90,7 @@ if (empty($token)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" href="/assets/logo/DJS Logo.png">
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <title>Security Settings Verification | BukSU DJS</title>
 </head>
 <body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased selection:bg-buksu-navy selection:text-buksu-gold relative overflow-x-hidden">

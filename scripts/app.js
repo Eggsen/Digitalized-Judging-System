@@ -50,8 +50,4 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-
-    document.getElementById('toggle-password-btn')?.addEventListener('click', () => {
-        togglePasswordVisibility('password-input', 'toggle-password-icon');
-    });
 });

@@ -14,7 +14,7 @@ $inviteToken = htmlspecialchars($_GET['invite_token'] ?? $_GET['token'] ?? '');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" href="/assets/logo/DJS Logo.png">
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <script type="module" src="/scripts/ui/authUI.js"></script>
     <title>Accept Invitation | BukSU Digitalized Judging System</title>
 </head>
