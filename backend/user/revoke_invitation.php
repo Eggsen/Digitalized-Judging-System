@@ -46,6 +46,14 @@ if ($userId === "") {
     exit;
 }
 
+if ($userId === (string)$_SESSION['user_id']) {
+    echo json_encode([
+        "success" => false,
+        "message" => "You cannot revoke your own account or invitation."
+    ]);
+    exit;
+}
+
 try {
     $objectId = new MongoDB\BSON\ObjectId($userId);
     $user = $usersCollection->findOne(['_id' => $objectId]);
