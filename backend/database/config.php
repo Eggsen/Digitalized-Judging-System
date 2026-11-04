@@ -24,8 +24,10 @@ try {
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
 
-    $uri = $_ENV['MONGODB_URI'] ?? getenv('MONGODB_URI') ?: null;
-    $databaseName = $_ENV['MONGODB_DATABASE'] ?? getenv('MONGODB_DATABASE') ?: null;
+    $rawUri = $_ENV['MONGODB_URI'] ?? getenv('MONGODB_URI') ?: '';
+    $rawDb = $_ENV['MONGODB_DATABASE'] ?? getenv('MONGODB_DATABASE') ?: '';
+    $uri = trim((string)$rawUri, " \t\n\r\0\x0B\"'") ?: null;
+    $databaseName = trim((string)$rawDb, " \t\n\r\0\x0B\"'") ?: null;
 
     if (!$uri || !$databaseName) {
         throw new Exception("Database environment variables MONGODB_URI or MONGODB_DATABASE missing.");

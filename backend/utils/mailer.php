@@ -42,14 +42,20 @@ function sendSystemEmail($toEmail, $subject, $htmlMessage, $bypassSettingCheck =
         }
     }
 
-    $smtpHost = trim($_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?: 'smtp.gmail.com');
-    $smtpPort = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?: 587);
-    $smtpUsername = trim($_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME') ?: '');
-    $rawPassword = trim($_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD') ?: '');
+    // Helper to strip accidental quotes and whitespace from environment variables (e.g., entered in Render UI)
+    $cleanEnv = function($val, $default = '') {
+        if ($val === null || $val === false || $val === '') return $default;
+        return trim((string)$val, " \t\n\r\0\x0B\"'");
+    };
+
+    $smtpHost = $cleanEnv($_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST'), 'smtp.gmail.com');
+    $smtpPort = (int)$cleanEnv($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT'), '587');
+    $smtpUsername = $cleanEnv($_ENV['SMTP_USERNAME'] ?? getenv('SMTP_USERNAME'), '');
+    $rawPassword = $cleanEnv($_ENV['SMTP_PASSWORD'] ?? getenv('SMTP_PASSWORD'), '');
     // Google App Passwords are 16 letters, often copied with spaces (e.g. "abcd efgh ijkl mnop"). Strip spaces automatically.
     $smtpPassword = str_replace(' ', '', $rawPassword);
-    $smtpFromEmail = trim($_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL') ?: $smtpUsername);
-    $smtpFromName = trim($_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME') ?: 'BukSU Judging System');
+    $smtpFromEmail = $cleanEnv($_ENV['SMTP_FROM_EMAIL'] ?? getenv('SMTP_FROM_EMAIL'), $smtpUsername);
+    $smtpFromName = $cleanEnv($_ENV['SMTP_FROM_NAME'] ?? getenv('SMTP_FROM_NAME'), 'BukSU Judging System');
 
     $mailSent = false;
     $errorMessage = null;
