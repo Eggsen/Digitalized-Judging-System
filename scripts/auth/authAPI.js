@@ -26,7 +26,7 @@ export async function loginUser(credentials) {
         console.error("Authentication API Error: ", error);
         return {
             success: false,
-            message: "Unable to connect to authentication server. Please verify your network and ensure PHP server is running on localhost:8000."
+            message: "Unable to connect to authentication server. Please check your network connection and try again."
         };
     }
 }

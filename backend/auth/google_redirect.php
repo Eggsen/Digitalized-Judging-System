@@ -19,8 +19,8 @@ if (!$googleAuthEnabled) {
     exit;
 }
 
-$clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? '';
-$redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? 'http://localhost:8000/backend/auth/google_callback.php';
+$clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? getenv('GOOGLE_CLIENT_ID') ?: '';
+$redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? getenv('GOOGLE_REDIRECT_URI') ?: 'http://localhost:8000/backend/auth/google_callback.php';
 
 if (empty($clientId)) {
     header("Location: /auth/login.php?error=oauth_config_missing");

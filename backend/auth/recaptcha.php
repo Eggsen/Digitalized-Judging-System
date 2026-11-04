@@ -22,7 +22,7 @@ function verifyRecaptcha(?string $token): array {
         }
     }
 
-    $secretKey = $_ENV['RECAPTCHA_SECRET_KEY'] ?? '';
+    $secretKey = $_ENV['RECAPTCHA_SECRET_KEY'] ?? getenv('RECAPTCHA_SECRET_KEY') ?: '';
 
     if (empty($secretKey)) {
         error_log("reCAPTCHA Warning: RECAPTCHA_SECRET_KEY is not configured in .env");

@@ -22,10 +22,10 @@ use MongoDB\Client;
 
 try {
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
-    $dotenv->load();
+    $dotenv->safeLoad();
 
-    $uri = $_ENV['MONGODB_URI'] ?? null;
-    $databaseName = $_ENV['MONGODB_DATABASE'] ?? null;
+    $uri = $_ENV['MONGODB_URI'] ?? getenv('MONGODB_URI') ?: null;
+    $databaseName = $_ENV['MONGODB_DATABASE'] ?? getenv('MONGODB_DATABASE') ?: null;
 
     if (!$uri || !$databaseName) {
         throw new Exception("Database environment variables MONGODB_URI or MONGODB_DATABASE missing.");

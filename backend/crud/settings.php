@@ -424,7 +424,8 @@ try {
         $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $protocol = $isHttps ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
         $verifyLink = "{$protocol}://{$host}/backend/crud/verify_security_change.php?token={$token}";
 
@@ -627,7 +628,8 @@ try {
         $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $protocol = $isHttps ? "https" : "http";
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
         $verifyLink = "{$protocol}://{$host}/backend/crud/verify_security_change.php?token={$token}";
 
