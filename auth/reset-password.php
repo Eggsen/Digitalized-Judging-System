@@ -76,20 +76,45 @@ $resetToken = htmlspecialchars($_GET['reset_token'] ?? $_GET['token'] ?? '');
                 <input type="hidden" id="reset-token-input" value="<?= $resetToken ?>">
 
                 <div>
-                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password</label>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">New Password <span class="text-rose-500">*</span></label>
                     <div class="relative rounded-xl">
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i class="fa-solid fa-lock"></i>
                         </div>
-                        <input type="password" id="reset-token-password-input" placeholder="Enter new password (min. 6 chars)" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
+                        <input type="password" id="reset-token-password-input" placeholder="Create strong password (min. 8 chars)" class="w-full ps-9 pe-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-buksu-navy focus:ring-2 focus:ring-buksu-navy/10 transition-all">
                         <button type="button" id="toggle-reset-token-pw-btn" class="absolute inset-y-0 right-0 pe-3.5 flex items-center text-slate-400 hover:text-buksu-navy transition-colors cursor-pointer">
                             <i id="toggle-reset-token-pw-icon" class="fa-solid fa-eye"></i>
                         </button>
                     </div>
+
+                    <!-- Password Requirements Box -->
+                    <div id="password-requirements-box" class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] space-y-1.5">
+                        <div class="font-bold text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved text-buksu-navy"></i> Password Requirements:
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-slate-500 font-medium pt-0.5">
+                            <div id="reset-req-length" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>At least 8 characters</span>
+                            </div>
+                            <div id="reset-req-capital" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 capital letter (A-Z)</span>
+                            </div>
+                            <div id="reset-req-number" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 number (0-9)</span>
+                            </div>
+                            <div id="reset-req-special" class="flex items-center gap-1.5 transition-colors">
+                                <i class="fa-regular fa-circle text-[10px] text-slate-400"></i>
+                                <span>1 special symbol (!@#$)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm New Password</label>
+                    <label class="block text-xs font-semibold text-buksu-navy mb-1.5">Confirm New Password <span class="text-rose-500">*</span></label>
                     <div class="relative rounded-xl">
                         <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
                             <i class="fa-solid fa-shield-halved"></i>

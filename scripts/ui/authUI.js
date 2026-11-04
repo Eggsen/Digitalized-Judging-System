@@ -33,6 +33,14 @@ function initLandingPage() {
         });
     }
 
+    // Real-time password requirement indicator on password reset
+    const resetTokenPasswordInput = document.getElementById('reset-token-password-input');
+    if (resetTokenPasswordInput) {
+        resetTokenPasswordInput.addEventListener('input', () => {
+            checkPasswordRequirements(resetTokenPasswordInput.value, 'reset-req-');
+        });
+    }
+
     document.getElementById('toggle-reset-token-pw-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('reset-token-password-input', 'toggle-reset-token-pw-icon');
     });
@@ -186,16 +194,16 @@ function updateRequirementBadge(elementId, isValid) {
     }
 }
 
-export function checkPasswordRequirements(password) {
+export function checkPasswordRequirements(password, prefix = 'req-') {
     const hasLength = password.length >= 8;
     const hasCapital = /[A-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-    updateRequirementBadge('req-length', hasLength);
-    updateRequirementBadge('req-capital', hasCapital);
-    updateRequirementBadge('req-number', hasNumber);
-    updateRequirementBadge('req-special', hasSpecial);
+    updateRequirementBadge(prefix + 'length', hasLength);
+    updateRequirementBadge(prefix + 'capital', hasCapital);
+    updateRequirementBadge(prefix + 'number', hasNumber);
+    updateRequirementBadge(prefix + 'special', hasSpecial);
 
     return hasLength && hasCapital && hasNumber && hasSpecial;
 }
@@ -333,8 +341,23 @@ async function handleCompleteReset() {
         return;
     }
 
-    if (newPassword.length < 6) {
-        showResetTokenNotice('warning', 'Password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+        showResetTokenNotice('warning', 'Password must be at least 8 characters long.');
+        return;
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one capital letter (A-Z).');
+        return;
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one number (0-9).');
+        return;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one special character (e.g. !@#$%^&*).');
         return;
     }
 
