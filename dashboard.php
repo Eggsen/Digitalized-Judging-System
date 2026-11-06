@@ -2398,17 +2398,89 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                             Close
                         </button>
                         <div class="flex items-center gap-2.5 flex-wrap">
+                            <button type="button" id="judgeFooterViewSummaryBtn" class="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-extrabold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 hidden shadow-2xs">
+                                <i class="fa-solid fa-file-invoice"></i> View Submitted Score
+                            </button>
                             <span id="submitFinalScoreLockNotice" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden flex items-center gap-1"></span>
                             <button type="button" id="saveDraftScoreBtn" class="px-4 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                                 <i class="fa-solid fa-pen-ruler"></i> Save as Draft
                             </button>
                             <div id="submitFinalScoreWrapper" class="inline-block relative">
-                                <button type="button" id="submitFinalScoreBtn" class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 font-extrabold text-xs rounded-xl shadow-none cursor-not-allowed transition-all flex items-center gap-1.5 disabled:pointer-events-none" disabled>
-                                    <i class="fa-solid fa-lock"></i> Submit Final Score
+                                <button type="button" id="submitFinalScoreBtn" class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 font-extrabold text-xs rounded-xl shadow-none cursor-not-allowed transition-all flex items-center gap-1.5" disabled>
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Final Score
                                 </button>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: JUDGE SUBMISSION SUMMARY & CONFIRMATION -->
+    <div id="judge-submission-summary-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-60 hidden">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-scale-up">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-buksu-navy to-buksu-navy-light text-white shrink-0">
+                <div class="flex items-center gap-3">
+                    <div id="judge-summary-icon-container" class="w-10 h-10 rounded-2xl bg-buksu-gold text-buksu-navy flex items-center justify-center font-black shadow-md shrink-0">
+                        <i id="judge-summary-icon" class="fa-solid fa-clipboard-check text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 id="judge-summary-modal-title" class="font-black text-base sm:text-lg leading-tight">Confirm Score Submission</h3>
+                        <p id="judge-summary-modal-subtitle" class="text-xs text-slate-200">Please review your evaluated scores before final transmission</p>
+                    </div>
+                </div>
+                <button type="button" class="close-summary-modal-btn text-white/70 hover:text-white text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+            </div>
+
+            <!-- Body (Scrollable) -->
+            <div class="p-5 overflow-y-auto space-y-4 text-slate-700 dark:text-slate-300 flex-1">
+                <!-- Contestant Details Card -->
+                <div id="judge-summary-contestant-card" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700"></div>
+
+                <!-- Criteria Itemized List -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs font-extrabold text-slate-500 uppercase tracking-wider px-1">
+                        <span>Itemized Criteria Evaluation</span>
+                        <span>Score / Max</span>
+                    </div>
+                    <div id="judge-summary-criteria-list" class="space-y-2.5"></div>
+                </div>
+
+                <!-- Citations & Special Awards Assigned -->
+                <div id="judge-summary-citations-container" class="space-y-1.5 hidden">
+                    <span class="text-xs font-extrabold text-slate-500 uppercase tracking-wider px-1 block">Special Awards &amp; Citations</span>
+                    <div id="judge-summary-citations-list" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Total Score Summary Banner -->
+                <div class="p-4 rounded-2xl bg-buksu-navy/5 dark:bg-buksu-gold/10 border border-buksu-navy/20 dark:border-buksu-gold/30 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 block">Overall Score</span>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">Sum of all weighted criteria contributions</span>
+                    </div>
+                    <div class="text-right">
+                        <span id="judge-summary-total-score" class="font-black text-2xl sm:text-3xl text-buksu-navy dark:text-buksu-gold font-mono">0.00%</span>
+                    </div>
+                </div>
+
+                <!-- Confirmation Notice -->
+                <div id="judge-summary-confirm-notice" class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-3 shadow-2xs">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 text-base shrink-0"></i>
+                    <span>Please verify all scores above. Once confirmed, this evaluation is transmitted to the Tabulation Board as <strong>Final</strong> and will be locked.</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-850 shrink-0 flex-wrap">
+                <button type="button" class="close-summary-modal-btn px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-extrabold text-xs rounded-xl cursor-pointer transition-colors">
+                    <i class="fa-solid fa-arrow-left me-1.5"></i> Back to Scoring
+                </button>
+                <div id="judge-summary-footer-actions">
+                    <button type="button" id="judgeConfirmSubmitBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-check-double"></i> Confirm &amp; Submit Score
+                    </button>
                 </div>
             </div>
         </div>
@@ -2452,16 +2524,21 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                         <h3 id="tabulation-event-title" class="font-extrabold text-slate-800 text-lg sm:text-xl leading-tight">Official Scoring Matrix</h3>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" id="tabVerifyAllBtn" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 hidden shadow-xs">
+                        <i class="fa-solid fa-shield-check"></i> Verify All Scores
+                    </button>
                     <button type="button" id="openTabulationQrBtn" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-purple-200">
                         <i class="fa-solid fa-qrcode"></i> QR Access
                     </button>
                     <button type="button" id="refreshTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
                         <i class="fa-solid fa-rotate-right"></i> Refresh
                     </button>
-                    <button type="button" id="printTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
-                        <i class="fa-solid fa-print"></i> Print Matrix
-                    </button>
+                    <div id="printTabulationWrapper" class="relative inline-block">
+                        <button type="button" id="printTabulationBtn" class="px-3.5 py-1.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none" disabled title="All scores must be verified before printing or exporting PDF">
+                            <i class="fa-solid fa-lock"></i> Print Matrix
+                        </button>
+                    </div>
                     <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
                 </div>
             </div>

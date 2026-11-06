@@ -1,4 +1,4 @@
-import { getScores, unlockJudgeScore, verifyJudgeScore, unverifyJudgeScore } from "/scripts/admin/judgingAPI.js";
+import { getScores, unlockJudgeScore, verifyJudgeScore, unverifyJudgeScore, verifyAllJudgeScores } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { openEventQrModal } from "/scripts/admin/eventsUI.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel, onWebSocketStatusChange, getWebSocketStatus } from "/scripts/utils/websocket.js";
@@ -68,9 +68,49 @@ export function initTabulatorUI() {
         loadTabulationData(true);
     });
 
-    // Print button
+    // Verify All button
+    document.getElementById('tabVerifyAllBtn')?.addEventListener('click', async () => {
+        if (!currentEventId || !cachedData) return;
+        const { stats = {} } = cachedData;
+        const unverifiedCount = (stats.total_submitted || 0) - (stats.total_verified || 0);
+        if (unverifiedCount <= 0) {
+            showToast('All Scores Verified', 'All submitted scores are already verified.', 'info');
+            return;
+        }
+
+        if (!confirm(`Verify and certify all ${unverifiedCount} final submitted judge score(s)?\n\nThis will certify all scores and make the official Print Matrix & PDF generation available.`)) {
+            return;
+        }
+
+        const btn = document.getElementById('tabVerifyAllBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Verifying All...';
+        }
+
+        const res = await verifyAllJudgeScores(currentEventId);
+        if (res.success) {
+            showToast('All Scores Certified!', res.message || 'All final scores have been verified.', 'success');
+            await loadTabulationData(false);
+        } else {
+            showToast(res.message || 'Failed to verify all scores.', 'error');
+            if (btn) btn.disabled = false;
+        }
+    });
+
+    // Print button wrapper (lock feedback) & Print button
+    document.getElementById('printTabulationWrapper')?.addEventListener('click', () => {
+        const printBtn = document.getElementById('printTabulationBtn');
+        if (printBtn && printBtn.disabled) {
+            showToast("Print Matrix Locked", printBtn.title || "All final scores must be verified before generating PDF / Print Matrix.", "warning");
+        }
+    });
+
     document.getElementById('printTabulationBtn')?.addEventListener('click', () => {
-        window.print();
+        const printBtn = document.getElementById('printTabulationBtn');
+        if (printBtn && !printBtn.disabled) {
+            window.print();
+        }
     });
 
     // QR Access button
@@ -311,7 +351,7 @@ function renderTabulationBoard(data) {
                     <span class="text-base font-extrabold text-slate-800">${judges.length} Judges</span>
                 </div>
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scores Received</span>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Final Scores Received</span>
                     <span class="text-base font-extrabold ${pct === 100 ? 'text-emerald-600' : 'text-slate-800'}">${totalSubmitted} / ${totalExpected} (${pct}%)</span>
                 </div>
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
@@ -322,12 +362,59 @@ function renderTabulationBoard(data) {
                 </div>
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 col-span-2 sm:col-span-4 lg:col-span-1">
                     <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tabulation Status</span>
-                    <span class="text-xs font-black uppercase ${stats.is_all_verified ? 'text-emerald-600' : (stats.is_completed ? 'text-blue-600' : 'text-amber-600')}">
-                        ${stats.is_all_verified ? '<i class="fa-solid fa-certificate me-1"></i> Certified' : (stats.is_completed ? '<i class="fa-solid fa-list-check me-1"></i> Verifying' : '<i class="fa-solid fa-hourglass-half me-1 animate-pulse"></i> In Tabulation')}
+                    <span class="text-xs font-black uppercase ${stats.is_all_verified ? 'text-emerald-600' : (stats.is_completed ? 'text-amber-600' : 'text-slate-700')}">
+                        ${stats.is_all_verified 
+                            ? '<i class="fa-solid fa-certificate me-1"></i> Certified &bull; PDF Ready' 
+                            : (stats.is_completed 
+                                ? '<i class="fa-solid fa-shield-halved me-1 animate-pulse"></i> Awaiting Verification' 
+                                : '<i class="fa-solid fa-hourglass-half me-1"></i> In Tabulation')}
                     </span>
                 </div>
             </div>
         `;
+    }
+
+    // Update Verify All Final Scores button
+    const verifyAllBtn = document.getElementById('tabVerifyAllBtn');
+    if (verifyAllBtn) {
+        const totalSubmitted = stats.total_submitted || 0;
+        const totalVerified = stats.total_verified || 0;
+        const unverifiedCount = totalSubmitted - totalVerified;
+        if ((role === 'admin' || role === 'tabulator') && unverifiedCount > 0) {
+            verifyAllBtn.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify All (${unverifiedCount} Final)`;
+            verifyAllBtn.classList.remove('hidden');
+            verifyAllBtn.disabled = false;
+        } else {
+            verifyAllBtn.classList.add('hidden');
+        }
+    }
+
+    // Update Print Matrix button state (Locked until ALL final scores are verified)
+    const printBtn = document.getElementById('printTabulationBtn');
+    if (printBtn) {
+        const totalSubmitted = stats.total_submitted || 0;
+        const totalVerified = stats.total_verified || 0;
+        const totalExpected = stats.total_expected || 0;
+        const isAllVerified = Boolean(stats.is_all_verified);
+
+        if (isAllVerified) {
+            printBtn.disabled = false;
+            printBtn.className = "px-3.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5";
+            printBtn.innerHTML = '<i class="fa-solid fa-print"></i> Print Matrix / PDF';
+            printBtn.title = "Print or export official certified tabulation matrix PDF";
+        } else {
+            printBtn.disabled = true;
+            printBtn.className = "px-3.5 py-1.5 bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none";
+            printBtn.innerHTML = '<i class="fa-solid fa-lock text-slate-400"></i> Print Matrix';
+
+            let msg = "Official Print Matrix is unavailable until all final judge scores are verified.";
+            if (totalSubmitted < totalExpected) {
+                msg = `Print Matrix is locked: Incomplete submissions (${totalSubmitted}/${totalExpected} scores submitted). All scores must be submitted and verified before generating PDF.`;
+            } else if (totalVerified < totalSubmitted) {
+                msg = `Print Matrix is locked: ${totalSubmitted - totalVerified} final score(s) awaiting verification. Click 'Verify' on each final score or 'Verify All Scores' to unlock.`;
+            }
+            printBtn.title = msg;
+        }
     }
 
     // Render Table Matrix
@@ -430,13 +517,13 @@ function renderTabulationBoard(data) {
                     if (isVerified) {
                         verifyBadgeHtml = `
                             <span class="text-[9px] text-emerald-800 bg-emerald-100/90 font-extrabold px-1.5 py-0.5 rounded border border-emerald-300 flex items-center gap-1 mt-0.5 shadow-2xs">
-                                <i class="fa-solid fa-shield-check text-emerald-600 text-[8px]"></i> Verified
+                                <i class="fa-solid fa-shield-check text-emerald-600 text-[8px]"></i> Final &bull; Verified
                             </span>
                         `;
                     } else {
                         verifyBadgeHtml = `
                             <span class="text-[9px] text-amber-800 bg-amber-100 font-extrabold px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-1 mt-0.5 shadow-2xs animate-pulse">
-                                <i class="fa-solid fa-shield text-amber-600 text-[8px]"></i> Verify
+                                <i class="fa-solid fa-shield text-amber-600 text-[8px]"></i> Final &bull; Verify
                             </span>
                         `;
                     }
@@ -459,17 +546,16 @@ function renderTabulationBoard(data) {
                 } else if (entry.status === 'draft') {
                     scoreCell = `
                         <div class="inline-flex flex-col items-center">
-                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-amber-100/60 transition-all cursor-pointer border border-transparent hover:border-amber-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect in-progress draft criteria scores">
-                                <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200 group-hover:scale-105 transition-transform shadow-2xs">
-                                    ${parseFloat(entry.total_score).toFixed(precision)}%
+                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-slate-100/60 transition-all cursor-pointer border border-transparent hover:border-slate-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Judge is currently drafting scores. Draft scores cannot be verified until officially submitted.">
+                                <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200 group-hover:scale-105 transition-transform">
+                                    ${parseFloat(entry.total_score || 0).toFixed(precision)}%
                                 </span>
-                                <span class="text-[9px] text-amber-600 font-semibold mt-0.5 flex items-center gap-1 group-hover:underline">
-                                    <i class="fa-solid fa-pen-ruler text-[8px]"></i> Draft &bull; Verify
+                                <span class="text-[9px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                                    <i class="fa-solid fa-pen-ruler text-[8px]"></i> In-Progress Draft
                                 </span>
                             </button>
                             <div class="hidden print-only text-center">
-                                <div class="text-xs font-bold text-slate-700 font-mono">${parseFloat(entry.total_score).toFixed(precision)}%</div>
-                                <div class="text-[8px] text-slate-400 uppercase">Draft</div>
+                                <div class="text-xs font-normal text-slate-400 italic">Pending Submission</div>
                             </div>
                         </div>
                     `;
@@ -620,10 +706,10 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
         if (isSubmitted) {
             if (isVerified) {
                 statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs';
-                statusBadgeEl.innerHTML = '<i class="fa-solid fa-shield-check"></i> Certified &amp; Verified';
+                statusBadgeEl.innerHTML = '<i class="fa-solid fa-shield-check"></i> Final &bull; Certified &amp; Verified';
             } else {
                 statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse shadow-2xs';
-                statusBadgeEl.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Pending Verification';
+                statusBadgeEl.innerHTML = '<i class="fa-solid fa-shield text-amber-600"></i> Final &bull; Awaiting Verification';
             }
         } else {
             statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1';

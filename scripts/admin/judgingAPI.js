@@ -289,3 +289,22 @@ export async function unverifyJudgeScore(eventId, contestantId, judgeId) {
         return { success: false, message: "Network error revoking score verification." };
     }
 }
+
+export async function verifyAllJudgeScores(eventId) {
+    try {
+        const res = await fetch("/backend/crud/scores.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "verify_all_scores",
+                event_id: parseInt(eventId)
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("verifyAllJudgeScores error: ", e);
+        return { success: false, message: "Network error verifying all scores." };
+    }
+}
+

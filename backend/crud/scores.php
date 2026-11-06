@@ -808,6 +808,72 @@ if ($method === "POST") {
         }
     }
 
+    // ---------------------------------------------------------
+    // ACTION: VERIFY ALL FINAL SCORES (Admin or Tabulator only)
+    // ---------------------------------------------------------
+    if ($action === 'verify_all_scores') {
+        if ($role !== 'admin' && $role !== 'tabulator') {
+            echo json_encode(["success" => false, "message" => "Only administrators or tabulators can verify scores."]);
+            exit;
+        }
+
+        $eventId = (int)($data['event_id'] ?? 0);
+        if ($eventId <= 0) {
+            echo json_encode(["success" => false, "message" => "Valid Event ID is required."]);
+            exit;
+        }
+
+        try {
+            $nowStr = (new DateTime())->format('Y-m-d H:i:s');
+            $verifierName = $_SESSION['username'] ?? 'Tabulator';
+
+            $updateRes = $scoresCollection->updateMany(
+                [
+                    'event_id' => $eventId,
+                    'status' => 'submitted',
+                    'is_verified' => ['$ne' => true]
+                ],
+                [
+                    '$set' => [
+                        'is_verified' => true,
+                        'verified_at' => $nowStr,
+                        'verified_by' => $verifierName
+                    ]
+                ]
+            );
+
+            $modCount = $updateRes->getModifiedCount();
+            $eventDoc = $eventsCollection->findOne(['_id' => $eventId]);
+            $evName = $eventDoc ? ($eventDoc['eventName'] ?? "Event #{$eventId}") : "Event #{$eventId}";
+
+            logSystemAction(
+                $userId,
+                $verifierName,
+                $role,
+                'VERIFY_ALL_SCORES',
+                "Verified all {$modCount} pending submitted score(s) in '{$evName}'."
+            );
+
+            // Broadcast real-time WebSocket event
+            triggerWebSocketEvent("event-{$eventId}", "tabulation-updated", [
+                'event_id'       => $eventId,
+                'verified_count' => $modCount,
+                'verified_by'    => $verifierName,
+                'timestamp'      => $nowStr
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Successfully verified {$modCount} final score(s)!",
+                "verified_count" => $modCount
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            exit;
+        }
+    }
+
     // Normal Score Entry (Judge or Admin only)
     if ($role !== 'judge' && $role !== 'admin') {
         echo json_encode(["success" => false, "message" => "Only designated judges can enter scores."]);
