@@ -124,6 +124,10 @@ async function loadJudgeEventData() {
     }
 
     currentEventData = res.event || {};
+    if (currentEventData.eventName) {
+        const titleEl = document.getElementById('judge-modal-title');
+        if (titleEl) titleEl.textContent = currentEventData.eventName;
+    }
     currentSettings = res.settings || {};
     currentJudgeId = res.judge_id || document.body.dataset.userId || '';
     currentJudgeUsername = res.judge_username || document.body.dataset.username || '';

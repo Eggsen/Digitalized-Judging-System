@@ -13,7 +13,12 @@ if (session_status() === PHP_SESSION_NONE) {
 function validateUserSession($redirectOnFailure = false) {
     if (empty($_SESSION['user_id'])) {
         if ($redirectOnFailure) {
-            header("Location: /auth/login.php");
+            $reqUri = $_SERVER['REQUEST_URI'] ?? '';
+            $loginUrl = "/auth/login.php";
+            if (!empty($reqUri) && strpos($reqUri, '?') !== false) {
+                $loginUrl .= "?redirect_to=" . urlencode($reqUri);
+            }
+            header("Location: " . $loginUrl);
             exit;
         }
         return false;

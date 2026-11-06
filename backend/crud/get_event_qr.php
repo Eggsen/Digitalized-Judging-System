@@ -51,7 +51,8 @@ try {
 
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
     $protocol = $isHttps ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+    $rawHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost:8000');
+    $host = trim(explode(',', $rawHost)[0]);
 
     if ($type === 'public') {
         $targetUrl = "{$protocol}://{$host}/dashboard.php?view_event={$eventId}&type=public_matrix";

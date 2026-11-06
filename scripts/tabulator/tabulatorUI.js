@@ -176,6 +176,10 @@ function renderTabulationBoard(data) {
     if (printTitleEl) {
         printTitleEl.textContent = `${event.eventName || `Competition #${currentEventId}`} — Official Tabulation Matrix`;
     }
+    const screenTitleEl = document.getElementById('tabulation-event-title');
+    if (screenTitleEl && event?.eventName) {
+        screenTitleEl.textContent = event.eventName;
+    }
     const printDateEl = document.getElementById('tab-print-date');
     if (printDateEl) {
         printDateEl.textContent = new Date().toLocaleString('en-US', {

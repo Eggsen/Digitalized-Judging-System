@@ -190,8 +190,13 @@ try {
         $_SESSION['preferences'] = ['theme' => 'light', 'colorRule' => 'normal', 'navPlacement' => 'top'];
     }
 
-    // 7. Successfully authenticated, redirect to dashboard
-    header("Location: /dashboard.php");
+    // 7. Successfully authenticated, redirect to destination or dashboard
+    $redirectDestination = $_SESSION['oauth2_redirect_to'] ?? '/dashboard.php';
+    unset($_SESSION['oauth2_redirect_to']);
+    if (empty($redirectDestination) || $redirectDestination[0] !== '/') {
+        $redirectDestination = '/dashboard.php';
+    }
+    header("Location: " . $redirectDestination);
     exit;
 
 } catch (Throwable $e) {

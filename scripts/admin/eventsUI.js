@@ -14,26 +14,72 @@ document.addEventListener("DOMContentLoaded", () => {
     initCommonModalEvents();
     initQrModalControls();
 
+    // Ensure judge and tabulator modal controls are ready for all authenticated roles
+    initJudgeUI();
+    initTabulatorUI();
+
     if (userRole === 'admin') {
         initAdminTabs();
         initAdminEventActions();
         initContestantsCriteriaUI();
-        initJudgeUI();
-        initTabulatorUI();
         loadAdminEvents();
         loadAuditLogs();
     } else if (userRole === 'judge') {
-        initJudgeUI();
         initUserTabs();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     } else if (userRole === 'tabulator') {
-        initTabulatorUI();
         initUserTabs();
         loadUserAssignedEvents();
         document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
     }
+
+    // Automatically launch scoring or tabulation modal if arrived via scanned QR code or deep link
+    handleQrDeepLinks();
 });
+
+function handleQrDeepLinks() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = urlParams.get('event_id') || urlParams.get('eventId') || urlParams.get('view_event') || urlParams.get('id');
+    const action = urlParams.get('action');
+    const type = urlParams.get('type');
+
+    if (!eventId) return;
+
+    const numericEventId = parseInt(eventId);
+    if (isNaN(numericEventId) || numericEventId <= 0) return;
+
+    // Clean URL query parameters silently so subsequent manual page refreshes don't re-trigger modals
+    try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {}
+
+    // Allow DOM to settle before opening the deep-linked modal
+    setTimeout(() => {
+        // 1. Judge Direct Scoring Sheet Access (scanned Judge QR Placard)
+        if (action === 'judge_score') {
+            if (userRole === 'judge' || userRole === 'admin') {
+                openJudgeScoringModal(numericEventId);
+            } else {
+                openTabulationBoardModal(numericEventId);
+            }
+            return;
+        }
+
+        // 2. Public Live Tabulation Board / Verification Seal Access (scanned Public QR Code)
+        if (urlParams.has('view_event') || type === 'public_matrix' || action === 'tabulation' || action === 'matrix') {
+            openTabulationBoardModal(numericEventId);
+            return;
+        }
+
+        // 3. Fallback based on user role
+        if (userRole === 'judge') {
+            openJudgeScoringModal(numericEventId);
+        } else {
+            openTabulationBoardModal(numericEventId);
+        }
+    }, 150);
+}
 
 /* -------------------------------------------------------------
  * ADMIN TABS & NAVIGATION (SIDEBAR + TOP BAR SYNC)

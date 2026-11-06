@@ -42,7 +42,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (response && response.success) {
                 showNotice(noticeText, response.message || "Login successful! Redirecting...", "success");
                 setTimeout(() => {
-                    window.location.href = response.redirect || "/dashboard.php";
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectTo = urlParams.get('redirect_to');
+                    if (redirectTo && redirectTo.startsWith('/')) {
+                        window.location.href = redirectTo;
+                    } else {
+                        window.location.href = response.redirect || "/dashboard.php";
+                    }
                 }, 700);
             } else {
                 resetRecaptchaWidget('login-recaptcha');

@@ -31,6 +31,10 @@ if (empty($clientId)) {
 $state = bin2hex(random_bytes(16));
 $_SESSION['oauth2_state'] = $state;
 
+if (!empty($_GET['redirect_to'])) {
+    $_SESSION['oauth2_redirect_to'] = $_GET['redirect_to'];
+}
+
 $params = [
     'client_id'     => $clientId,
     'redirect_uri'  => $redirectUri,
