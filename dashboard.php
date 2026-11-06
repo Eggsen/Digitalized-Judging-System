@@ -2130,6 +2130,91 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         </div>
     </div>
 
+    <!-- MODAL: SCORE BREAKDOWN & VERIFICATION (FOR TABULATOR & ADMIN) -->
+    <div id="score-breakdown-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] hidden no-print">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-black shadow-xs border border-buksu-gold/30">
+                        <i class="fa-solid fa-list-check text-base"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Score Audit &amp; Verification</span>
+                            <span id="breakdown-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">Submitted</span>
+                        </div>
+                        <h3 id="breakdown-modal-title" class="font-extrabold text-slate-800 text-base leading-tight">Judge Score Breakdown</h3>
+                    </div>
+                </div>
+                <button type="button" class="close-breakdown-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none transition-colors">&times;</button>
+            </div>
+
+            <!-- Contestant & Judge Banner Strip -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="breakdown-contestant-num" class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold font-black text-xs flex items-center justify-center shrink-0 border border-buksu-gold/30">
+                        #1
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h4 id="breakdown-contestant-name" class="font-extrabold text-slate-800 text-xs">Contestant Name</h4>
+                            <span id="breakdown-contestant-type" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-buksu-navy border border-slate-200 hidden">Team</span>
+                        </div>
+                        <p id="breakdown-contestant-dept" class="text-[11px] text-slate-500 font-normal">Department / Organization</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3">
+                    <div class="text-right sm:text-left">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Evaluating Judge</span>
+                        <span id="breakdown-judge-name" class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-gavel text-buksu-navy text-[10px]"></i> Judge Name
+                        </span>
+                    </div>
+                    <div class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-right">
+                        <span class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Total Score</span>
+                        <span id="breakdown-total-score" class="text-base font-black text-buksu-navy font-mono">0.00%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timestamp & Unlock info if available -->
+            <div id="breakdown-audit-meta" class="flex items-center justify-between text-[11px] text-slate-500 px-1 flex-wrap gap-2">
+                <span id="breakdown-submitted-time"><i class="fa-regular fa-clock me-1 text-slate-400"></i>Submitted: N/A</span>
+                <span id="breakdown-criteria-count" class="font-semibold text-slate-600">0 of 0 Criteria Evaluated</span>
+            </div>
+
+            <!-- Detailed Criteria Breakdown List -->
+            <div class="space-y-3 flex-1 min-h-[160px]">
+                <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-layer-group text-buksu-navy"></i> Itemized Scoring Criteria &amp; Sub-Scores
+                </h4>
+                <div id="breakdown-criteria-list" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                    <!-- Populated dynamically via tabulatorUI.js -->
+                </div>
+            </div>
+
+            <!-- Special Citations / Awards given by this judge (if any) -->
+            <div id="breakdown-citations-section" class="hidden space-y-1.5 border-t border-slate-100 pt-3">
+                <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-award text-amber-600"></i> Special Citations / Awards Assigned
+                </h5>
+                <div id="breakdown-citations-list" class="flex items-center gap-1.5 flex-wrap"></div>
+            </div>
+
+            <!-- Modal Footer with Unlock & Close actions -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                <div id="breakdown-unlock-container">
+                    <!-- Dynamic Unlock Button if applicable -->
+                </div>
+                <button type="button" class="close-breakdown-modal-btn px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Close Audit
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: VIEW EVENT DETAILS (ACCESSIBLE TO ALL ROLES) -->
     <div id="view-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in">

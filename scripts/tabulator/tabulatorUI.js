@@ -47,6 +47,20 @@ export function initTabulatorUI() {
         if (e.target === modal) closeTabulationModal();
     });
 
+    // Score Breakdown Modal close buttons & backdrop click
+    const breakdownModal = document.getElementById('score-breakdown-modal');
+    if (breakdownModal) {
+        breakdownModal.querySelectorAll('.close-breakdown-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                closeScoreBreakdownModal();
+            });
+        });
+
+        breakdownModal.addEventListener('click', (e) => {
+            if (e.target === breakdownModal) closeScoreBreakdownModal();
+        });
+    }
+
     // Refresh button
     document.getElementById('refreshTabulationBtn')?.addEventListener('click', () => {
         loadTabulationData(true);
@@ -123,6 +137,7 @@ export async function openTabulationBoardModal(eventId, eventName) {
 }
 
 export function closeTabulationModal() {
+    closeScoreBreakdownModal();
     const modal = document.getElementById('tabulation-board-modal');
     if (modal) modal.classList.add('hidden');
 
@@ -385,7 +400,7 @@ function renderTabulationBoard(data) {
                     let unlockBtnHtml = '';
                     if ((role === 'admin' || role === 'tabulator') && unlockPolicy !== 'locked_after_submit') {
                         unlockBtnHtml = `
-                            <button type="button" class="unlock-judge-score-btn text-[9px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-1.5 py-0.5 rounded border border-slate-200 hover:border-rose-200 transition-colors inline-flex items-center gap-1 mt-1 cursor-pointer" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" data-judge-name="${escapeHtml(j.username)}" data-contestant-name="${escapeHtml(row.name)}" title="Unlock score to allow judge to edit">
+                            <button type="button" class="unlock-judge-score-btn no-print text-[9px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-1.5 py-0.5 rounded border border-slate-200 hover:border-rose-200 transition-colors inline-flex items-center gap-1 mt-1 cursor-pointer" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" data-judge-name="${escapeHtml(j.username)}" data-contestant-name="${escapeHtml(row.name)}" title="Unlock score to allow judge to edit">
                                 <i class="fa-solid fa-lock-open text-[8px]"></i> Unlock
                             </button>
                         `;
@@ -393,20 +408,36 @@ function renderTabulationBoard(data) {
 
                     scoreCell = `
                         <div class="inline-flex flex-col items-center">
-                            <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                ${parseFloat(entry.total_score).toFixed(precision)}%
-                            </span>
-                            <span class="text-[9px] text-emerald-600 font-semibold mt-0.5"><i class="fa-solid fa-circle-check"></i> Final</span>
+                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-emerald-100/60 transition-all cursor-pointer border border-transparent hover:border-emerald-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect itemized criteria breakdown and verify score">
+                                <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 group-hover:scale-105 transition-transform shadow-2xs">
+                                    ${parseFloat(entry.total_score).toFixed(precision)}%
+                                </span>
+                                <span class="text-[9px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1 group-hover:underline">
+                                    <i class="fa-solid fa-circle-check text-[8px]"></i> Final &bull; Verify
+                                </span>
+                            </button>
+                            <div class="hidden print-only text-center">
+                                <div class="text-xs font-black text-slate-800 font-mono">${parseFloat(entry.total_score).toFixed(precision)}%</div>
+                                <div class="text-[8px] text-slate-500 uppercase">Final</div>
+                            </div>
                             ${unlockBtnHtml}
                         </div>
                     `;
                 } else if (entry.status === 'draft') {
                     scoreCell = `
-                        <div class="inline-flex flex-col items-center opacity-70">
-                            <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                                ${parseFloat(entry.total_score).toFixed(precision)}%
-                            </span>
-                            <span class="text-[9px] text-amber-600 font-semibold mt-0.5"><i class="fa-solid fa-pen-ruler"></i> Draft</span>
+                        <div class="inline-flex flex-col items-center">
+                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-amber-100/60 transition-all cursor-pointer border border-transparent hover:border-amber-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect in-progress draft criteria scores">
+                                <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200 group-hover:scale-105 transition-transform shadow-2xs">
+                                    ${parseFloat(entry.total_score).toFixed(precision)}%
+                                </span>
+                                <span class="text-[9px] text-amber-600 font-semibold mt-0.5 flex items-center gap-1 group-hover:underline">
+                                    <i class="fa-solid fa-pen-ruler text-[8px]"></i> Draft &bull; Verify
+                                </span>
+                            </button>
+                            <div class="hidden print-only text-center">
+                                <div class="text-xs font-bold text-slate-700 font-mono">${parseFloat(entry.total_score).toFixed(precision)}%</div>
+                                <div class="text-[8px] text-slate-400 uppercase">Draft</div>
+                            </div>
                         </div>
                     `;
                 } else {
@@ -448,6 +479,16 @@ function renderTabulationBoard(data) {
 
     tableBody.innerHTML = tbodyHtml;
 
+    // Bind View Score Breakdown button click handlers
+    tableBody.querySelectorAll('.view-score-breakdown-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const cid = btn.dataset.contestantId;
+            const jid = btn.dataset.judgeId;
+            openScoreBreakdownModal(cid, jid);
+        });
+    });
+
     // Bind Unlock Score button click handlers
     tableBody.querySelectorAll('.unlock-judge-score-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -475,6 +516,329 @@ function renderTabulationBoard(data) {
             }
         });
     });
+}
+
+export function openScoreBreakdownModal(contestantId, judgeId) {
+    if (!cachedData) return;
+
+    const modal = document.getElementById('score-breakdown-modal');
+    if (!modal) return;
+
+    const { matrix = [], judges = [], criteria = [], settings = {}, role = '' } = cachedData;
+    const judgingSettings = settings.judging || {};
+    const precision = parseInt(judgingSettings.decimalPrecision ?? 2);
+    const unlockPolicy = judgingSettings.unlockPolicy || 'admin_approval';
+
+    // 1. Locate contestant row and judge
+    const contestantRow = matrix.find(r => String(r.contestant_id) === String(contestantId));
+    const judge = judges.find(j => String(j.id) === String(judgeId));
+
+    if (!contestantRow || !judge) {
+        showToast('Score record or judge information not found.', 'error');
+        return;
+    }
+
+    const entry = contestantRow.judge_scores ? contestantRow.judge_scores[judge.id] : null;
+    if (!entry) {
+        showToast('No score record found for this judge and contestant.', 'warning');
+        return;
+    }
+
+    // 2. Populate Header & Banner info
+    const numEl = document.getElementById('breakdown-contestant-num');
+    const nameEl = document.getElementById('breakdown-contestant-name');
+    const deptEl = document.getElementById('breakdown-contestant-dept');
+    const typeEl = document.getElementById('breakdown-contestant-type');
+    const judgeEl = document.getElementById('breakdown-judge-name');
+    const totalScoreEl = document.getElementById('breakdown-total-score');
+    const statusBadgeEl = document.getElementById('breakdown-status-badge');
+    const submittedTimeEl = document.getElementById('breakdown-submitted-time');
+    const critCountEl = document.getElementById('breakdown-criteria-count');
+
+    if (numEl) numEl.textContent = `#${contestantRow.contestant_number}`;
+    if (nameEl) nameEl.textContent = contestantRow.name;
+    if (deptEl) deptEl.textContent = contestantRow.department_or_org || 'Independent';
+
+    if (typeEl) {
+        if (contestantRow.entry_type === 'team') {
+            typeEl.textContent = 'Team';
+            typeEl.classList.remove('hidden');
+        } else {
+            typeEl.classList.add('hidden');
+        }
+    }
+
+    if (judgeEl) {
+        judgeEl.innerHTML = `<i class="fa-solid fa-gavel text-buksu-navy text-[10px]"></i> ${escapeHtml(judge.username)}`;
+    }
+
+    if (totalScoreEl) {
+        totalScoreEl.textContent = `${parseFloat(entry.total_score || 0).toFixed(precision)}%`;
+    }
+
+    const isSubmitted = (entry.status === 'submitted');
+    if (statusBadgeEl) {
+        if (isSubmitted) {
+            statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1';
+            statusBadgeEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Submitted (Final)';
+        } else {
+            statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1';
+            statusBadgeEl.innerHTML = '<i class="fa-solid fa-pen-ruler"></i> In-Progress Draft';
+        }
+    }
+
+    if (submittedTimeEl) {
+        if (entry.submitted_at) {
+            const dateStr = new Date(entry.submitted_at).toLocaleString('en-US', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            });
+            submittedTimeEl.innerHTML = `<i class="fa-regular fa-clock me-1 text-slate-400"></i>Submitted: <strong class="text-slate-700">${escapeHtml(dateStr)}</strong>`;
+        } else {
+            submittedTimeEl.innerHTML = `<i class="fa-regular fa-clock me-1 text-slate-400"></i>Status: <strong class="text-slate-700">${isSubmitted ? 'Submitted' : 'Draft'}</strong>`;
+        }
+    }
+
+    // 3. Render Itemized Criteria List
+    const criteriaScores = Array.isArray(entry.criteria_scores) ? entry.criteria_scores : [];
+    const criteriaScoresMap = {};
+    criteriaScores.forEach(cs => {
+        criteriaScoresMap[String(cs.criteria_id)] = cs;
+    });
+
+    let scoredCount = 0;
+    const criteriaContainer = document.getElementById('breakdown-criteria-list');
+
+    if (criteriaContainer) {
+        if (criteria.length === 0) {
+            criteriaContainer.innerHTML = `
+                <div class="py-8 text-center text-slate-400 text-xs">
+                    <p>No criteria defined for this competition.</p>
+                </div>
+            `;
+        } else {
+            let criteriaHtml = '';
+            let calculationSteps = [];
+
+            criteria.forEach(cr => {
+                const critScore = criteriaScoresMap[String(cr.id)];
+                const maxPts = parseFloat(cr.max_points || 100);
+                const weightPct = parseFloat(cr.percentage || 0);
+                const isScored = Boolean(critScore && critScore.score !== undefined && critScore.score !== null);
+
+                if (isScored) scoredCount++;
+
+                const rawScore = isScored ? parseFloat(critScore.score) : 0;
+                const weightedScore = maxPts > 0 ? (rawScore / maxPts) * weightPct : 0;
+                calculationSteps.push(`${weightedScore.toFixed(precision)}%`);
+
+                const isCategory = (cr.scoring_type === 'category' || (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0));
+
+                let typeBadge = '';
+                if (isCategory) {
+                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Category-Based</span>`;
+                } else {
+                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Criteria-Based (Rubric)</span>`;
+                }
+
+                // Render inner details (either Category sub-scores or Rubric rating)
+                let innerDetailsHtml = '';
+                if (isCategory) {
+                    const categories = Array.isArray(cr.scoring_categories) ? cr.scoring_categories : [];
+                    const subScores = (critScore && critScore.sub_scores) ? critScore.sub_scores : {};
+
+                    if (categories.length > 0) {
+                        innerDetailsHtml = `
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 space-y-2">
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                                    <span>Score Categories Breakdown</span>
+                                    <span>Entered / Max</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    ${categories.map(cat => {
+                                        const catMax = parseFloat(cat.points || 0);
+                                        const catEntered = subScores[cat.id] !== undefined ? parseFloat(subScores[cat.id]) : (subScores[String(cat.id)] !== undefined ? parseFloat(subScores[String(cat.id)]) : null);
+                                        const catEnteredFormatted = catEntered !== null ? catEntered.toFixed(precision) : '—';
+                                        const catPct = (catMax > 0 && catEntered !== null) ? Math.min(100, Math.round((catEntered / catMax) * 100)) : 0;
+
+                                        return `
+                                            <div class="p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/70 text-xs">
+                                                <div class="flex items-center justify-between gap-1.5 mb-1">
+                                                    <span class="font-bold text-slate-700 text-[11px] truncate" title="${escapeHtml(cat.name)}">${escapeHtml(cat.name)}</span>
+                                                    <span class="font-mono font-black text-slate-900 text-xs shrink-0">${catEnteredFormatted} <span class="text-[10px] text-slate-400 font-normal">/ ${catMax}</span></span>
+                                                </div>
+                                                ${cat.description ? `<p class="text-[10px] text-slate-400 line-clamp-1 mb-1.5">${escapeHtml(cat.description)}</p>` : ''}
+                                                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                                    <div class="h-full ${catPct >= 80 ? 'bg-emerald-500' : (catPct >= 50 ? 'bg-amber-500' : 'bg-slate-400')} rounded-full transition-all" style="width: ${catPct}%"></div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // Rubric / Criteria-based
+                    const rubricRatings = Array.isArray(cr.rubric_ratings) ? cr.rubric_ratings : [];
+                    let ratingName = critScore?.rating_name || '';
+                    let ratingDesc = '';
+
+                    if (!ratingName && critScore?.rating_id) {
+                        const matchedRating = rubricRatings.find(r => String(r.id) === String(critScore.rating_id));
+                        if (matchedRating) {
+                            ratingName = matchedRating.name;
+                            ratingDesc = matchedRating.description || '';
+                        }
+                    } else if (ratingName && rubricRatings.length > 0) {
+                        const matchedRating = rubricRatings.find(r => r.name === ratingName);
+                        if (matchedRating && matchedRating.description) {
+                            ratingDesc = matchedRating.description;
+                        }
+                    }
+
+                    if (ratingName) {
+                        innerDetailsHtml = `
+                            <div class="mt-3 pt-2.5 border-t border-slate-100">
+                                <div class="p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-amber-400 text-buksu-navy flex items-center justify-center text-xs font-black shadow-2xs">
+                                            <i class="fa-solid fa-star"></i>
+                                        </div>
+                                        <div>
+                                            <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block">Selected Rating Level</span>
+                                            <span class="font-extrabold text-slate-800 text-xs">${escapeHtml(ratingName)}</span>
+                                            ${ratingDesc ? `<p class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(ratingDesc)}</p>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-xs font-black text-slate-800 font-mono">${rawScore.toFixed(precision)} / ${maxPts} pts</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                criteriaHtml += `
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
+                        <div class="flex items-start justify-between gap-3 flex-wrap">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-buksu-navy text-buksu-gold border border-buksu-gold/30">
+                                        ${weightPct}% Weight
+                                    </span>
+                                    ${typeBadge}
+                                    ${!isScored ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200">Pending</span>` : ''}
+                                </div>
+                                <h5 class="font-extrabold text-slate-800 text-xs sm:text-sm mt-1">${escapeHtml(cr.title)}</h5>
+                                ${cr.description ? `<p class="text-[11px] text-slate-500 font-normal leading-relaxed">${escapeHtml(cr.description)}</p>` : ''}
+                            </div>
+
+                            <div class="text-right bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 shrink-0">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Raw Score Entered</div>
+                                <div class="text-sm font-black text-slate-900 font-mono">
+                                    ${rawScore.toFixed(precision)} <span class="text-[11px] text-slate-400 font-normal">/ ${maxPts} pts</span>
+                                </div>
+                                <div class="text-[10px] font-extrabold text-emerald-700 mt-0.5">
+                                    Weighted: +${weightedScore.toFixed(precision)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        ${innerDetailsHtml}
+                    </div>
+                `;
+            });
+
+            // Summary card showing formula breakdown
+            criteriaHtml += `
+                <div class="p-3.5 rounded-2xl bg-buksu-navy/5 border border-buksu-navy/20 flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <div class="space-y-0.5">
+                        <span class="font-extrabold text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-buksu-navy"></i> Tabulation Verification Formula
+                        </span>
+                        <p class="text-[11px] text-slate-500 font-mono">
+                            ${calculationSteps.join(' + ')} = <strong class="text-buksu-navy">${parseFloat(entry.total_score || 0).toFixed(precision)}%</strong>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Verified Total</span>
+                        <span class="text-base font-black text-buksu-navy font-mono">${parseFloat(entry.total_score || 0).toFixed(precision)}%</span>
+                    </div>
+                </div>
+            `;
+
+            criteriaContainer.innerHTML = criteriaHtml;
+        }
+    }
+
+    if (critCountEl) {
+        critCountEl.textContent = `${scoredCount} of ${criteria.length} Criteria Evaluated`;
+    }
+
+    // 4. Citations & Comments from this judge for this contestant
+    const citationsSecEl = document.getElementById('breakdown-citations-section');
+    const citationsListEl = document.getElementById('breakdown-citations-list');
+    if (citationsSecEl && citationsListEl) {
+        const comments = Array.isArray(contestantRow.comments) ? contestantRow.comments : [];
+        const judgeComments = comments.filter(c => !c.judge_id || String(c.judge_id) === String(judge.id));
+
+        if (judgeComments.length > 0) {
+            citationsListEl.innerHTML = judgeComments.map(c => `
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fa-solid fa-award text-amber-700"></i> ${escapeHtml(c.text || c.award_title || '')}
+                </span>
+            `).join('');
+            citationsSecEl.classList.remove('hidden');
+        } else {
+            citationsSecEl.classList.add('hidden');
+        }
+    }
+
+    // 5. Unlock action in modal footer
+    const unlockContainer = document.getElementById('breakdown-unlock-container');
+    if (unlockContainer) {
+        if (isSubmitted && (role === 'admin' || role === 'tabulator') && unlockPolicy !== 'locked_after_submit') {
+            unlockContainer.innerHTML = `
+                <button type="button" id="modalUnlockJudgeScoreBtn" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-extrabold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs" data-contestant-id="${contestantId}" data-judge-id="${judge.id}" data-judge-name="${escapeHtml(judge.username)}" data-contestant-name="${escapeHtml(contestantRow.name)}">
+                    <i class="fa-solid fa-lock-open text-rose-600"></i> Unlock Score for Judge
+                </button>
+            `;
+
+            const unlockBtn = document.getElementById('modalUnlockJudgeScoreBtn');
+            if (unlockBtn) {
+                unlockBtn.addEventListener('click', async () => {
+                    if (!confirm(`Unlock submitted score by Judge "${judge.username}" for "${contestantRow.name}"?\n\nThis will return the score to draft status so the judge can revise and re-submit.`)) {
+                        return;
+                    }
+
+                    unlockBtn.disabled = true;
+                    unlockBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Unlocking...';
+
+                    const res = await unlockJudgeScore(currentEventId, contestantId, judge.id);
+                    if (res.success) {
+                        showToast(res.message || 'Score unlocked successfully!', 'success');
+                        closeScoreBreakdownModal();
+                        await loadTabulationData(false);
+                    } else {
+                        showToast(res.message || 'Failed to unlock score.', 'error');
+                        unlockBtn.disabled = false;
+                        unlockBtn.innerHTML = '<i class="fa-solid fa-lock-open text-rose-600"></i> Unlock Score for Judge';
+                    }
+                });
+            }
+        } else {
+            unlockContainer.innerHTML = '';
+        }
+    }
+
+    modal.classList.remove('hidden');
+}
+
+export function closeScoreBreakdownModal() {
+    const modal = document.getElementById('score-breakdown-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function escapeHtml(str) {

@@ -199,13 +199,16 @@ if ($method === "GET") {
                                 $sub[(string)$k] = (float)$v;
                             }
                         }
-                        $formattedCriteriaScores[] = [
+                        $item = [
                             'criteria_id' => (string)($cs['criteria_id'] ?? ''),
                             'max' => (int)($cs['max'] ?? 100),
                             'score' => (float)($cs['score'] ?? 0),
                             'category_id' => (string)($cs['category_id'] ?? ''),
                             'sub_scores' => (object)$sub
                         ];
+                        if (!empty($cs['rating_id'])) $item['rating_id'] = (string)$cs['rating_id'];
+                        if (!empty($cs['rating_name'])) $item['rating_name'] = (string)$cs['rating_name'];
+                        $formattedCriteriaScores[] = $item;
                     }
                 }
                 $judgeScores[$cId] = [
@@ -272,12 +275,16 @@ if ($method === "GET") {
                             $sub[(string)$k] = (float)$v;
                         }
                     }
-                    $formattedCriteriaScores[] = [
+                    $item = [
                         'criteria_id' => (string)($cs['criteria_id'] ?? ''),
                         'max' => (int)($cs['max'] ?? 100),
                         'score' => (float)($cs['score'] ?? 0),
                         'sub_scores' => (object)$sub
                     ];
+                    if (!empty($cs['rating_id'])) $item['rating_id'] = (string)$cs['rating_id'];
+                    if (!empty($cs['rating_name'])) $item['rating_name'] = (string)$cs['rating_name'];
+                    if (!empty($cs['category_id'])) $item['category_id'] = (string)$cs['category_id'];
+                    $formattedCriteriaScores[] = $item;
                 }
             }
             $scoreData = [
@@ -287,7 +294,9 @@ if ($method === "GET") {
                 'criteria_scores' => $formattedCriteriaScores,
                 'total_score' => (float)($s['total_score'] ?? 0),
                 'status' => $s['status'] ?? 'draft',
-                'submitted_at' => $s['submitted_at'] ?? ''
+                'submitted_at' => $s['submitted_at'] ?? '',
+                'unlocked_at' => $s['unlocked_at'] ?? '',
+                'unlocked_by' => $s['unlocked_by'] ?? ''
             ];
             $allScores[] = $scoreData;
             $scoresByContestantJudge["{$cId}_{$jId}"] = $scoreData;
