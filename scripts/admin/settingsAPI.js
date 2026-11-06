@@ -118,3 +118,19 @@ export async function resendSecurityCode() {
     }
 }
 
+export async function saveApiKeys(apiKeysData) {
+    try {
+        const response = await fetch("/backend/crud/settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "save_api_keys", api_keys: apiKeysData }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Save API Keys Error: ", error);
+        return { success: false, message: "Unable to save API keys to server." };
+    }
+}
+
+

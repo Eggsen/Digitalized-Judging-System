@@ -23,6 +23,7 @@ if (!$isGet && $userRole !== 'admin') {
 require_once __DIR__ . "/../database/config.php";
 require_once __DIR__ . "/../utils/logger.php";
 require_once __DIR__ . "/../utils/mailer.php";
+require_once __DIR__ . "/../utils/env_manager.php";
 
 function maskEmail($email) {
     if (empty($email) || strpos($email, '@') === false) return 'admin email';
@@ -131,11 +132,17 @@ try {
             'systemVersion' => 'v2.4-Production'
         ];
 
-        echo json_encode([
+        $response = [
             "success" => true,
             "settings" => $settingsDoc,
             "diagnostics" => $diagnostics
-        ]);
+        ];
+
+        if ($userRole === 'admin') {
+            $response['api_keys'] = getSystemApiKeys($settingsCollection);
+        }
+
+        echo json_encode($response);
         exit;
     }
 
@@ -226,6 +233,58 @@ try {
             "success" => true,
             "message" => "System settings updated successfully.",
             "settings" => $freshDoc
+        ]);
+        exit;
+    }
+
+    if ($action === 'save_api_keys') {
+        if ($userRole !== 'admin') {
+            echo json_encode(["success" => false, "message" => "Access denied. Only administrators can modify environment credentials."]);
+            exit;
+        }
+
+        $incomingKeys = $data['api_keys'] ?? [];
+        if (!is_array($incomingKeys)) {
+            echo json_encode(["success" => false, "message" => "Invalid API keys payload format."]);
+            exit;
+        }
+
+        $sanitizedKeys = [];
+        foreach (ALLOWED_ENV_KEYS as $allowedKey) {
+            if (array_key_exists($allowedKey, $incomingKeys)) {
+                $sanitizedKeys[$allowedKey] = trim((string)$incomingKeys[$allowedKey]);
+            }
+        }
+
+        // 1. Update the physical .env file on server disk
+        $envSuccess = updateEnvFile($sanitizedKeys);
+
+        // 2. Persist to MongoDB system_settings to survive Render container restarts/rebuilds
+        $settingsCollection->updateOne(
+            ['_id' => 'system_settings'],
+            [
+                '$set' => [
+                    'api_keys' => $sanitizedKeys,
+                    'updatedAt' => date('Y-m-d H:i:s'),
+                    'updatedBy' => $_SESSION['username'] ?? 'Administrator'
+                ]
+            ],
+            ['upsert' => true]
+        );
+
+        // Log audit action
+        logSystemAction(
+            $_SESSION['user_id'] ?? null,
+            $_SESSION['username'] ?? 'Admin',
+            'admin',
+            'UPDATE_API_KEYS',
+            'Admin updated environment variables & API keys in .env and database (Google, reCAPTCHA, Cloudinary, SMTP, Pusher).'
+        );
+
+        echo json_encode([
+            "success" => true,
+            "message" => "API credentials successfully updated in .env and synchronized with cloud database.",
+            "api_keys" => getSystemApiKeys($settingsCollection)
         ]);
         exit;
     }

@@ -55,6 +55,22 @@ try {
     $settingsCollection = $db->settings;
     $logoLibraryCollection = $db->logo_library;
 
+    // Sync stored API keys from MongoDB settings into runtime environment
+    // to persist settings across Render container restarts
+    try {
+        $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']);
+        if (!empty($settingsDoc['api_keys']) && (is_array($settingsDoc['api_keys']) || is_object($settingsDoc['api_keys']))) {
+            foreach ($settingsDoc['api_keys'] as $envKey => $envVal) {
+                if ($envVal !== null && $envVal !== '') {
+                    $_ENV[(string)$envKey] = (string)$envVal;
+                    putenv("{$envKey}=" . (string)$envVal);
+                }
+            }
+        }
+    } catch (Throwable $ignore) {
+        // Safe fallback if settings collection is not yet ready
+    }
+
 } catch (Throwable $e) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'config.php') {
         header("Content-Type: application/json", true, 500);

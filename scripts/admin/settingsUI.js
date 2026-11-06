@@ -6,7 +6,8 @@ import {
     resetSettingsDefaults,
     requestSecurityChange,
     confirmSecurityChange,
-    resendSecurityCode
+    resendSecurityCode,
+    saveApiKeys
 } from "/scripts/admin/settingsAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 
@@ -42,6 +43,9 @@ export async function loadSystemSettings() {
     cachedSettings = res.settings;
     populateSettingsForm(res.settings);
     populateDiagnostics(res.diagnostics);
+    if (res.api_keys) {
+        populateApiKeysForm(res.api_keys);
+    }
 }
 
 function populateSettingsForm(settings) {
@@ -204,6 +208,7 @@ export function initSettingsPanel() {
     initLogoLibraryModal();
     initSecuritySettings();
     initBackupAndMaintenance();
+    initApiKeysSettings();
 }
 
 export function activateSettingsSubtab(target) {
@@ -1093,3 +1098,107 @@ async function handleResendSecurityOtp() {
         }
     }
 }
+
+const ENV_KEY_FIELDS = [
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_REDIRECT_URI',
+    'RECAPTCHA_SITE_KEY',
+    'RECAPTCHA_SECRET_KEY',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_FOLDER',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_SECURE',
+    'SMTP_USERNAME',
+    'SMTP_PASSWORD',
+    'SMTP_FROM_EMAIL',
+    'SMTP_FROM_NAME',
+    'PUSHER_APP_ID',
+    'PUSHER_CLUSTER',
+    'PUSHER_KEY',
+    'PUSHER_SECRET'
+];
+
+function populateApiKeysForm(apiKeys) {
+    if (!apiKeys || typeof apiKeys !== 'object') return;
+
+    ENV_KEY_FIELDS.forEach(key => {
+        const input = document.getElementById(`setting-env-${key}`);
+        if (input && apiKeys[key] !== undefined) {
+            input.value = apiKeys[key];
+        }
+    });
+}
+
+function initApiKeysSettings() {
+    // Password visibility toggle buttons
+    document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const targetInput = document.getElementById(targetId);
+            if (!targetInput) return;
+            const icon = btn.querySelector('i');
+            if (targetInput.type === 'password') {
+                targetInput.type = 'text';
+                if (icon) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            } else {
+                targetInput.type = 'password';
+                if (icon) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        });
+    });
+
+    // Save API keys handler
+    const handleSaveApiKeys = async () => {
+        const topBtn = document.getElementById('saveApiKeysBtnTop');
+        const btmBtn = document.getElementById('saveApiKeysBtn');
+        const buttons = [topBtn, btmBtn].filter(Boolean);
+
+        buttons.forEach(b => {
+            b.disabled = true;
+            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Saving...';
+        });
+
+        const payload = {};
+        ENV_KEY_FIELDS.forEach(key => {
+            const input = document.getElementById(`setting-env-${key}`);
+            if (input) {
+                payload[key] = input.value.trim();
+            }
+        });
+
+        const res = await saveApiKeys(payload);
+
+        buttons.forEach(b => {
+            b.disabled = false;
+        });
+        if (topBtn) {
+            topBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> Save .env Keys';
+        }
+        if (btmBtn) {
+            btmBtn.innerHTML = '<i class="fa-solid fa-floppy-disk text-buksu-gold me-1.5"></i> Save API Keys to .env';
+        }
+
+        if (res.success) {
+            showToast("Credentials Saved", res.message || "API keys written to .env and synchronized.", "create");
+            if (res.api_keys) {
+                populateApiKeysForm(res.api_keys);
+            }
+        } else {
+            showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
+        }
+    };
+
+    document.getElementById('saveApiKeysBtn')?.addEventListener('click', handleSaveApiKeys);
+    document.getElementById('saveApiKeysBtnTop')?.addEventListener('click', handleSaveApiKeys);
+}
+
