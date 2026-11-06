@@ -1,5 +1,6 @@
 import { getScores, submitScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
+import { subscribeToEventChannel, unsubscribeFromEventChannel } from "/scripts/utils/websocket.js";
 
 let currentEventId = null;
 let currentEventData = null;
@@ -30,15 +31,20 @@ export function initJudgeUI() {
     const modal = document.getElementById('judge-scoring-modal');
     if (!modal) return;
 
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        if (currentEventId) {
+            unsubscribeFromEventChannel(currentEventId);
+        }
+    };
+
     // Close buttons
     modal.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
+        btn.addEventListener('click', closeModal);
     });
 
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
+        if (e.target === modal) closeModal();
     });
 
     // Save Draft button
@@ -61,6 +67,28 @@ export async function openJudgeScoringModal(eventId, eventName) {
     modal.classList.remove('hidden');
 
     await loadJudgeEventData();
+
+    // Subscribe to real-time WebSocket channel for instant status changes & score unlocks
+    subscribeToEventChannel(currentEventId, {
+        onScoreUnlocked: async (data) => {
+            const judgeIdStr = String(currentJudgeId);
+            const targetJudgeStr = String(data.judge_id);
+            if (targetJudgeStr === judgeIdStr || (data.judge_name && data.judge_name === currentJudgeUsername)) {
+                showToast("Score Unlocked", "An administrator has unlocked your score for editing. You may now revise it.", "info");
+                const prevSelected = selectedContestantId;
+                await loadJudgeEventData();
+                if (prevSelected) {
+                    selectContestant(prevSelected);
+                }
+            }
+        },
+        onJudgingStatusChanged: async (data) => {
+            if (data.judgingStatus) {
+                showToast("Judging Status Update", `The judging period is now ${data.judgingStatus}.`, "info");
+                await loadJudgeEventData();
+            }
+        }
+    });
 }
 
 async function loadJudgeEventData() {

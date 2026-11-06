@@ -13,6 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . "/../database/config.php";
 require_once __DIR__ . "/../utils/logger.php";
+require_once __DIR__ . "/../utils/websocket.php";
 
 $method = $_SERVER['REQUEST_METHOD'];
 $role = strtolower($_SESSION['role'] ?? '');
@@ -569,6 +570,16 @@ if ($method === "POST") {
                 'created_at' => new MongoDB\BSON\UTCDateTime()
             ]);
 
+            // Broadcast real-time WebSocket event
+            triggerWebSocketEvent("event-{$eventId}", "score-unlocked", [
+                'event_id'        => $eventId,
+                'contestant_id'   => $contestantId,
+                'judge_id'        => $targetJudgeId,
+                'judge_name'      => $jName,
+                'unlocked_by'     => $_SESSION['username'] ?? 'Admin',
+                'timestamp'       => $nowStr
+            ]);
+
             echo json_encode([
                 "success" => true,
                 "message" => "Score successfully unlocked! Judge {$jName} may now edit and resubmit.",
@@ -779,6 +790,18 @@ if ($method === "POST") {
                 ]);
             }
         }
+
+        // Broadcast real-time WebSocket event for instant tabulation & live scoring updates
+        triggerWebSocketEvent("event-{$eventId}", "score-updated", [
+            'event_id'        => $eventId,
+            'contestant_id'   => $contestantId,
+            'contestant_name' => $contestantName,
+            'judge_id'        => $userId,
+            'judge_name'      => $_SESSION['username'] ?? 'Judge',
+            'status'          => $status,
+            'total_score'     => $totalScore,
+            'timestamp'       => $nowStr
+        ]);
 
         echo json_encode([
             "success" => true,

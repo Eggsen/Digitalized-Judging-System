@@ -47,7 +47,8 @@ if (empty($token)) {
                     'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
                     'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled']),
                     'qrCodeEnabled' => !empty($pending['changes']['qrCodeEnabled']),
-                    'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled'])
+                    'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled']),
+                    'websocketEnabled' => !empty($pending['changes']['websocketEnabled'])
                 ];
 
                 $updatedBy = $pending['requested_by_username'] ?? 'Administrator';
@@ -177,6 +178,17 @@ if (empty($token)) {
                             <i class="fa-solid fa-cloud-arrow-up text-slate-500"></i> Cloudinary Media API
                         </span>
                         <?php if ($newSecurity['cloudinaryEnabled']): ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
+                        <?php else: ?>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                        <span class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-slate-500"></i> Real-Time WebSockets
+                        </span>
+                        <?php if (!empty($newSecurity['websocketEnabled'])): ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Enabled</span>
                         <?php else: ?>
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">Disabled</span>

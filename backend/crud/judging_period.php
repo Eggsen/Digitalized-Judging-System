@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== "POST") {
 
 require_once __DIR__ . "/../database/config.php";
 require_once __DIR__ . "/../utils/logger.php";
+require_once __DIR__ . "/../utils/websocket.php";
 
 $rawJson = file_get_contents("php://input");
 $data = json_decode($rawJson, true);
@@ -115,6 +116,15 @@ try {
             ]);
         }
 
+        // Broadcast real-time WebSocket event
+        triggerWebSocketEvent("event-{$eventId}", "judging-status-changed", [
+            'event_id'      => $eventId,
+            'event_name'    => $eventNameStr,
+            'judgingStatus' => 'In Progress',
+            'status'        => 'Ongoing',
+            'timestamp'     => (new DateTime())->format('Y-m-d H:i:s')
+        ]);
+
         echo json_encode([
             "success" => true,
             "message" => "Judging period for '{$eventNameStr}' has started! Scoring is now live.",
@@ -157,6 +167,15 @@ try {
                 'created_at' => new MongoDB\BSON\UTCDateTime()
             ]);
         }
+
+        // Broadcast real-time WebSocket event
+        triggerWebSocketEvent("event-{$eventId}", "judging-status-changed", [
+            'event_id'      => $eventId,
+            'event_name'    => $eventNameStr,
+            'judgingStatus' => 'Finished',
+            'status'        => 'Completed',
+            'timestamp'     => (new DateTime())->format('Y-m-d H:i:s')
+        ]);
 
         echo json_encode([
             "success" => true,

@@ -1,10 +1,36 @@
 import { getScores, unlockJudgeScore } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { openEventQrModal } from "/scripts/admin/eventsUI.js";
+import { subscribeToEventChannel, unsubscribeFromEventChannel, onWebSocketStatusChange, getWebSocketStatus } from "/scripts/utils/websocket.js";
 
 let currentEventId = null;
 let pollInterval = null;
 let cachedData = null;
+let wsStatusUnsub = null;
+
+function updateSyncIndicator(status) {
+    const indicator = document.getElementById('tab-live-sync-indicator');
+    if (!indicator) return;
+
+    if (status === 'connected') {
+        indicator.innerHTML = `
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-emerald-700 font-bold flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-amber-500"></i> Real-Time WebSocket Live
+            </span>
+        `;
+    } else if (status === 'connecting') {
+        indicator.innerHTML = `
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+            <span class="text-slate-500">Connecting real-time stream...</span>
+        `;
+    } else {
+        indicator.innerHTML = `
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span class="text-slate-400">Live auto-syncing every 3s (Polling fallback)</span>
+        `;
+    }
+}
 
 export function initTabulatorUI() {
     const modal = document.getElementById('tabulation-board-modal');
@@ -51,7 +77,45 @@ export async function openTabulationBoardModal(eventId, eventName) {
     // Initial load
     await loadTabulationData(false);
 
-    // Setup real-time polling every 3 seconds
+    // Initial sync indicator state
+    updateSyncIndicator(getWebSocketStatus());
+
+    // Listen to WebSocket status changes to adjust polling interval dynamically
+    if (wsStatusUnsub) wsStatusUnsub();
+    wsStatusUnsub = onWebSocketStatusChange((status) => {
+        updateSyncIndicator(status);
+
+        if (pollInterval) clearInterval(pollInterval);
+        // If WebSocket is connected, relax polling to 25s heartbeat; otherwise use fast 3s polling
+        const intervalMs = (status === 'connected') ? 25000 : 3000;
+        pollInterval = setInterval(() => {
+            loadTabulationData(false);
+        }, intervalMs);
+    });
+
+    // Subscribe to real-time WebSocket channel for instant updates
+    subscribeToEventChannel(currentEventId, {
+        onScoreUpdated: (data) => {
+            console.log('⚡ [Live Tabulation] Real-time score update received:', data);
+            loadTabulationData(false);
+            if (data.judge_name && data.contestant_name) {
+                showToast("Live Score Received", `Judge ${data.judge_name} submitted a score for ${data.contestant_name}.`, "info");
+            }
+        },
+        onScoreUnlocked: (data) => {
+            console.log('⚡ [Live Tabulation] Score unlocked in real-time:', data);
+            loadTabulationData(false);
+        },
+        onJudgingStatusChanged: (data) => {
+            console.log('⚡ [Live Tabulation] Judging status changed:', data);
+            loadTabulationData(false);
+            if (data.judgingStatus) {
+                showToast("Judging Status Updated", `Judging period is now ${data.judgingStatus}.`, "info");
+            }
+        }
+    });
+
+    // Setup initial polling interval (3s default, will adjust when WS connects)
     if (pollInterval) clearInterval(pollInterval);
     pollInterval = setInterval(() => {
         loadTabulationData(false);
@@ -61,9 +125,19 @@ export async function openTabulationBoardModal(eventId, eventName) {
 export function closeTabulationModal() {
     const modal = document.getElementById('tabulation-board-modal');
     if (modal) modal.classList.add('hidden');
+
     if (pollInterval) {
         clearInterval(pollInterval);
         pollInterval = null;
+    }
+
+    if (currentEventId) {
+        unsubscribeFromEventChannel(currentEventId);
+    }
+
+    if (wsStatusUnsub) {
+        wsStatusUnsub();
+        wsStatusUnsub = null;
     }
 }
 

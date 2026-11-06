@@ -69,7 +69,8 @@ function getDefaultSettings() {
             'recaptchaEnabled' => true,
             'emailServiceEnabled' => true,
             'qrCodeEnabled' => true,
-            'cloudinaryEnabled' => true
+            'cloudinaryEnabled' => true,
+            'websocketEnabled' => true
         ],
         'backup' => [
             'lastBackupAt' => null,
@@ -107,6 +108,9 @@ try {
             }
             if (!isset($settingsDoc['security']['cloudinaryEnabled'])) {
                 $settingsDoc['security']['cloudinaryEnabled'] = true;
+            }
+            if (!isset($settingsDoc['security']['websocketEnabled'])) {
+                $settingsDoc['security']['websocketEnabled'] = true;
             }
         }
 
@@ -295,6 +299,7 @@ try {
         $emailService = !empty($data['emailServiceEnabled']);
         $qrCode = !empty($data['qrCodeEnabled']);
         $cloudinary = !empty($data['cloudinaryEnabled']);
+        $websocket = !empty($data['websocketEnabled']);
 
         $settingsDoc = $settingsCollection->findOne(['_id' => 'system_settings']) ?? getDefaultSettings();
         $currentSec = $settingsDoc['security'] ?? [
@@ -302,16 +307,18 @@ try {
             'recaptchaEnabled' => true,
             'emailServiceEnabled' => true,
             'qrCodeEnabled' => true,
-            'cloudinaryEnabled' => true
+            'cloudinaryEnabled' => true,
+            'websocketEnabled' => true
         ];
         $currGoogle = $currentSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currentSec['recaptchaEnabled'] ?? true;
         $currEmail = $currentSec['emailServiceEnabled'] ?? true;
         $currQrCode = $currentSec['qrCodeEnabled'] ?? true;
         $currCloudinary = $currentSec['cloudinaryEnabled'] ?? true;
+        $currWebsocket = $currentSec['websocketEnabled'] ?? true;
 
         // If no changes, return immediately
-        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha && $emailService === $currEmail && $qrCode === $currQrCode && $cloudinary === $currCloudinary) {
+        if ($googleAuth === $currGoogle && $recaptcha === $currRecaptcha && $emailService === $currEmail && $qrCode === $currQrCode && $cloudinary === $currCloudinary && $websocket === $currWebsocket) {
             echo json_encode([
                 "success" => true,
                 "requires_confirmation" => false,
@@ -329,7 +336,8 @@ try {
                 'recaptchaEnabled' => $recaptcha,
                 'emailServiceEnabled' => $emailService,
                 'qrCodeEnabled' => $qrCode,
-                'cloudinaryEnabled' => $cloudinary
+                'cloudinaryEnabled' => $cloudinary,
+                'websocketEnabled' => $websocket
             ];
 
             $settingsCollection->updateOne(
@@ -351,7 +359,7 @@ try {
                 $_SESSION['username'] ?? 'Admin',
                 'admin',
                 'UPDATE_SECURITY_SETTINGS',
-                'Admin directly updated security controls (email service disabled): Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF') . ', QR Code=' . ($newSecurity['qrCodeEnabled'] ? 'ON' : 'OFF') . ', Cloudinary=' . ($newSecurity['cloudinaryEnabled'] ? 'ON' : 'OFF')
+                'Admin directly updated security controls (email service disabled): Google OAuth=' . ($newSecurity['googleAuthEnabled'] ? 'ON' : 'OFF') . ', reCAPTCHA=' . ($newSecurity['recaptchaEnabled'] ? 'ON' : 'OFF') . ', Email=' . ($newSecurity['emailServiceEnabled'] ? 'ON' : 'OFF') . ', QR Code=' . ($newSecurity['qrCodeEnabled'] ? 'ON' : 'OFF') . ', Cloudinary=' . ($newSecurity['cloudinaryEnabled'] ? 'ON' : 'OFF') . ', WebSockets=' . ($newSecurity['websocketEnabled'] ? 'ON' : 'OFF')
             );
 
             echo json_encode([
@@ -395,7 +403,8 @@ try {
                 'recaptchaEnabled' => $recaptcha,
                 'emailServiceEnabled' => $emailService,
                 'qrCodeEnabled' => $qrCode,
-                'cloudinaryEnabled' => $cloudinary
+                'cloudinaryEnabled' => $cloudinary,
+                'websocketEnabled' => $websocket
             ],
             'requested_by_id' => (string)$_SESSION['user_id'],
             'requested_by_username' => $_SESSION['username'],
@@ -423,6 +432,9 @@ try {
 
         $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $websocketChangeText = ($currWebsocket ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($websocket ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
         $protocol = $isHttps ? "https" : "http";
@@ -459,9 +471,13 @@ try {
                         <td style='padding: 8px 0; color: #334155;'><strong>QR Code Generation API:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$qrCodeChangeText}</td>
                     </tr>
-                    <tr>
+                    <tr style='border-bottom: 1px solid #e2e8f0;'>
                         <td style='padding: 8px 0; color: #334155;'><strong>Cloudinary Media CDN API:</strong></td>
                         <td style='padding: 8px 0; text-align: right;'>{$cloudinaryChangeText}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 8px 0; color: #334155;'><strong>Real-Time WebSockets (Pusher):</strong></td>
+                        <td style='padding: 8px 0; text-align: right;'>{$websocketChangeText}</td>
                     </tr>
                 </table>
             </div>
@@ -537,7 +553,8 @@ try {
             'recaptchaEnabled' => !empty($pending['changes']['recaptchaEnabled']),
             'emailServiceEnabled' => !empty($pending['changes']['emailServiceEnabled']),
             'qrCodeEnabled' => !empty($pending['changes']['qrCodeEnabled']),
-            'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled'])
+            'cloudinaryEnabled' => !empty($pending['changes']['cloudinaryEnabled']),
+            'websocketEnabled' => !empty($pending['changes']['websocketEnabled'])
         ];
 
         $settingsCollection->updateOne(
@@ -599,19 +616,22 @@ try {
         $emailService = !empty($pending['changes']['emailServiceEnabled']);
         $qrCode = !empty($pending['changes']['qrCodeEnabled']);
         $cloudinary = !empty($pending['changes']['cloudinaryEnabled']);
+        $websocket = !empty($pending['changes']['websocketEnabled']);
 
         $currSec = $settingsDoc['security'] ?? [
             'googleAuthEnabled' => true,
             'recaptchaEnabled' => true,
             'emailServiceEnabled' => true,
             'qrCodeEnabled' => true,
-            'cloudinaryEnabled' => true
+            'cloudinaryEnabled' => true,
+            'websocketEnabled' => true
         ];
         $currGoogle = $currSec['googleAuthEnabled'] ?? true;
         $currRecaptcha = $currSec['recaptchaEnabled'] ?? true;
         $currEmail = $currSec['emailServiceEnabled'] ?? true;
         $currQrCode = $currSec['qrCodeEnabled'] ?? true;
         $currCloudinary = $currSec['cloudinaryEnabled'] ?? true;
+        $currWebsocket = $currSec['websocketEnabled'] ?? true;
 
         $googleChangeText = ($currGoogle ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($googleAuth ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
@@ -627,6 +647,9 @@ try {
 
         $cloudinaryChangeText = ($currCloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
             . ' &rarr; ' . ($cloudinary ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
+
+        $websocketChangeText = ($currWebsocket ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>')
+            . ' &rarr; ' . ($websocket ? '<span style="color:#10b981;font-weight:bold;">Enabled</span>' : '<span style="color:#ef4444;font-weight:bold;">Disabled</span>');
 
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
         $protocol = $isHttps ? "https" : "http";

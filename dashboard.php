@@ -27,6 +27,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
     <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <title><?= $badgeInfo['title'] ?> | BukSU DJS</title>
@@ -1078,6 +1079,30 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                             </p>
                                         </div>
                                     </div>
+
+                                    <!-- Real-Time WebSockets Card (Pusher / Soketi) -->
+                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
+                                                        <i class="fa-solid fa-bolt"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h4 class="font-bold text-xs text-slate-800">Real-Time WebSockets</h4>
+                                                        <span id="websocket-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    </div>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="setting-toggle-websocket" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
+                                                </label>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                                Instantaneous event broadcasting (Pusher/Soketi) for live scoring matrices, judge unlocks, and status changes. Automatically falls back to polling if disabled or unconfigured.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
@@ -2094,7 +2119,7 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
             <!-- Footer -->
             <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                <span class="flex items-center gap-1.5">
+                <span id="tab-live-sync-indicator" class="flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live auto-syncing every 3 seconds
                 </span>
                 <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl transition-all cursor-pointer">

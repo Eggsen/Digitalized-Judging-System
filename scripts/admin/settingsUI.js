@@ -100,6 +100,7 @@ function populateSettingsForm(settings) {
     const emailToggle = document.getElementById('setting-toggle-email');
     const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
     const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
+    const websocketToggle = document.getElementById('setting-toggle-websocket');
 
     if (googleAuthToggle) {
         googleAuthToggle.checked = (security.googleAuthEnabled !== false);
@@ -124,6 +125,11 @@ function populateSettingsForm(settings) {
     if (cloudinaryToggle) {
         cloudinaryToggle.checked = (security.cloudinaryEnabled !== false);
         updateSecurityToggleBadge('cloudinary-status-badge', cloudinaryToggle.checked);
+    }
+
+    if (websocketToggle) {
+        websocketToggle.checked = (security.websocketEnabled !== false);
+        updateSecurityToggleBadge('websocket-status-badge', websocketToggle.checked);
     }
 
     // Update live banner preview & logo previews
@@ -812,6 +818,13 @@ function initSecuritySettings() {
         });
     }
 
+    const websocketToggle = document.getElementById('setting-toggle-websocket');
+    if (websocketToggle) {
+        websocketToggle.addEventListener('change', () => {
+            updateSecurityToggleBadge('websocket-status-badge', websocketToggle.checked);
+        });
+    }
+
     if (applyBtn) {
         applyBtn.addEventListener('click', handleApplySecurityChanges);
     }
@@ -840,6 +853,7 @@ async function handleApplySecurityChanges() {
     const emailToggle = document.getElementById('setting-toggle-email');
     const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
     const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
+    const websocketToggle = document.getElementById('setting-toggle-websocket');
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
 
     const newGoogleAuth = googleAuthToggle ? googleAuthToggle.checked : true;
@@ -847,25 +861,29 @@ async function handleApplySecurityChanges() {
     const newEmail = emailToggle ? emailToggle.checked : true;
     const newQrCode = qrcodeToggle ? qrcodeToggle.checked : true;
     const newCloudinary = cloudinaryToggle ? cloudinaryToggle.checked : true;
+    const newWebsocket = websocketToggle ? websocketToggle.checked : true;
 
     const currSec = cachedSettings?.security || {
         googleAuthEnabled: true,
         recaptchaEnabled: true,
         emailServiceEnabled: true,
         qrCodeEnabled: true,
-        cloudinaryEnabled: true
+        cloudinaryEnabled: true,
+        websocketEnabled: true
     };
     const currGoogle = currSec.googleAuthEnabled !== false;
     const currRecaptcha = currSec.recaptchaEnabled !== false;
     const currEmail = currSec.emailServiceEnabled !== false;
     const currQrCode = currSec.qrCodeEnabled !== false;
     const currCloudinary = currSec.cloudinaryEnabled !== false;
+    const currWebsocket = currSec.websocketEnabled !== false;
 
     if (newGoogleAuth === currGoogle && 
         newRecaptcha === currRecaptcha && 
         newEmail === currEmail && 
         newQrCode === currQrCode && 
-        newCloudinary === currCloudinary) {
+        newCloudinary === currCloudinary &&
+        newWebsocket === currWebsocket) {
         showToast("Notice", "No changes were made to security controls.", "info");
         return;
     }
@@ -880,7 +898,8 @@ async function handleApplySecurityChanges() {
         recaptchaEnabled: newRecaptcha,
         emailServiceEnabled: newEmail,
         qrCodeEnabled: newQrCode,
-        cloudinaryEnabled: newCloudinary
+        cloudinaryEnabled: newCloudinary,
+        websocketEnabled: newWebsocket
     });
 
     if (applyBtn) {
@@ -919,6 +938,7 @@ function applySecurityToggleStates(sec) {
     const eToggle = document.getElementById('setting-toggle-email');
     const qToggle = document.getElementById('setting-toggle-qrcode');
     const cToggle = document.getElementById('setting-toggle-cloudinary');
+    const wToggle = document.getElementById('setting-toggle-websocket');
 
     if (gToggle) {
         gToggle.checked = (sec.googleAuthEnabled !== false);
@@ -939,6 +959,10 @@ function applySecurityToggleStates(sec) {
     if (cToggle) {
         cToggle.checked = (sec.cloudinaryEnabled !== false);
         updateSecurityToggleBadge('cloudinary-status-badge', cToggle.checked);
+    }
+    if (wToggle) {
+        wToggle.checked = (sec.websocketEnabled !== false);
+        updateSecurityToggleBadge('websocket-status-badge', wToggle.checked);
     }
 }
 
@@ -970,9 +994,13 @@ function openSecurityConfirmModal(maskedEmail, diff) {
                 <span>QR Code Generator API:</span>
                 <span class="font-bold">${diff.currQrCode ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newQrCode ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
-            <div class="flex items-center justify-between py-1">
+            <div class="flex items-center justify-between py-1 border-b border-slate-100">
                 <span>Cloudinary Media API:</span>
                 <span class="font-bold">${diff.currCloudinary ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newCloudinary ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
+            </div>
+            <div class="flex items-center justify-between py-1">
+                <span>Real-Time WebSockets:</span>
+                <span class="font-bold">${diff.currWebsocket ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'} &rarr; ${diff.newWebsocket ? '<span class="text-emerald-600">Enabled</span>' : '<span class="text-rose-600">Disabled</span>'}</span>
             </div>
         `;
     }
