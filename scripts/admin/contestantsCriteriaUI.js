@@ -34,6 +34,9 @@ export function initContestantsCriteriaUI() {
     // Form: Create Contestant
     document.getElementById('createContestantForm')?.addEventListener('submit', handleAddContestant);
 
+    // Form: Edit Contestant
+    document.getElementById('editContestantForm')?.addEventListener('submit', handleEditContestantSubmit);
+
     // Entry type radio toggle for contestant form
     document.querySelectorAll('input[name="contestant_entry_type"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -50,6 +53,26 @@ export function initContestantsCriteriaUI() {
                 teamMembersGroup?.classList.add('hidden');
                 if (nameLabel) nameLabel.textContent = 'Full Name / Entry Title';
                 if (nameInput) nameInput.placeholder = 'e.g. John Doe';
+            }
+        });
+    });
+
+    // Entry type radio toggle for edit contestant form
+    document.querySelectorAll('input[name="edit_contestant_entry_type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const isTeam = e.target.value === 'team';
+            const teamMembersGroup = document.getElementById('edit-contestant-team-members-group');
+            const nameLabel = document.getElementById('edit-contestant-name-label');
+            const nameInput = document.getElementById('edit-contestant-name');
+
+            if (isTeam) {
+                teamMembersGroup?.classList.remove('hidden');
+                if (nameLabel) nameLabel.textContent = 'Team / Group Name';
+                if (nameInput) nameInput.placeholder = 'e.g. The Velocity Band or Team Alpha';
+            } else {
+                teamMembersGroup?.classList.add('hidden');
+                if (nameLabel) nameLabel.textContent = 'Contestant Name / Entry Title';
+                if (nameInput) nameInput.placeholder = 'e.g. Juan Dela Cruz';
             }
         });
     });
@@ -133,9 +156,16 @@ export function initContestantsCriteriaUI() {
         });
     });
 
+    document.querySelectorAll('#edit-contestant-modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('edit-contestant-modal')?.classList.add('hidden');
+        });
+    });
+
     // Close button for main manage setup modal: closes setup modal and child modals
     document.querySelectorAll('#manage-event-setup-modal .close-modal-btn').forEach(btn => {
-        if (btn.closest('#adjust-weights-modal') || btn.closest('#criterion-rubric-modal') || btn.closest('#contestant-comments-modal')) {
+        if (btn.closest('#adjust-weights-modal') || btn.closest('#criterion-rubric-modal') || btn.closest('#contestant-comments-modal') || btn.closest('#edit-contestant-modal')) {
             return;
         }
         btn.addEventListener('click', (e) => {
@@ -144,6 +174,7 @@ export function initContestantsCriteriaUI() {
             document.getElementById('adjust-weights-modal')?.classList.add('hidden');
             document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
             document.getElementById('contestant-comments-modal')?.classList.add('hidden');
+            document.getElementById('edit-contestant-modal')?.classList.add('hidden');
         });
     });
 
@@ -154,6 +185,11 @@ export function initContestantsCriteriaUI() {
     const weightsModal = document.getElementById('adjust-weights-modal');
     weightsModal?.addEventListener('click', (e) => {
         if (e.target === weightsModal) weightsModal.classList.add('hidden');
+    });
+
+    const editContestantModal = document.getElementById('edit-contestant-modal');
+    editContestantModal?.addEventListener('click', (e) => {
+        if (e.target === editContestantModal) editContestantModal.classList.add('hidden');
     });
 
     const rubricModal = document.getElementById('criterion-rubric-modal');
@@ -429,37 +465,7 @@ function bindContestantRowActions() {
     document.querySelectorAll('.edit-contestant-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
-            const currentNum = btn.dataset.num;
-            const currentName = btn.dataset.name;
-            const currentDept = btn.dataset.dept;
-            const currentDesc = btn.dataset.desc;
-
-            const newNum = prompt(`Edit Contestant Number for "${currentName}":`, currentNum);
-            if (newNum === null) return;
-            const newName = prompt(`Edit Contestant Name:`, currentName);
-            if (newName === null || !newName.trim()) return;
-            const newDept = prompt(`Edit Department / Organization:`, currentDept);
-            if (newDept === null) return;
-            const newDesc = prompt(`Edit Description / Entry details:`, currentDesc);
-            if (newDesc === null) return;
-
-            (async () => {
-                const res = await editContestant({
-                    id,
-                    contestant_number: parseInt(newNum) || currentNum,
-                    name: newName.trim(),
-                    department_or_org: newDept.trim(),
-                    description: newDesc.trim()
-                });
-
-                if (res.success) {
-                    showToast('Contestant Updated!', 'Contestant details updated successfully.', 'edit');
-                    document.getElementById('manage-event-setup-modal')?.classList.add('hidden');
-                    document.getElementById('refreshEventsBtn')?.click();
-                } else {
-                    showToast(res.message || 'Failed to update contestant.', 'error');
-                }
-            })();
+            openEditContestantModal(id);
         });
     });
 
@@ -482,6 +488,105 @@ function bindContestantRowActions() {
             }
         });
     });
+}
+
+function openEditContestantModal(contestantId) {
+    const modal = document.getElementById('edit-contestant-modal');
+    if (!modal) return;
+
+    const contestant = cachedContestants.find(c => String(c.id) === String(contestantId));
+    if (!contestant) return;
+
+    document.getElementById('edit-contestant-id').value = contestant.id;
+    document.getElementById('edit-contestant-num').value = contestant.contestant_number || '';
+    document.getElementById('edit-contestant-name').value = contestant.name || '';
+    document.getElementById('edit-contestant-dept').value = contestant.department_or_org || contestant.college || '';
+    document.getElementById('edit-contestant-desc').value = contestant.description || '';
+
+    const isTeam = contestant.entry_type === 'team';
+    const radioInd = document.querySelector('input[name="edit_contestant_entry_type"][value="individual"]');
+    const radioTeam = document.querySelector('input[name="edit_contestant_entry_type"][value="team"]');
+    if (isTeam && radioTeam) {
+        radioTeam.checked = true;
+    } else if (radioInd) {
+        radioInd.checked = true;
+    }
+
+    const teamGroup = document.getElementById('edit-contestant-team-members-group');
+    const nameLabel = document.getElementById('edit-contestant-name-label');
+    const nameInput = document.getElementById('edit-contestant-name');
+    const membersInput = document.getElementById('edit-contestant-members');
+
+    if (teamGroup) teamGroup.classList.toggle('hidden', !isTeam);
+    if (nameLabel) nameLabel.textContent = isTeam ? 'Team / Group Name' : 'Contestant Name / Entry Title';
+    if (nameInput) nameInput.placeholder = isTeam ? 'e.g. The Velocity Band or Team Alpha' : 'e.g. Juan Dela Cruz';
+    if (membersInput) membersInput.value = Array.isArray(contestant.team_members) ? contestant.team_members.join(', ') : (contestant.team_members || '');
+
+    document.getElementById('edit-contestant-modal-title').textContent = `Edit Contestant: #${contestant.contestant_number} ${contestant.name}`;
+
+    modal.classList.remove('hidden');
+}
+
+async function handleEditContestantSubmit(e) {
+    if (e) e.preventDefault();
+
+    const id = document.getElementById('edit-contestant-id')?.value;
+    const numInput = document.getElementById('edit-contestant-num');
+    const nameInput = document.getElementById('edit-contestant-name');
+    const deptInput = document.getElementById('edit-contestant-dept');
+    const descInput = document.getElementById('edit-contestant-desc');
+    const membersInput = document.getElementById('edit-contestant-members');
+    const entryTypeRadio = document.querySelector('input[name="edit_contestant_entry_type"]:checked');
+    const btn = document.getElementById('saveEditContestantBtn');
+
+    const contestantNumber = parseInt(numInput?.value);
+    const name = nameInput?.value?.trim();
+    const dept = deptInput?.value?.trim() || '';
+    const desc = descInput?.value?.trim() || '';
+    const entryType = entryTypeRadio?.value || 'individual';
+    const membersRaw = membersInput?.value?.trim() || '';
+
+    if (!id || !contestantNumber || !name) {
+        showToast('Please provide a contestant number and name.', 'warning');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Saving...';
+    }
+
+    const payload = {
+        id,
+        contestant_number: contestantNumber,
+        name: name,
+        department_or_org: dept,
+        college: dept,
+        description: desc,
+        entry_type: entryType
+    };
+
+    if (entryType === 'team') {
+        payload.team_members = membersRaw ? membersRaw.split(/[\r\n,]+/).map(m => m.trim()).filter(Boolean) : [];
+    } else {
+        payload.team_members = [];
+    }
+
+    const res = await editContestant(payload);
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save Changes';
+    }
+
+    if (res.success) {
+        showToast('Contestant Updated!', res.message || `Contestant #${contestantNumber} updated successfully.`, 'edit');
+        document.getElementById('edit-contestant-modal')?.classList.add('hidden');
+        await loadContestantsList();
+        document.getElementById('refreshEventsBtn')?.click();
+    } else {
+        showToast(res.message || 'Failed to update contestant.', 'error');
+    }
 }
 
 async function handleAddContestant(e) {

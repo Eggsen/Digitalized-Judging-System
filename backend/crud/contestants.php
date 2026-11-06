@@ -48,7 +48,8 @@ if ($method === "GET") {
                 'id' => $idStr,
                 'contestant_number' => (int)($doc['contestant_number'] ?? 0),
                 'name' => $doc['name'] ?? '',
-                'department_or_org' => $doc['department_or_org'] ?? '',
+                'department_or_org' => $doc['department_or_org'] ?? $doc['college'] ?? '',
+                'college' => $doc['college'] ?? $doc['department_or_org'] ?? '',
                 'description' => $doc['description'] ?? '',
                 'entry_type' => $doc['entry_type'] ?? 'individual',
                 'team_members' => (array)($doc['team_members'] ?? []),
@@ -94,7 +95,7 @@ if ($method === "POST") {
         $eventId = (int)($data['event_id'] ?? 0);
         $contestantNumber = (int)($data['contestant_number'] ?? 0);
         $name = trim($data['name'] ?? '');
-        $department = trim($data['department_or_org'] ?? '');
+        $department = trim($data['department_or_org'] ?? $data['college'] ?? '');
         $description = trim($data['description'] ?? '');
         $entryType = in_array(strtolower($data['entry_type'] ?? ''), ['team', 'team-based', 'group']) ? 'team' : 'individual';
         $teamMembers = parseTeamMembers($data['team_members'] ?? []);
@@ -124,6 +125,7 @@ if ($method === "POST") {
                 'contestant_number' => $contestantNumber,
                 'name' => $name,
                 'department_or_org' => $department,
+                'college' => $department,
                 'description' => $description,
                 'entry_type' => $entryType,
                 'team_members' => $teamMembers,
@@ -169,7 +171,7 @@ if ($method === "POST") {
         $id = trim($data['id'] ?? '');
         $contestantNumber = (int)($data['contestant_number'] ?? 0);
         $name = trim($data['name'] ?? '');
-        $department = trim($data['department_or_org'] ?? '');
+        $department = trim($data['department_or_org'] ?? $data['college'] ?? '');
         $description = trim($data['description'] ?? '');
 
         if ($id === '' || $name === '' || $contestantNumber <= 0) {
@@ -207,6 +209,7 @@ if ($method === "POST") {
                 'contestant_number' => $contestantNumber,
                 'name' => $name,
                 'department_or_org' => $department,
+                'college' => $department,
                 'description' => $description,
                 'updated_at' => (new DateTime())->format('Y-m-d H:i:s')
             ];

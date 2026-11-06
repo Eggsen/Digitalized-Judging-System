@@ -10,6 +10,7 @@ let judgeScoresMap = {};
 let selectedContestantId = null;
 let activeCriterionId = null;
 let contestantScoresState = {}; // { [contestantId]: { [critId]: { score: number, sub_scores: { [subId]: number } } } }
+let contestantReviewedState = {}; // { [contestantId]: boolean } - tracks if judge clicked "Review & Submit"
 let currentJudgeId = '';
 let currentJudgeUsername = '';
 let currentSettings = {};
@@ -17,6 +18,33 @@ let currentSettings = {};
 function formatScore(val, overridePrecision = null) {
     const p = overridePrecision !== null ? overridePrecision : (parseInt(currentSettings?.judging?.decimalPrecision ?? 2));
     return parseFloat(val || 0).toFixed(p);
+}
+
+function isCriterionComplete(cr, critState) {
+    if (!cr || !critState) return false;
+    if (cr.scoring_type === 'category') {
+        const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
+            ? cr.scoring_categories
+            : [];
+        if (categories.length === 0) {
+            return (critState.score > 0) || Boolean(critState.is_scored);
+        }
+        const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => 
+            critState.sub_scores[k] !== undefined && 
+            critState.sub_scores[k] !== null && 
+            critState.sub_scores[k] !== ''
+        );
+        return scoredCats.length >= categories.length;
+    } else {
+        return (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
+    }
+}
+
+function areAllCriteriaComplete(contestantId = null) {
+    const cid = contestantId || selectedContestantId;
+    if (!cid || criteriaList.length === 0) return false;
+    const contestantScores = contestantScoresState[cid] || {};
+    return criteriaList.every(cr => isCriterionComplete(cr, contestantScores[cr.id]));
 }
 
 const TIER_CONFIG = {
@@ -52,6 +80,14 @@ export function initJudgeUI() {
 
     // Submit Final Score button
     document.getElementById('submitFinalScoreBtn')?.addEventListener('click', () => handleSaveScore('submit'));
+
+    // Wrapper click for locked Submit Final Score button
+    document.getElementById('submitFinalScoreWrapper')?.addEventListener('click', () => {
+        const submitBtn = document.getElementById('submitFinalScoreBtn');
+        if (submitBtn && submitBtn.disabled) {
+            handleLockedSubmitClick();
+        }
+    });
 }
 
 export async function openJudgeScoringModal(eventId, eventName) {
@@ -62,6 +98,7 @@ export async function openJudgeScoringModal(eventId, eventName) {
     selectedContestantId = null;
     activeCriterionId = null;
     contestantScoresState = {};
+    contestantReviewedState = {};
 
     document.getElementById('judge-modal-title').textContent = eventName || `Competition #${currentEventId}`;
     modal.classList.remove('hidden');
@@ -297,7 +334,7 @@ function renderScoringSheet() {
 
     criteriaList.forEach(cr => {
         const critState = contestantScores[cr.id];
-        if (critState && (critState.score > 0 || critState.rating_id || critState.is_scored)) {
+        if (isCriterionComplete(cr, critState)) {
             completedCriteriaCount++;
         }
     });
@@ -406,6 +443,8 @@ function renderScoringSheet() {
         return;
     }
 
+    const allCriteriaScored = areAllCriteriaComplete();
+
     // -------------------------------------------------------------
     // CRITERIA SELECTION CARDS DECK (Bright, High-Contrast Cards)
     // -------------------------------------------------------------
@@ -415,7 +454,14 @@ function renderScoringSheet() {
                 <span class="flex items-center gap-1.5">
                     <i class="fa-solid fa-layer-group text-buksu-navy"></i> Select Criteria to Score
                 </span>
-                <span class="text-slate-500 font-bold text-[11px]">Click any criteria card to score</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500 font-bold text-[11px] hidden sm:inline">Click any criteria card to score</span>
+                    ${allCriteriaScored ? `
+                        <button type="button" id="deckReviewBtn" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                            <i class="fa-solid fa-check"></i> Review &amp; Submit
+                        </button>
+                    ` : ''}
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="criteria-cards-deck">
@@ -536,6 +582,9 @@ function renderScoringSheet() {
         });
     });
 
+    // Bind Deck Review & Submit Button
+    document.getElementById('deckReviewBtn')?.addEventListener('click', handleReviewAndSubmit);
+
     // Bind Unlock Score Edit Button
     document.getElementById('unlockScoreEditBtn')?.addEventListener('click', () => {
         if (scoringBody) {
@@ -586,10 +635,12 @@ function renderActiveRubricSection() {
             renderScoringSheet();
             document.getElementById('gc-active-rubric-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else {
-            // Last criterion: Scroll to Submit button
-            document.getElementById('submitFinalScoreBtn')?.scrollIntoView({ behavior: 'smooth' });
-            showToast('All criteria reviewed! You can now save draft or submit score.', 'info');
+            handleReviewAndSubmit();
         }
+    });
+
+    document.getElementById('gcReviewAndSubmitBtn')?.addEventListener('click', () => {
+        handleReviewAndSubmit();
     });
 }
 
@@ -633,6 +684,17 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
             val = Math.round(val * 10) / 10;
 
             critState.sub_scores[catId] = val;
+
+            // Invalidate reviewed state if scores change after reviewing
+            if (contestantReviewedState[selectedContestantId]) {
+                contestantReviewedState[selectedContestantId] = false;
+                const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+                const scoreEntry = judgeScoresMap[selectedContestantId];
+                const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+                const scoringBody = document.getElementById('judge-scoring-form-body');
+                const isUnlocked = scoringBody?.dataset.unlocked === "true";
+                toggleActionButtons(isPeriodActive && (!isSubmitted || isUnlocked));
+            }
 
             // Recalculate total score as sum of sub_scores
             let sum = 0;
@@ -715,6 +777,17 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
             critState.rating_id = ratingId;
             critState.rating_name = ratingName;
             critState.is_scored = true;
+
+            // Invalidate reviewed state if scores change after reviewing
+            if (contestantReviewedState[selectedContestantId]) {
+                contestantReviewedState[selectedContestantId] = false;
+                const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+                const scoreEntry = judgeScoresMap[selectedContestantId];
+                const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+                const scoringBody = document.getElementById('judge-scoring-form-body');
+                const isUnlocked = scoringBody?.dataset.unlocked === "true";
+                toggleActionButtons(isPeriodActive && (!isSubmitted || isUnlocked));
+            }
 
             renderActiveRubricSection();
             updateLiveDisplays();
@@ -956,6 +1029,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
     // Navigation Controls within the Card
     const hasPrev = critIndex > 0;
     const hasNext = critIndex < criteriaList.length - 1;
+    const allCriteriaScored = areAllCriteriaComplete();
 
     cardHtml += `
             <!-- Card Footer Navigation -->
@@ -973,14 +1047,20 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                     ${isComplete ? `<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400 me-1"></i> Current score: ${critState.score.toFixed(1)} / ${maxPts} pts` : 'No score entered for this criterion'}
                 </span>
 
-                <button type="button" id="gcNextCriterionBtn" 
-                    class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all ${
-                        hasNext 
-                            ? 'bg-buksu-navy hover:bg-buksu-navy-light text-white cursor-pointer shadow-xs' 
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs'
-                    }">
-                    ${hasNext ? 'Next Criterion <i class="fa-solid fa-arrow-right"></i>' : 'Review & Submit <i class="fa-solid fa-check"></i>'}
-                </button>
+                <div class="flex items-center gap-2">
+                    ${hasNext ? `
+                        <button type="button" id="gcNextCriterionBtn" 
+                            class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all bg-buksu-navy hover:bg-buksu-navy-light text-white cursor-pointer shadow-xs">
+                            Next Criterion <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    ` : ''}
+                    ${(!hasNext || allCriteriaScored) ? `
+                        <button type="button" id="gcReviewAndSubmitBtn" 
+                            class="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs">
+                            Review &amp; Submit <i class="fa-solid fa-check"></i>
+                        </button>
+                    ` : ''}
+                </div>
             </div>
         </div>
     `;
@@ -1093,7 +1173,7 @@ function updateLiveDisplays() {
     let completedCriteriaCount = 0;
     criteriaList.forEach(cr => {
         const cs = contestantScores[cr.id];
-        if (cs && (cs.score > 0 || cs.rating_id || cs.is_scored)) {
+        if (isCriterionComplete(cr, cs)) {
             completedCriteriaCount++;
         }
     });
@@ -1104,12 +1184,177 @@ function updateLiveDisplays() {
     }
 }
 
-function toggleActionButtons(enabled) {
+function toggleActionButtons(canEdit) {
     const draftBtn = document.getElementById('saveDraftScoreBtn');
     const submitBtn = document.getElementById('submitFinalScoreBtn');
+    const lockNotice = document.getElementById('submitFinalScoreLockNotice');
 
-    if (draftBtn) draftBtn.disabled = !enabled;
-    if (submitBtn) submitBtn.disabled = !enabled;
+    if (draftBtn) draftBtn.disabled = !canEdit;
+
+    const isReviewed = Boolean(selectedContestantId && contestantReviewedState[selectedContestantId]);
+    const canSubmitFinal = Boolean(canEdit && isReviewed);
+
+    if (submitBtn) {
+        submitBtn.disabled = !canSubmitFinal;
+        if (!canSubmitFinal) {
+            submitBtn.className = "px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 font-extrabold text-xs rounded-xl shadow-none cursor-not-allowed transition-all flex items-center gap-1.5 disabled:pointer-events-none";
+            submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Submit Final Score';
+            submitBtn.setAttribute('title', canEdit ? 'Click "Review & Submit" on the rubric to unlock final score submission' : 'Judging is locked or not active');
+        } else {
+            submitBtn.className = "px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5";
+            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Final Score';
+            submitBtn.setAttribute('title', 'Submit your final score to the tabulator');
+        }
+    }
+
+    if (lockNotice) {
+        if (!canEdit) {
+            lockNotice.innerHTML = '';
+            lockNotice.classList.add('hidden');
+        } else if (!isReviewed) {
+            lockNotice.innerHTML = '<i class="fa-solid fa-lock text-amber-500 text-xs"></i> <span class="text-slate-500 dark:text-slate-400">Locked until <strong>Review &amp; Submit</strong></span>';
+            lockNotice.classList.remove('hidden');
+        } else {
+            lockNotice.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span class="text-emerald-700 dark:text-emerald-400 font-bold">Reviewed &amp; Ready to Submit</span>';
+            lockNotice.classList.remove('hidden');
+        }
+    }
+}
+
+function handleReviewAndSubmit() {
+    if (!currentEventId || !selectedContestantId) {
+        showToast('Please select a contestant first.', 'warning');
+        return;
+    }
+
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+    const scoreEntry = judgeScoresMap[selectedContestantId];
+    const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+    const isUnlocked = scoringBody?.dataset.unlocked === "true";
+
+    if (!isPeriodActive) {
+        showToast('Judging Not Active', 'Scoring is currently locked because judging is not in progress.', 'warning');
+        return;
+    }
+
+    if (isSubmitted && !isUnlocked) {
+        showToast('Score Already Submitted', 'Evaluation has been submitted and is locked.', 'info');
+        return;
+    }
+
+    const contestantScores = contestantScoresState[selectedContestantId] || {};
+    let firstIncompleteCrit = null;
+
+    for (const cr of criteriaList) {
+        const critState = contestantScores[cr.id] || { score: 0, sub_scores: {} };
+        if (!isCriterionComplete(cr, critState) && !firstIncompleteCrit) {
+            firstIncompleteCrit = cr;
+        }
+    }
+
+    if (firstIncompleteCrit) {
+        contestantReviewedState[selectedContestantId] = false;
+        const canSubmit = isPeriodActive && (!isSubmitted || isUnlocked);
+        toggleActionButtons(canSubmit);
+
+        const isCategory = (firstIncompleteCrit.scoring_type === 'category');
+        const actionPrompt = isCategory ? 'score all categories' : 'select a rating';
+        showToast(`Incomplete Scoring`, `Please ${actionPrompt} for "${firstIncompleteCrit.title}" before reviewing and submitting.`, 'warning');
+        activeCriterionId = firstIncompleteCrit.id;
+        renderScoringSheet();
+        document.getElementById('gc-active-rubric-card')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+
+    // All criteria complete! Mark as reviewed
+    contestantReviewedState[selectedContestantId] = true;
+    const canSubmit = isPeriodActive && (!isSubmitted || isUnlocked);
+    toggleActionButtons(canSubmit);
+
+    // Scroll to submit button and highlight it
+    const submitBtn = document.getElementById('submitFinalScoreBtn');
+    submitBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (submitBtn) {
+        submitBtn.classList.add('ring-4', 'ring-emerald-400', 'ring-offset-2');
+        setTimeout(() => {
+            submitBtn.classList.remove('ring-4', 'ring-emerald-400', 'ring-offset-2');
+        }, 2200);
+    }
+
+    showToast('All criteria reviewed!', 'The "Submit Final Score" button is now unlocked. You can now submit your score.', 'success');
+}
+
+function handleLockedSubmitClick() {
+    if (!selectedContestantId) {
+        showToast('Please select a contestant first.', 'info');
+        return;
+    }
+
+    const scoringBody = document.getElementById('judge-scoring-form-body');
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
+    const scoreEntry = judgeScoresMap[selectedContestantId];
+    const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
+    const isUnlocked = scoringBody?.dataset.unlocked === "true";
+
+    if (!isPeriodActive) {
+        showToast('Judging Not Active', 'Scoring is currently locked because judging is not in progress.', 'warning');
+        return;
+    }
+
+    if (isSubmitted && !isUnlocked) {
+        showToast('Score Already Submitted', 'This evaluation has already been submitted and is locked.', 'info');
+        return;
+    }
+
+    const isReviewed = Boolean(contestantReviewedState[selectedContestantId]);
+    if (!isReviewed) {
+        showToast('Submission Locked', 'You must click "Review & Submit" before you can submit your final score.', 'warning');
+        scrollToReviewButton();
+    }
+}
+
+function scrollToReviewButton() {
+    const contestantScores = contestantScoresState[selectedContestantId] || {};
+    let firstIncompleteCrit = null;
+
+    for (const cr of criteriaList) {
+        const critState = contestantScores[cr.id] || { score: 0, sub_scores: {} };
+        if (!isCriterionComplete(cr, critState) && !firstIncompleteCrit) {
+            firstIncompleteCrit = cr;
+        }
+    }
+
+    if (firstIncompleteCrit) {
+        activeCriterionId = firstIncompleteCrit.id;
+        renderScoringSheet();
+        document.getElementById('gc-active-rubric-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const card = document.getElementById('gc-active-rubric-card');
+        if (card) {
+            card.classList.add('ring-4', 'ring-amber-400');
+            setTimeout(() => card.classList.remove('ring-4', 'ring-amber-400'), 2000);
+        }
+        return;
+    }
+
+    // All complete: navigate to last criterion if not on it
+    const lastCrit = criteriaList[criteriaList.length - 1];
+    if (lastCrit && String(activeCriterionId) !== String(lastCrit.id)) {
+        activeCriterionId = lastCrit.id;
+        renderScoringSheet();
+    }
+
+    setTimeout(() => {
+        const reviewBtn = document.getElementById('gcReviewAndSubmitBtn') || document.getElementById('gcNextCriterionBtn');
+        if (reviewBtn) {
+            reviewBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            reviewBtn.classList.add('ring-4', 'ring-amber-400', 'animate-pulse');
+            setTimeout(() => {
+                reviewBtn.classList.remove('ring-4', 'ring-amber-400', 'animate-pulse');
+            }, 2500);
+        }
+    }, 100);
 }
 
 async function handleSaveScore(action) {
@@ -1118,24 +1363,21 @@ async function handleSaveScore(action) {
         return;
     }
 
+    if (action === 'submit') {
+        if (!contestantReviewedState[selectedContestantId]) {
+            showToast('Submission Locked', 'Please review all criteria and click "Review & Submit" before submitting final scores.', 'warning');
+            scrollToReviewButton();
+            return;
+        }
+    }
+
     const contestantScores = contestantScoresState[selectedContestantId] || {};
     const criteriaScoresPayload = [];
     let firstIncompleteCrit = null;
 
     for (const cr of criteriaList) {
         const critState = contestantScores[cr.id] || { score: 0, sub_scores: {} };
-        const isCategory = (cr.scoring_type === 'category');
-        let isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
-
-        if (isCategory && action === 'submit') {
-            const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
-                ? cr.scoring_categories
-                : [];
-            const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '');
-            if (scoredCats.length < categories.length) {
-                isComplete = false;
-            }
-        }
+        const isComplete = isCriterionComplete(cr, critState);
 
         if (!isComplete && !firstIncompleteCrit) {
             firstIncompleteCrit = cr;
@@ -1193,6 +1435,10 @@ async function handleSaveScore(action) {
             status: action === 'submit' ? 'submitted' : 'draft',
             submitted_at: new Date().toISOString()
         };
+
+        if (action === 'submit') {
+            contestantReviewedState[selectedContestantId] = false;
+        }
 
         const scoringBody = document.getElementById('judge-scoring-form-body');
         if (scoringBody) delete scoringBody.dataset.unlocked;

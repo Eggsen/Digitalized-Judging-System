@@ -938,6 +938,7 @@ function initCommonModalEvents() {
         'view-event-modal',
         'manage-event-setup-modal',
         'adjust-weights-modal',
+        'edit-contestant-modal',
         'judge-scoring-modal',
         'tabulation-board-modal'
     ];
@@ -954,6 +955,7 @@ function initCommonModalEvents() {
                     document.getElementById('adjust-weights-modal')?.classList.add('hidden');
                     document.getElementById('criterion-rubric-modal')?.classList.add('hidden');
                     document.getElementById('contestant-comments-modal')?.classList.add('hidden');
+                    document.getElementById('edit-contestant-modal')?.classList.add('hidden');
                 }
             }
         });

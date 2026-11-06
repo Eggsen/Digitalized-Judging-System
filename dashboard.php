@@ -1796,8 +1796,8 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                                 <textarea id="new-contestant-members" rows="2" placeholder="e.g. Alice (Vocals), Bob (Keyboardist)&#10;or leave blank to register team name only" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy"></textarea>
                             </div>
                             <div>
-                                <label class="block font-semibold text-slate-700 mb-1">Department / Organization</label>
-                                <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
+                                <label class="block font-semibold text-slate-700 mb-1">College / Department / Organization</label>
+                                <input type="text" id="new-contestant-dept" placeholder="e.g. College of Education, COT, CAS, CON" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-buksu-navy">
                             </div>
                             <div>
                                 <label class="block font-semibold text-slate-700 mb-1">Description / Entry Info</label>
@@ -2069,6 +2069,80 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
         </div>
     </div>
 
+    <!-- MODAL: EDIT CONTESTANT -->
+    <div id="edit-contestant-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white dark:bg-slate-850 rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 dark:border-slate-700 animate-fade-in flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold text-sm shadow-xs border border-buksu-gold/30">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </div>
+                    <div>
+                        <h3 id="edit-contestant-modal-title" class="font-extrabold text-slate-800 dark:text-slate-100 text-sm leading-tight">Edit Contestant Information</h3>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Update contestant number, full name, college/department, and details</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl cursor-pointer p-1 leading-none">&times;</button>
+            </div>
+
+            <form id="editContestantForm" onsubmit="return false;" class="space-y-3.5 text-xs">
+                <input type="hidden" id="edit-contestant-id" value="">
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-1">
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Contestant #</label>
+                        <input type="number" id="edit-contestant-num" min="1" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-buksu-navy dark:focus:ring-buksu-gold">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Entry Type</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-1.5 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
+                                <input type="radio" name="edit_contestant_entry_type" value="individual" class="text-buksu-navy focus:ring-buksu-navy">
+                                <span class="font-bold text-xs text-slate-700 dark:text-slate-300"><i class="fa-solid fa-user me-1 text-slate-400"></i> Individual</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
+                                <input type="radio" name="edit_contestant_entry_type" value="team" class="text-buksu-navy focus:ring-buksu-navy">
+                                <span class="font-bold text-xs text-slate-700 dark:text-slate-300"><i class="fa-solid fa-users-line me-1 text-slate-400"></i> Team</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label id="edit-contestant-name-label" class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Contestant Name / Entry Title</label>
+                    <input type="text" id="edit-contestant-name" required placeholder="e.g. Juan Dela Cruz" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-buksu-navy dark:focus:ring-buksu-gold">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">College / Department / Organization</label>
+                    <input type="text" id="edit-contestant-dept" placeholder="e.g. College of Education, COT, CAS, CON" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-buksu-navy dark:focus:ring-buksu-gold">
+                </div>
+
+                <div id="edit-contestant-team-members-group" class="hidden space-y-1">
+                    <div class="flex items-center justify-between">
+                        <label class="font-semibold text-slate-700 dark:text-slate-300">Team Members <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <span class="text-[10px] text-slate-400">Comma or line-separated</span>
+                    </div>
+                    <textarea id="edit-contestant-members" rows="2" placeholder="e.g. Alice (Vocals), Bob (Keyboardist)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-buksu-navy dark:focus:ring-buksu-gold"></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Description / Entry Info <span class="text-slate-400 font-normal">(Optional)</span></label>
+                    <textarea id="edit-contestant-desc" rows="2" placeholder="Brief notes or piece title..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-buksu-navy dark:focus:ring-buksu-gold"></textarea>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end gap-2">
+                    <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl cursor-pointer transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="saveEditContestantBtn" class="px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: CONTESTANT CITATIONS & TEAM COMMENTS -->
     <div id="contestant-comments-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] hidden">
         <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-7 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
@@ -2319,17 +2393,20 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
-                        <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl cursor-pointer">
+                    <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between flex-wrap gap-2">
+                        <button type="button" class="close-modal-btn px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs rounded-xl cursor-pointer transition-colors">
                             Close
                         </button>
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="saveDraftScoreBtn" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5" disabled>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <span id="submitFinalScoreLockNotice" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden flex items-center gap-1"></span>
+                            <button type="button" id="saveDraftScoreBtn" class="px-4 py-2 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                                 <i class="fa-solid fa-pen-ruler"></i> Save as Draft
                             </button>
-                            <button type="button" id="submitFinalScoreBtn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5" disabled>
-                                <i class="fa-solid fa-paper-plane"></i> Submit Final Score
-                            </button>
+                            <div id="submitFinalScoreWrapper" class="inline-block relative">
+                                <button type="button" id="submitFinalScoreBtn" class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 font-extrabold text-xs rounded-xl shadow-none cursor-not-allowed transition-all flex items-center gap-1.5 disabled:pointer-events-none" disabled>
+                                    <i class="fa-solid fa-lock"></i> Submit Final Score
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
