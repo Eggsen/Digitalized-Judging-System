@@ -133,7 +133,7 @@ export function resetPreferences() {
  */
 async function savePreferencesToServer(prefs) {
     try {
-        await fetch('/backend/user/preferences.php', {
+        await fetch('/api/users/preferences', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -152,7 +152,7 @@ async function savePreferencesToServer(prefs) {
  */
 export async function fetchUserPreferencesFromServer() {
     try {
-        const res = await fetch('/backend/user/preferences.php');
+        const res = await fetch('/api/users/preferences');
         if (!res.ok) return;
         const data = await res.json();
         if (data.success && data.preferences) {

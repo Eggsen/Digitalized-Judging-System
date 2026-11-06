@@ -1,5 +1,5 @@
 import { fetchNotifications, respondToInvitation, markNotificationsRead } from "./notificationAPI.js";
-import { showToast } from "../utils/uiUtils.js";
+import { showToast, formatDateTime } from "../utils/uiUtils.js";
 import { loadAdminEvents } from "../admin/eventsUI.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -91,7 +91,7 @@ export async function loadNotifications() {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-1 mb-0.5">
                         <h4 class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(n.title)}</h4>
-                        <span class="text-[10px] text-slate-400 font-normal shrink-0">${n.created_at}</span>
+                        <span class="text-[10px] text-slate-400 font-normal shrink-0">${formatDateTime(n.created_at)}</span>
                     </div>
                     <p class="text-[11px] text-slate-600 leading-snug font-normal">${escapeHtml(n.message)}</p>
 

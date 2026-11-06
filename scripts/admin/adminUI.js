@@ -1,5 +1,5 @@
 import { createAccount, listAccounts, updatePermissions, updateRole, revokeInvitation, revokeUserSessions, deleteAccount } from "/scripts/admin/adminAPI.js";
-import { showNotice } from "/scripts/utils/index.js";
+import { showNotice, formatDateTime } from "/scripts/utils/index.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
 import { loadAdminEvents } from "/scripts/admin/eventsUI.js";
@@ -32,8 +32,8 @@ async function loadAccounts() {
             <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
                 <i class="fa-solid fa-user text-slate-400 dark:text-slate-500 me-1.5"></i>${account.first_name ? `${account.first_name} ${account.last_name}` : (account.username || account.name || 'Pending Activation')}
                 ${account.email ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
-                ${account.created_at ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
-                ${account.activated_at ? `<div class="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
+                ${account.created_at ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${formatDateTime(account.created_at)}</div>` : ''}
+                ${account.activated_at ? `<div class="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${formatDateTime(account.activated_at)}</div>` : ''}
             </td>
             <td class="px-4 py-3 text-center align-middle">
                 ${account.role === 'admin' 

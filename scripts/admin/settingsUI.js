@@ -9,7 +9,7 @@ import {
     resendSecurityCode,
     saveApiKeys
 } from "/scripts/admin/settingsAPI.js";
-import { showToast } from "/scripts/utils/uiUtils.js";
+import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
 const userRole = document.body.dataset.role;
 
@@ -94,7 +94,7 @@ function populateSettingsForm(settings) {
     // Backup timestamp
     const lastBackupEl = document.getElementById('setting-last-backup-badge');
     if (lastBackupEl) {
-        lastBackupEl.textContent = backup.lastBackupAt ? `Last Backup: ${backup.lastBackupAt}` : 'No backups recorded yet';
+        lastBackupEl.textContent = backup.lastBackupAt ? `Last Backup: ${formatDateTime(backup.lastBackupAt)}` : 'No backups recorded yet';
     }
 
     // Security controls
@@ -197,7 +197,7 @@ function populateDiagnostics(diag) {
     setTxt('diag-users-count', diag.counts?.users ?? 0);
     setTxt('diag-logs-count', diag.counts?.logs ?? 0);
     setTxt('diag-server-time', diag.serverTime || new Date().toLocaleString());
-    setTxt('diag-php-version', `PHP ${diag.phpVersion || '8.2'}`);
+    setTxt('diag-php-version', diag.nodeVersion ? `Node.js ${diag.nodeVersion}` : 'Node.js Runtime');
     setTxt('diag-system-version', diag.systemVersion || 'v2.4');
 }
 
@@ -365,7 +365,7 @@ function initLogoUploader() {
         formData.append('logo_file', file);
 
         try {
-            const resp = await fetch('/backend/crud/upload_logo.php', {
+            const resp = await fetch('/api/settings/upload-logo', {
                 method: 'POST',
                 body: formData
             });
@@ -410,7 +410,7 @@ function initLogoUploader() {
         formData.append('action', 'reset_default_logo');
 
         try {
-            const resp = await fetch('/backend/crud/upload_logo.php', {
+            const resp = await fetch('/api/settings/upload-logo', {
                 method: 'POST',
                 body: formData
             });
@@ -490,7 +490,7 @@ export async function loadLogoLibrary() {
     `;
 
     try {
-        const resp = await fetch('/backend/crud/logo_library.php', {
+        const resp = await fetch('/api/settings/logo-library', {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
         });
@@ -621,7 +621,7 @@ async function selectLogoFromLibrary(url, btn) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-buksu-gold"></i> Selecting...';
 
     try {
-        const resp = await fetch('/backend/crud/logo_library.php', {
+        const resp = await fetch('/api/settings/logo-library', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'select_logo', url: url })
@@ -659,7 +659,7 @@ async function deleteLogoFromLibrary(id, filename, btn) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
     try {
-        const resp = await fetch('/backend/crud/logo_library.php', {
+        const resp = await fetch('/api/settings/logo-library', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'delete_logo', id: id })
@@ -717,7 +717,7 @@ function initBackupAndMaintenance() {
 
             const lastBackupEl = document.getElementById('setting-last-backup-badge');
             if (lastBackupEl && res.lastBackupAt) {
-                lastBackupEl.textContent = `Last Backup: ${res.lastBackupAt}`;
+                lastBackupEl.textContent = `Last Backup: ${formatDateTime(res.lastBackupAt)}`;
             }
         } else {
             showToast("Backup Failed", res.message || "Could not generate backup.", "error");

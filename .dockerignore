@@ -3,8 +3,5 @@
 .env
 .env.*
 node_modules
-vendor
-backend/logs/*.log
 scratch
-*.md
-
+*.log

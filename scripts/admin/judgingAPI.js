@@ -7,7 +7,7 @@
 // -------------------------------------------------------------
 export async function getContestants(eventId) {
     try {
-        const res = await fetch(`/backend/crud/contestants.php?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
+        const res = await fetch(`/api/contestants?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
         return await res.json();
     } catch (e) {
         console.error("getContestants error: ", e);
@@ -17,10 +17,10 @@ export async function getContestants(eventId) {
 
 export async function createContestant(data) {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
+        const res = await fetch("/api/contestants", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "create", ...data }),
+            body: JSON.stringify(data),
             credentials: "include"
         });
         return await res.json();
@@ -32,10 +32,11 @@ export async function createContestant(data) {
 
 export async function editContestant(data) {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
-            method: "POST",
+        const id = data.id || data.contestant_id;
+        const res = await fetch(`/api/contestants/${encodeURIComponent(id)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "edit", ...data }),
+            body: JSON.stringify(data),
             credentials: "include"
         });
         return await res.json();
@@ -47,10 +48,9 @@ export async function editContestant(data) {
 
 export async function deleteContestant(id) {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
-            method: "POST",
+        const res = await fetch(`/api/contestants/${encodeURIComponent(id)}`, {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", id }),
             credentials: "include"
         });
         return await res.json();
@@ -62,13 +62,11 @@ export async function deleteContestant(id) {
 
 export async function addContestantComment(contestantId, commentText, memberName = '', awardTitle = '') {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
-            method: "POST",
+        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
-                action: "add_comment", 
-                contestant_id: contestantId, 
-                text: commentText,
+                details: commentText,
                 member_name: memberName,
                 award_title: awardTitle
             }),
@@ -83,10 +81,10 @@ export async function addContestantComment(contestantId, commentText, memberName
 
 export async function deleteContestantComment(contestantId, commentId) {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
-            method: "POST",
+        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete_comment", contestant_id: contestantId, comment_id: commentId }),
+            body: JSON.stringify({ details: '' }),
             credentials: "include"
         });
         return await res.json();
@@ -98,10 +96,10 @@ export async function deleteContestantComment(contestantId, commentId) {
 
 export async function updateTeamMembers(contestantId, teamMembers) {
     try {
-        const res = await fetch("/backend/crud/contestants.php", {
-            method: "POST",
+        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "update_members", contestant_id: contestantId, team_members: teamMembers }),
+            body: JSON.stringify({ representation: teamMembers }),
             credentials: "include"
         });
         return await res.json();
@@ -116,7 +114,7 @@ export async function updateTeamMembers(contestantId, teamMembers) {
 // -------------------------------------------------------------
 export async function getCriteria(eventId) {
     try {
-        const res = await fetch(`/backend/crud/criteria.php?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
+        const res = await fetch(`/api/criteria?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
         return await res.json();
     } catch (e) {
         console.error("getCriteria error: ", e);
@@ -126,10 +124,10 @@ export async function getCriteria(eventId) {
 
 export async function createCriterion(data) {
     try {
-        const res = await fetch("/backend/crud/criteria.php", {
+        const res = await fetch("/api/criteria", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "create", ...data }),
+            body: JSON.stringify(data),
             credentials: "include"
         });
         return await res.json();
@@ -141,10 +139,11 @@ export async function createCriterion(data) {
 
 export async function editCriterion(data) {
     try {
-        const res = await fetch("/backend/crud/criteria.php", {
-            method: "POST",
+        const id = data.id || data.criterion_id;
+        const res = await fetch(`/api/criteria/${encodeURIComponent(id)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "edit", ...data }),
+            body: JSON.stringify(data),
             credentials: "include"
         });
         return await res.json();
@@ -156,10 +155,10 @@ export async function editCriterion(data) {
 
 export async function updateCriteriaWeights(eventId, weights) {
     try {
-        const res = await fetch("/backend/crud/criteria.php", {
+        const res = await fetch("/api/criteria", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "update_weights", event_id: eventId, weights }),
+            body: JSON.stringify({ event_id: eventId, weights }),
             credentials: "include"
         });
         return await res.json();
@@ -171,10 +170,9 @@ export async function updateCriteriaWeights(eventId, weights) {
 
 export async function deleteCriterion(id) {
     try {
-        const res = await fetch("/backend/crud/criteria.php", {
-            method: "POST",
+        const res = await fetch(`/api/criteria/${encodeURIComponent(id)}`, {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", id }),
             credentials: "include"
         });
         return await res.json();
@@ -189,10 +187,10 @@ export async function deleteCriterion(id) {
 // -------------------------------------------------------------
 export async function toggleJudgingPeriod(eventId, action) {
     try {
-        const res = await fetch("/backend/crud/judging_period.php", {
-            method: "POST",
+        const res = await fetch(`/api/events/${encodeURIComponent(eventId)}/judging-period`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ event_id: eventId, action }),
+            body: JSON.stringify({ judging_status: action }),
             credentials: "include"
         });
         return await res.json();
@@ -207,7 +205,7 @@ export async function toggleJudgingPeriod(eventId, action) {
 // -------------------------------------------------------------
 export async function getScores(eventId) {
     try {
-        const res = await fetch(`/backend/crud/scores.php?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
+        const res = await fetch(`/api/scores/matrix?event_id=${encodeURIComponent(eventId)}`, { credentials: "include" });
         return await res.json();
     } catch (e) {
         console.error("getScores error: ", e);
@@ -217,7 +215,7 @@ export async function getScores(eventId) {
 
 export async function submitScore(data) {
     try {
-        const res = await fetch("/backend/crud/scores.php", {
+        const res = await fetch("/api/scores/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -232,14 +230,14 @@ export async function submitScore(data) {
 
 export async function unlockJudgeScore(eventId, contestantId, judgeId) {
     try {
-        const res = await fetch("/backend/crud/scores.php", {
+        const res = await fetch("/api/scores/approve-unlock", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                action: "unlock_score",
-                event_id: parseInt(eventId),
+                event_id: String(eventId),
                 contestant_id: contestantId,
-                judge_id: judgeId
+                judge_id: judgeId,
+                approve: true
             }),
             credentials: "include"
         });
@@ -252,12 +250,11 @@ export async function unlockJudgeScore(eventId, contestantId, judgeId) {
 
 export async function verifyJudgeScore(eventId, contestantId, judgeId) {
     try {
-        const res = await fetch("/backend/crud/scores.php", {
+        const res = await fetch("/api/scores/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                action: "verify_score",
-                event_id: parseInt(eventId),
+                event_id: String(eventId),
                 contestant_id: contestantId,
                 judge_id: judgeId
             }),
@@ -272,12 +269,11 @@ export async function verifyJudgeScore(eventId, contestantId, judgeId) {
 
 export async function unverifyJudgeScore(eventId, contestantId, judgeId) {
     try {
-        const res = await fetch("/backend/crud/scores.php", {
+        const res = await fetch("/api/scores/unverify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                action: "unverify_score",
-                event_id: parseInt(eventId),
+                event_id: String(eventId),
                 contestant_id: contestantId,
                 judge_id: judgeId
             }),
@@ -292,12 +288,12 @@ export async function unverifyJudgeScore(eventId, contestantId, judgeId) {
 
 export async function verifyAllJudgeScores(eventId) {
     try {
-        const res = await fetch("/backend/crud/scores.php", {
+        const res = await fetch("/api/scores/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                action: "verify_all_scores",
-                event_id: parseInt(eventId)
+                event_id: String(eventId),
+                verify_all: true
             }),
             credentials: "include"
         });

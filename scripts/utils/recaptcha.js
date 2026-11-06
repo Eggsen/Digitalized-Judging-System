@@ -4,17 +4,28 @@
 
 const widgetMap = {};
 const renderingInProgress = {};
+const DEFAULT_SITE_KEY = '6Ld6WQ8uAAAAAJCMsoqiP9mQUlL3m7ekeFPzXBzR';
 
 /**
  * Initialize / render the primary login widget if its container exists.
  */
 export function initLoginRecaptcha() {
+    if (window.RECAPTCHA_ENABLED === false) {
+        const container = document.getElementById('login-recaptcha');
+        if (container) container.innerHTML = '';
+        const wrapper = document.getElementById('login-recaptcha-wrapper') || container?.parentElement;
+        if (wrapper) {
+            wrapper.classList.add('hidden');
+            wrapper.style.display = 'none';
+        }
+        return;
+    }
     if (document.getElementById('login-recaptcha')) {
         renderRecaptchaWidget('login-recaptcha');
     }
 }
 
-// Global hook for inline callback in login.php
+// Global hook for inline callback in login.html
 window.__initLoginRecaptcha = initLoginRecaptcha;
 
 // Global callback invoked by Google reCAPTCHA API script when ready
@@ -29,6 +40,9 @@ window.onRecaptchaApiReady = function () {
         }
     }
     initLoginRecaptcha();
+    if (document.getElementById('reset-recaptcha') && !document.getElementById('forgot-password-card')?.classList.contains('hidden')) {
+        renderRecaptchaWidget('reset-recaptcha');
+    }
 };
 
 /**
@@ -38,17 +52,29 @@ window.onRecaptchaApiReady = function () {
  */
 export function renderRecaptchaWidget(containerId) {
     if (window.RECAPTCHA_ENABLED === false) {
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = '';
+        const wrapper = document.getElementById(containerId + '-wrapper') || container?.parentElement;
+        if (wrapper) {
+            wrapper.classList.add('hidden');
+            wrapper.style.display = 'none';
+        }
         return;
     }
-    const siteKey = window.RECAPTCHA_SITE_KEY;
+    const siteKey = window.RECAPTCHA_SITE_KEY || DEFAULT_SITE_KEY;
     if (!siteKey) {
+        if (!window.__recaptchaKeyRetries) window.__recaptchaKeyRetries = {};
+        window.__recaptchaKeyRetries[containerId] = (window.__recaptchaKeyRetries[containerId] || 0) + 1;
+        if (window.__recaptchaKeyRetries[containerId] <= 30) {
+            setTimeout(() => renderRecaptchaWidget(containerId), 100);
+        }
         return;
     }
 
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Check if widget for this container has already been rendered
+    // Check if widget for this container has already been rendered with child elements
     if (widgetMap[containerId] !== undefined && container.children.length > 0) {
         return;
     }
@@ -58,7 +84,7 @@ export function renderRecaptchaWidget(containerId) {
     }
 
     if (!window.grecaptcha || typeof window.grecaptcha.render !== 'function') {
-        // If API is not yet loaded, queue retry shortly
+        // If Google reCAPTCHA script is not yet loaded, queue retry shortly
         setTimeout(() => renderRecaptchaWidget(containerId), 150);
         return;
     }
@@ -74,7 +100,7 @@ export function renderRecaptchaWidget(containerId) {
             widgetMap[containerId] = widgetId;
         }
     } catch (err) {
-        console.error(`reCAPTCHA render error for container "${containerId}":`, err);
+        console.warn(`reCAPTCHA render attempt for "${containerId}":`, err.message);
     } finally {
         delete renderingInProgress[containerId];
     }
@@ -96,7 +122,6 @@ export function getRecaptchaResponse(containerId) {
             return "";
         }
     }
-    // Fallback if widgetMap entry is missing: try default widget response
     try {
         return window.grecaptcha.getResponse() || "";
     } catch (err) {
@@ -119,7 +144,7 @@ export function resetRecaptchaWidget(containerId) {
             window.grecaptcha.reset();
         }
     } catch (err) {
-        console.warn(`reCAPTCHA reset failed for "${containerId}":`, err);
+        console.warn(`reCAPTCHA reset failed for "${containerId}":`, err.message);
     }
 }
 
@@ -131,4 +156,3 @@ if (document.readyState === 'loading') {
 } else {
     initLoginRecaptcha();
 }
-

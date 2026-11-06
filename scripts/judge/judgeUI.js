@@ -1,5 +1,5 @@
 import { getScores, submitScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
-import { showToast } from "/scripts/utils/uiUtils.js";
+import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel } from "/scripts/utils/websocket.js";
 
 let currentEventId = null;
@@ -1950,7 +1950,7 @@ function renderJudgeAssignedAwards(contestant, isInputsDisabled) {
                         ${c.comment && c.comment !== c.award_title && c.comment !== c.text ? `
                             <p class="text-[11px] text-slate-500 dark:text-slate-400 italic font-normal line-clamp-1">${escapeHtml(c.comment)}</p>
                         ` : ''}
-                        <span class="text-[10px] text-slate-400 dark:text-slate-500 block">${c.created_at ? escapeHtml(c.created_at) : ''}</span>
+                        <span class="text-[10px] text-slate-400 dark:text-slate-500 block">${c.created_at ? escapeHtml(formatDateTime(c.created_at)) : ''}</span>
                     </div>
                 </div>
                 ${isMine ? (

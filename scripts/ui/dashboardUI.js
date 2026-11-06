@@ -2,5 +2,5 @@ import { logoutUser } from "/scripts/auth/authAPI.js";
 
 document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await logoutUser();
-    window.location.href = '/auth/login.php';
+    window.location.href = '/auth/login';
 });

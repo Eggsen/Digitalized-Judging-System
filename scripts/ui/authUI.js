@@ -14,8 +14,10 @@ function initLandingPage() {
         togglePasswordBtn.addEventListener('click', () => togglePasswordVisibility('password-input', 'toggle-password-icon'));
     }
 
-    // Ensure login recaptcha is initialized
-    renderRecaptchaWidget('login-recaptcha');
+    // Ensure login recaptcha is initialized if enabled
+    if (window.RECAPTCHA_ENABLED === true) {
+        renderRecaptchaWidget('login-recaptcha');
+    }
 
     // Password visibility toggles for invite & reset forms
     document.getElementById('toggle-invite-password-btn')?.addEventListener('click', () => {
@@ -51,8 +53,9 @@ function initLandingPage() {
     // Check URL query parameters or hidden inputs for tokens or OAuth errors
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromInput = document.getElementById('invite-token-input')?.value?.trim();
-    const inviteToken = urlParams.get('invite_token') || urlParams.get('token') || tokenFromInput;
-    const resetToken = urlParams.get('reset_token') || document.getElementById('reset-token-input')?.value?.trim();
+    const tokenFromResetInput = document.getElementById('reset-token-input')?.value?.trim();
+    const inviteToken = urlParams.get('invite_token') || (acceptInviteCard ? urlParams.get('token') : null) || tokenFromInput;
+    const resetToken = urlParams.get('token') || urlParams.get('reset_token') || tokenFromResetInput;
     const oauthError = urlParams.get('error');
     const oauthEmail = urlParams.get('email');
 
@@ -129,14 +132,31 @@ function initLandingPage() {
             }
             if (btn) btn.disabled = true;
         }
-    } else if (resetToken && resetTokenCard) {
+    } else if (resetTokenCard) {
         if (loginCard) loginCard.classList.add('hidden');
         resetTokenCard.classList.remove('hidden');
         resetTokenCard.classList.add('animate-fade-in');
 
         const tokenInput = document.getElementById('reset-token-input');
-        if (tokenInput) tokenInput.value = resetToken;
-        checkResetToken(resetToken);
+        if (tokenInput && resetToken) tokenInput.value = resetToken;
+
+        if (resetToken) {
+            checkResetToken(resetToken);
+        } else {
+            const usernameDisplay = document.getElementById('reset-token-username-display');
+            const noticeWrap = document.getElementById('reset-token-notice-wrap');
+            const notice = document.getElementById('reset-token-notice');
+            const btn = document.getElementById('completeResetBtn');
+            if (usernameDisplay) {
+                usernameDisplay.innerHTML = '<span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation me-1.5"></i>Missing Reset Token</span>';
+            }
+            if (noticeWrap && notice) {
+                noticeWrap.className = 'my-4 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200';
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1.5"></i>No password reset token was provided in the link. Please request a new password reset.';
+                noticeWrap.classList.remove('hidden');
+            }
+            if (btn) btn.disabled = true;
+        }
     }
 
     // Accept invitation form submit
@@ -168,6 +188,11 @@ async function checkInviteToken(token) {
         if (roleDisplay) roleDisplay.textContent = `Role: Official ${res.role ? res.role.charAt(0).toUpperCase() + res.role.slice(1) : ''}`;
         if (noticeWrap) noticeWrap.classList.add('hidden');
         if (btn) btn.disabled = false;
+
+        const fnInput = document.getElementById('invite-firstname-input');
+        const lnInput = document.getElementById('invite-lastname-input');
+        if (fnInput && !fnInput.value && res.first_name) fnInput.value = res.first_name;
+        if (lnInput && !lnInput.value && res.last_name) lnInput.value = res.last_name;
     } else {
         if (usernameDisplay) usernameDisplay.textContent = "Invalid Invitation";
         if (roleDisplay) roleDisplay.textContent = "This link may be invalid, used, or expired.";
@@ -283,9 +308,11 @@ async function handleAcceptInvite() {
                 acceptInviteCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
-                renderRecaptchaWidget('login-recaptcha');
+                if (window.RECAPTCHA_ENABLED === true) {
+                    renderRecaptchaWidget('login-recaptcha');
+                }
             } else {
-                window.location.href = '/auth/login.php';
+                window.location.href = '/auth/login';
             }
         }, 1500);
     } else {
@@ -302,7 +329,7 @@ async function checkResetToken(token) {
     if (usernameDisplay) usernameDisplay.textContent = "Verifying reset link...";
 
     try {
-        const response = await fetch(`/backend/auth/reset_password.php?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`);
         const res = await response.json();
 
         if (res.success) {
@@ -321,6 +348,12 @@ async function checkResetToken(token) {
         }
     } catch (e) {
         if (usernameDisplay) usernameDisplay.textContent = "Error verifying link.";
+        if (btn) btn.disabled = true;
+        if (noticeWrap && notice) {
+            noticeWrap.className = 'my-4 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200';
+            notice.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1.5"></i>Network error occurred while verifying the reset token.`;
+            noticeWrap.classList.remove('hidden');
+        }
     }
 }
 
@@ -389,9 +422,11 @@ async function handleCompleteReset() {
                 resetTokenCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
-                renderRecaptchaWidget('login-recaptcha');
+                if (window.RECAPTCHA_ENABLED === true) {
+                    renderRecaptchaWidget('login-recaptcha');
+                }
             } else {
-                window.location.href = '/auth/login.php';
+                window.location.href = '/auth/login';
             }
         }, 1500);
     } else {

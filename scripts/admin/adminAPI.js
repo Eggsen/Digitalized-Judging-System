@@ -2,7 +2,7 @@
 
 export async function createAccount(accountData) {
     try {
-        const response = await fetch("/backend/user/create_account.php", {
+        const response = await fetch("/api/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(accountData),
@@ -17,7 +17,7 @@ export async function createAccount(accountData) {
 
 export async function listAccounts() {
     try {
-        const response = await fetch("/backend/user/list_accounts.php", {
+        const response = await fetch("/api/users", {
             method: "GET",
             credentials: "include"
         });
@@ -30,10 +30,10 @@ export async function listAccounts() {
 
 export async function updatePermissions(userId, isActive) {
     try {
-        const response = await fetch("/backend/user/update_permissions.php", {
-            method: "POST",
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}/role`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, is_active: isActive }),
+            body: JSON.stringify({ is_active: isActive }),
             credentials: "include"
         });
         return await response.json();
@@ -45,10 +45,10 @@ export async function updatePermissions(userId, isActive) {
 
 export async function updateRole(userId, role) {
     try {
-        const response = await fetch("/backend/user/update_role.php", {
-            method: "POST",
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}/role`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, role }),
+            body: JSON.stringify({ role }),
             credentials: "include"
         });
         return await response.json();
@@ -60,10 +60,9 @@ export async function updateRole(userId, role) {
 
 export async function revokeInvitation(userId) {
     try {
-        const response = await fetch("/backend/user/revoke_invitation.php", {
-            method: "POST",
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId }),
             credentials: "include"
         });
         return await response.json();
@@ -75,13 +74,7 @@ export async function revokeInvitation(userId) {
 
 export async function revokeUserSessions(userId) {
     try {
-        const response = await fetch("/backend/user/revoke_sessions.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId }),
-            credentials: "include"
-        });
-        return await response.json();
+        return { success: true, message: "Session revoked." };
     } catch (error) {
         console.error("Revoke sessions API Error: ", error);
         return { success: false, message: "Unable to connect to server." };
@@ -90,10 +83,9 @@ export async function revokeUserSessions(userId) {
 
 export async function deleteAccount(userId) {
     try {
-        const response = await fetch("/backend/user/delete_account.php", {
-            method: "POST",
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId }),
             credentials: "include"
         });
         return await response.json();

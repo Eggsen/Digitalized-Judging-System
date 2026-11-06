@@ -1,6 +1,6 @@
 import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, deleteArchivedEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
-import { showToast } from "../utils/uiUtils.js";
+import { showToast, formatDateTime, toDateTimeLocalValue } from "../utils/uiUtils.js";
 import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
@@ -274,7 +274,7 @@ export async function loadAdminEvents() {
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-regular fa-clock text-buksu-navy w-4"></i>
-                        <span>${e.date || 'TBA'}</span>
+                        <span>${formatDateTime(e.date)}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-solid fa-location-dot text-buksu-navy w-4"></i>
@@ -322,7 +322,7 @@ export async function loadAdminEvents() {
                         data-type="${escapeHtml(e.type)}" 
                         data-desc="${escapeHtml(e.description)}" 
                         data-venue="${escapeHtml(e.venue)}" 
-                        data-rawdate="${e.rawDate}" 
+                        data-rawdate="${e.date || ''}" 
                         data-status="${e.status}" 
                         data-judging="${e.judgingStatus}"
                         title="Edit Competition">
@@ -381,7 +381,7 @@ async function loadJudgeAssignments() {
                     ${getStatusBadgeHtml(e.status)}
                     <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(e.eventName)}</h4>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${e.date || 'TBA'} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
+                <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${formatDateTime(e.date)} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
                 <div class="flex items-center gap-4 mt-2 text-xs">
                     <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                         <i class="fa-solid fa-gavel text-buksu-navy me-1"></i> ${e.assignedjudges ? e.assignedjudges.length : 0} Judges Assigned
@@ -712,7 +712,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
         if (isUserTable) {
             return `
                 <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
-                    <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
+                    <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(formatDateTime(log.timestamp))}</td>
                     <td class="px-4 py-3 text-center align-middle whitespace-nowrap">${actionBadge}</td>
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-200 align-middle font-normal">${escapeHtml(log.details)}</td>
                 </tr>
@@ -720,7 +720,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
         }
         return `
             <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
-                <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
+                <td class="px-4 py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 align-middle whitespace-nowrap">${escapeHtml(formatDateTime(log.timestamp))}</td>
                 <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle whitespace-nowrap">
                     ${escapeHtml(log.username)}
                     <span class="ms-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${escapeHtml(log.role)}</span>
@@ -783,7 +783,7 @@ async function loadUserAssignedEvents() {
                 <div class="space-y-1.5 text-xs text-slate-600 border-t border-slate-200/60 pt-3">
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-regular fa-clock text-buksu-navy w-4"></i>
-                        <span>${e.date || 'TBA'}</span>
+                        <span>${formatDateTime(e.date)}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-solid fa-location-dot text-buksu-navy w-4"></i>
@@ -1043,7 +1043,7 @@ function bindEventCardActions() {
             document.getElementById('edit-ev-venue').value = btn.dataset.venue;
             document.getElementById('edit-ev-status').value = btn.dataset.status;
             document.getElementById('edit-ev-judging-status').value = btn.dataset.judging;
-            document.getElementById('edit-ev-date').value = btn.dataset.rawdate;
+            document.getElementById('edit-ev-date').value = toDateTimeLocalValue(btn.dataset.rawdate);
             document.getElementById('edit-ev-desc').value = btn.dataset.desc;
 
             const isOngoing = (btn.dataset.status === 'Ongoing' || btn.dataset.judging === 'In Progress');
@@ -1166,7 +1166,7 @@ export async function openViewEventModal(eventId) {
     statusBadge.className = `px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(event.status)}`;
 
     // Set Details
-    document.getElementById('view-ev-date').textContent = event.date || 'TBA';
+    document.getElementById('view-ev-date').textContent = formatDateTime(event.date);
     document.getElementById('view-ev-venue').textContent = event.venue || 'TBA';
     document.getElementById('view-ev-judging-status').textContent = event.judgingStatus || 'Not Yet Started';
     document.getElementById('view-ev-desc').textContent = event.description && event.description.trim() ? event.description : 'No description provided.';
@@ -1508,7 +1508,7 @@ async function fetchAndRenderQrCode() {
     if (urlTextEl) urlTextEl.textContent = 'Generating...';
 
     try {
-        const resp = await fetch(`/backend/crud/get_event_qr.php?event_id=${encodeURIComponent(currentQrEventId)}&type=${encodeURIComponent(currentQrType)}`);
+        const resp = await fetch(`/api/events/${encodeURIComponent(currentQrEventId)}/qr`);
         const data = await resp.json();
         currentQrData = data;
 

@@ -14,7 +14,7 @@ async function parseResponse(response, defaultError = "Unable to connect to serv
 
 export async function loginUser(credentials) {
     try {
-        const response = await fetch("/backend/auth/login.php", {
+        const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
@@ -36,7 +36,7 @@ export const loginAdmin = loginUser;
 
 export async function logoutUser() {
     try {
-        const response = await fetch("/backend/auth/logout.php", {
+        const response = await fetch("/api/auth/logout", {
             method: "POST",
             credentials: "include"
         });
@@ -49,7 +49,7 @@ export async function logoutUser() {
 
 export async function checkSession() {
     try {
-        const response = await fetch("/backend/auth/check_session.php", {
+        const response = await fetch("/api/auth/me", {
             method: "GET",
             credentials: "include"
         });
@@ -62,7 +62,7 @@ export async function checkSession() {
 
 export async function resetPassword(payload) {
     try {
-        const response = await fetch("/backend/auth/reset_password.php", {
+        const response = await fetch("/api/auth/reset-password", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -77,7 +77,7 @@ export async function resetPassword(payload) {
 
 export async function registerAdmin(payload) {
     try {
-        const response = await fetch("/backend/auth/register_admin.php", {
+        const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -92,7 +92,7 @@ export async function registerAdmin(payload) {
 
 export async function verifyInviteToken(token) {
     try {
-        const response = await fetch(`/backend/auth/accept_invitation.php?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`/api/auth/accept-invitation?token=${encodeURIComponent(token)}`, {
             method: "GET",
             credentials: "include"
         });
@@ -105,7 +105,7 @@ export async function verifyInviteToken(token) {
 
 export async function acceptInvitation(payload) {
     try {
-        const response = await fetch("/backend/auth/accept_invitation.php", {
+        const response = await fetch("/api/auth/accept-invitation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),

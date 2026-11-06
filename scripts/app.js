@@ -19,12 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const password = passwordInput ? passwordInput.value : "";
 
             if (!identifier || !password) {
-                showNotice(noticeText, "Please enter your username/email and password.", "warning");
+                showNotice(noticeText, "Please enter your email and password.", "warning");
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(identifier)) {
+                showNotice(noticeText, "Please enter a valid email address.", "warning");
                 return;
             }
 
             const recaptchaToken = getRecaptchaResponse('login-recaptcha');
-            if (window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_ENABLED !== false && !recaptchaToken) {
+            if (window.RECAPTCHA_ENABLED === true && window.RECAPTCHA_SITE_KEY && !recaptchaToken) {
                 showNotice(noticeText, "Please verify that you are not a robot.", "warning");
                 return;
             }
@@ -35,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showNotice(noticeText, "Signing in...", "info");
 
-            const response = await loginUser({ identifier, password, recaptcha_response: recaptchaToken });
+            const response = await loginUser({ email: identifier, identifier, password, recaptcha_response: recaptchaToken });
 
             if (submitBtn) submitBtn.disabled = false;
 
@@ -47,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (redirectTo && redirectTo.startsWith('/')) {
                         window.location.href = redirectTo;
                     } else {
-                        window.location.href = response.redirect || "/dashboard.php";
+                        window.location.href = response.redirect || "/dashboard";
                     }
                 }, 700);
             } else {

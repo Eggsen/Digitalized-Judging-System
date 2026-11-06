@@ -1,6 +1,6 @@
 export async function listEvents() {
     try {
-        const res = await fetch("/backend/crud/list_events.php", { credentials: "include" });
+        const res = await fetch("/api/events", { credentials: "include" });
         return await res.json();
     } catch (e) {
         console.error("listEvents API error: ", e);
@@ -10,7 +10,7 @@ export async function listEvents() {
 
 export async function createEvent(data) {
     try {
-        const res = await fetch("/backend/crud/create_event.php", {
+        const res = await fetch("/api/events", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -25,8 +25,9 @@ export async function createEvent(data) {
 
 export async function editEvent(data) {
     try {
-        const res = await fetch("/backend/crud/edit_event.php", {
-            method: "POST",
+        const eventId = data.event_id || data.id;
+        const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
             credentials: "include"
@@ -40,7 +41,8 @@ export async function editEvent(data) {
 
 export async function assignJudges(data) {
     try {
-        const res = await fetch("/backend/crud/assign_judges.php", {
+        const eventId = data.event_id || data.id;
+        const res = await fetch(`/api/events/${encodeURIComponent(eventId)}/assign-judges`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -55,8 +57,9 @@ export async function assignJudges(data) {
 
 export async function archiveEvent(data) {
     try {
-        const res = await fetch("/backend/crud/archive_event.php", {
-            method: "POST",
+        const eventId = data.event_id || data.id;
+        const res = await fetch(`/api/events/${encodeURIComponent(eventId)}/archive`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
             credentials: "include"
@@ -70,8 +73,9 @@ export async function archiveEvent(data) {
 
 export async function deleteArchivedEvent(data) {
     try {
-        const res = await fetch("/backend/crud/delete_event.php", {
-            method: "POST",
+        const eventId = data.event_id || data.id;
+        const res = await fetch(`/api/events/${encodeURIComponent(eventId)}`, {
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
             credentials: "include"
@@ -97,7 +101,7 @@ export async function listLogs(params = {}) {
         }
 
         const qs = query.toString();
-        const url = `/backend/crud/list_logs.php${qs ? `?${qs}` : ''}`;
+        const url = `/api/logs${qs ? `?${qs}` : ''}`;
         const res = await fetch(url, { credentials: "include" });
         return await res.json();
     } catch (e) {

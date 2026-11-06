@@ -12,7 +12,7 @@ import {
     updateCriteriaWeights, 
     deleteCriterion 
 } from "/scripts/admin/judgingAPI.js";
-import { showToast } from "/scripts/utils/uiUtils.js";
+import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
 let currentEventId = null;
 let currentEventName = '';
@@ -694,7 +694,7 @@ function renderModalCommentsList(contestant) {
                 <i class="fa-solid fa-award text-amber-600 mt-0.5 shrink-0"></i>
                 <div class="overflow-hidden">
                     <p class="font-bold text-slate-800 break-words">${escapeHtml(c.text)}</p>
-                    <span class="text-[10px] text-slate-400 font-medium">Added by ${escapeHtml(c.author || 'Admin')} ${c.created_at ? '• ' + escapeHtml(c.created_at) : ''}</span>
+                    <span class="text-[10px] text-slate-400 font-medium">Added by ${escapeHtml(c.author || 'Admin')} ${c.created_at ? '• ' + escapeHtml(formatDateTime(c.created_at)) : ''}</span>
                 </div>
             </div>
             <button type="button" class="delete-citation-btn p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors cursor-pointer shrink-0 text-xs" 

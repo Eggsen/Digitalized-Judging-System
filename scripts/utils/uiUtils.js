@@ -125,7 +125,7 @@ export function showToast(title, message = '', type = 'success', duration = 4000
     }
 }
 
-function escapeHtml(str) {
+export function escapeHtml(str) {
     if (!str) return '';
     return String(str)
         .replace(/&/g, "&amp;")
@@ -133,4 +133,75 @@ function escapeHtml(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+/**
+ * Formats a date/time string, timestamp, or Date object into a readable localized format.
+ * E.g., '2027-09-20T15:00:00.000Z' -> 'Sep 20, 2027, 11:00 PM'
+ * or '2027-09-20' -> 'Sep 20, 2027'
+ * @param {string|number|Date} dateVal - Input date or timestamp
+ * @param {Object} [options={}] - Options (e.g. { fallback: 'TBA', dateOnly: false })
+ * @returns {string} Formatted human-readable date
+ */
+export function formatDateTime(dateVal, options = {}) {
+    if (!dateVal) return options.fallback || 'TBA';
+    
+    if (typeof dateVal === 'string') {
+        const trimmed = dateVal.trim();
+        if (!trimmed) return options.fallback || 'TBA';
+        
+        // Pure date: YYYY-MM-DD without time
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            const [y, m, d] = trimmed.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            if (!isNaN(dt.getTime())) {
+                return dt.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }
+        }
+    }
+
+    const d = (dateVal instanceof Date) ? dateVal : new Date(dateVal);
+    if (isNaN(d.getTime())) {
+        return String(dateVal);
+    }
+
+    if (options.dateOnly) {
+        return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    return d.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+/**
+ * Formats a date into a value compatible with HTML5 <input type="datetime-local"> (YYYY-MM-DDTHH:mm).
+ * @param {string|number|Date} dateVal 
+ * @returns {string}
+ */
+export function toDateTimeLocalValue(dateVal) {
+    if (!dateVal) return '';
+    const d = (dateVal instanceof Date) ? dateVal : new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    
+    const pad = n => String(n).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }

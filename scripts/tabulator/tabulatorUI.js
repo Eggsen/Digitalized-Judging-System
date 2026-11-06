@@ -298,7 +298,7 @@ function renderTabulationBoard(data) {
     const qrSealEl = document.getElementById('tab-print-qr-seal');
     if (qrSealEl) {
         if (settings.security?.qrCodeEnabled !== false && currentEventId) {
-            fetch(`/backend/crud/get_event_qr.php?event_id=${encodeURIComponent(currentEventId)}&type=public`)
+            fetch(`/api/events/${encodeURIComponent(currentEventId)}/qr`)
                 .then(r => r.json())
                 .then(qrRes => {
                     const sealQr = qrRes.qr_code_url || qrRes.qr_url;
@@ -532,12 +532,12 @@ function renderTabulationBoard(data) {
                         <div class="inline-flex flex-col items-center">
                             <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-slate-100/80 transition-all cursor-pointer border border-transparent hover:border-slate-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect itemized criteria breakdown and verify score">
                                 <span class="text-xs font-black ${isVerified ? 'text-emerald-800 bg-emerald-50 border-emerald-300' : 'text-slate-800 bg-slate-50 border-slate-300'} px-2.5 py-0.5 rounded-md border group-hover:scale-105 transition-transform shadow-2xs">
-                                    ${parseFloat(entry.total_score).toFixed(precision)}%
+                                    ${parseFloat(entry.total_score || 0).toFixed(precision)}%
                                 </span>
                                 ${verifyBadgeHtml}
                             </button>
                             <div class="hidden print-only text-center">
-                                <div class="text-xs font-black text-slate-800 font-mono">${parseFloat(entry.total_score).toFixed(precision)}%</div>
+                                <div class="text-xs font-black text-slate-800 font-mono">${parseFloat(entry.total_score || 0).toFixed(precision)}%</div>
                                 <div class="text-[8px] text-slate-500 uppercase">${isVerified ? 'Verified' : 'Final'}</div>
                             </div>
                             ${unlockBtnHtml}
@@ -798,17 +798,19 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
         } else {
             let criteriaHtml = '';
             let calculationSteps = [];
+            let computedTotal = 0;
 
             criteria.forEach(cr => {
                 const critScore = criteriaScoresMap[String(cr.id)];
-                const maxPts = parseFloat(cr.max_points || 100);
-                const weightPct = parseFloat(cr.percentage || 0);
+                const maxPts = parseFloat(cr.max_points !== undefined ? cr.max_points : (cr.max_score || 100));
+                const weightPct = parseFloat(cr.percentage !== undefined ? cr.percentage : (cr.weight || 0));
                 const isScored = Boolean(critScore && critScore.score !== undefined && critScore.score !== null);
 
                 if (isScored) scoredCount++;
 
                 const rawScore = isScored ? parseFloat(critScore.score) : 0;
                 const weightedScore = maxPts > 0 ? (rawScore / maxPts) * weightPct : 0;
+                computedTotal += weightedScore;
                 calculationSteps.push(`${weightedScore.toFixed(precision)}%`);
 
                 const isCategory = (cr.scoring_type === 'category' || (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0));
@@ -930,6 +932,14 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                 `;
             });
 
+            const displayTotal = (entry.total_score !== undefined && entry.total_score !== null && parseFloat(entry.total_score) > 0)
+                ? parseFloat(entry.total_score)
+                : computedTotal;
+
+            if (totalScoreEl) {
+                totalScoreEl.textContent = `${displayTotal.toFixed(precision)}%`;
+            }
+
             // Summary card showing formula breakdown
             criteriaHtml += `
                 <div class="p-3.5 rounded-2xl bg-buksu-navy/5 border border-buksu-navy/20 flex items-center justify-between flex-wrap gap-2 text-xs">
@@ -938,12 +948,12 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                             <i class="fa-solid fa-calculator text-buksu-navy"></i> Tabulation Verification Formula
                         </span>
                         <p class="text-[11px] text-slate-600 font-mono break-all sm:break-words">
-                            ${calculationSteps.join(' + ')} = <strong class="text-buksu-navy font-bold">${parseFloat(entry.total_score || 0).toFixed(precision)}%</strong>
+                            ${calculationSteps.join(' + ')} = <strong class="text-buksu-navy font-bold">${displayTotal.toFixed(precision)}%</strong>
                         </p>
                     </div>
                     <div class="text-right shrink-0">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Verified Total</span>
-                        <span class="text-base font-black text-buksu-navy font-mono">${parseFloat(entry.total_score || 0).toFixed(precision)}%</span>
+                        <span class="text-base font-black text-buksu-navy font-mono">${displayTotal.toFixed(precision)}%</span>
                     </div>
                 </div>
             `;

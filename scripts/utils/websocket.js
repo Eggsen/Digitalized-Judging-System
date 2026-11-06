@@ -45,7 +45,7 @@ export function getWebSocketStatus() {
 export async function getWebSocketConfig() {
     if (cachedConfig) return cachedConfig;
     try {
-        const res = await fetch('/backend/utils/websocket_config.php', {
+        const res = await fetch('/api/settings/websocket-config', {
             credentials: 'include'
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

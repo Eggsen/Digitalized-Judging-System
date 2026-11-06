@@ -2,7 +2,7 @@
 
 export async function fetchNotifications() {
     try {
-        const response = await fetch("/backend/notifications/list_notifications.php", {
+        const response = await fetch("/api/notifications", {
             method: "GET",
             credentials: "include"
         });
@@ -15,7 +15,7 @@ export async function fetchNotifications() {
 
 export async function respondToInvitation(notificationId, action) {
     try {
-        const response = await fetch("/backend/notifications/respond_invitation.php", {
+        const response = await fetch("/api/notifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ notification_id: notificationId, action: action }),
@@ -30,8 +30,8 @@ export async function respondToInvitation(notificationId, action) {
 
 export async function markNotificationsRead() {
     try {
-        const response = await fetch("/backend/notifications/mark_read.php", {
-            method: "POST",
+        const response = await fetch("/api/notifications/all/read", {
+            method: "PATCH",
             credentials: "include"
         });
         return await response.json();

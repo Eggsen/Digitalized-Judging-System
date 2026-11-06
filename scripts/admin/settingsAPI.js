@@ -2,7 +2,7 @@
 
 export async function getSettings() {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings", {
             method: "GET",
             credentials: "include"
         });
@@ -15,10 +15,10 @@ export async function getSettings() {
 
 export async function saveSettings(settingsData) {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/save", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "save", ...settingsData }),
+            body: JSON.stringify(settingsData),
             credentials: "include"
         });
         return await response.json();
@@ -30,10 +30,9 @@ export async function saveSettings(settingsData) {
 
 export async function exportBackup() {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/export-backup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "export_backup" }),
             credentials: "include"
         });
         return await response.json();
@@ -45,10 +44,9 @@ export async function exportBackup() {
 
 export async function clearLogs() {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/clear-logs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "clear_logs" }),
             credentials: "include"
         });
         return await response.json();
@@ -60,7 +58,7 @@ export async function clearLogs() {
 
 export async function resetSettingsDefaults() {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/save", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "reset_defaults" }),
@@ -75,10 +73,10 @@ export async function resetSettingsDefaults() {
 
 export async function requestSecurityChange(securityData) {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/security-controls", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "request_security_change", ...securityData }),
+            body: JSON.stringify(securityData),
             credentials: "include"
         });
         return await response.json();
@@ -90,10 +88,10 @@ export async function requestSecurityChange(securityData) {
 
 export async function confirmSecurityChange(code) {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/security-controls", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "confirm_security_change", code }),
+            body: JSON.stringify({ code }),
             credentials: "include"
         });
         return await response.json();
@@ -105,7 +103,7 @@ export async function confirmSecurityChange(code) {
 
 export async function resendSecurityCode() {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/security-controls", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "resend_security_code" }),
@@ -120,10 +118,10 @@ export async function resendSecurityCode() {
 
 export async function saveApiKeys(apiKeysData) {
     try {
-        const response = await fetch("/backend/crud/settings.php", {
+        const response = await fetch("/api/settings/api-keys", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "save_api_keys", api_keys: apiKeysData }),
+            body: JSON.stringify({ api_keys: apiKeysData }),
             credentials: "include"
         });
         return await response.json();

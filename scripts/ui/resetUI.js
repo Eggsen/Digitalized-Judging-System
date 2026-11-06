@@ -25,12 +25,27 @@ function showForgotPasswordCard() {
     if (forgotCard) {
         forgotCard.classList.remove('hidden');
         forgotCard.classList.add('animate-fade-in');
+
+        // Render reCAPTCHA widget into reset-recaptcha container if enabled
+        if (window.RECAPTCHA_ENABLED === true) {
+            const resetWrap = document.getElementById('reset-recaptcha-wrapper');
+            if (resetWrap) {
+                resetWrap.classList.remove('hidden');
+                resetWrap.style.display = '';
+            }
+            renderRecaptchaWidget('reset-recaptcha');
+        } else {
+            const resetWrap = document.getElementById('reset-recaptcha-wrapper');
+            if (resetWrap) {
+                resetWrap.classList.add('hidden');
+                resetWrap.style.display = 'none';
+            }
+        }
+
         if (window.EMAIL_SERVICE_ENABLED === false) {
             showResetNotice('warning', 'The administrator has disabled email notifications. Password reset links cannot be emailed.');
             const btn = document.getElementById('resetRequestBtn');
             if (btn) btn.disabled = true;
-        } else {
-            renderRecaptchaWidget('reset-recaptcha');
         }
     }
 }
@@ -45,7 +60,9 @@ function hideForgotPasswordCard() {
     document.getElementById('forgot-password-card')?.classList.add('hidden');
     document.getElementById('login-card')?.classList.remove('hidden');
     document.getElementById('login-card')?.classList.add('animate-fade-in');
-    renderRecaptchaWidget('login-recaptcha');
+    if (window.RECAPTCHA_ENABLED === true) {
+        renderRecaptchaWidget('login-recaptcha');
+    }
 }
 
 async function handleResetRequestSubmit() {
@@ -61,13 +78,19 @@ async function handleResetRequestSubmit() {
     const notice = document.getElementById('reset-notice');
 
     if (!identifier) {
-        showResetNotice('warning', 'Please enter your registered email address or username.');
+        showResetNotice('warning', 'Please enter your registered email address.');
+        return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(identifier)) {
+        showResetNotice('warning', 'Please enter a valid email address.');
         return;
     }
 
     const recaptchaToken = getRecaptchaResponse('reset-recaptcha');
-    if (window.RECAPTCHA_SITE_KEY && window.RECAPTCHA_ENABLED !== false && !recaptchaToken) {
-        showResetNotice('warning', 'Please verify that you are not a robot.');
+    if (window.RECAPTCHA_ENABLED === true && !recaptchaToken) {
+        showResetNotice('warning', 'Please complete the reCAPTCHA verification challenge.');
         return;
     }
 
@@ -76,6 +99,7 @@ async function handleResetRequestSubmit() {
 
     const res = await resetPassword({
         action: 'request_reset',
+        email: identifier,
         identifier,
         recaptcha_response: recaptchaToken
     });
@@ -87,9 +111,12 @@ async function handleResetRequestSubmit() {
         if (noticeWrap && notice) {
             noticeWrap.className = 'mb-4 p-3 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200';
             notice.innerHTML = `
-                <div class="mb-1 font-bold"><i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> ${res.message}</div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-600 text-sm shrink-0"></i>
+                    <span>${res.message || 'Password reset link sent to your email.'}</span>
+                </div>
                 ${res.reset_link ? `
-                    <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Testing reset link:</div>
+                    <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Direct reset link:</div>
                     <div class="flex items-center gap-1.5">
                         <input type="text" readonly value="${res.reset_link}" id="demo-reset-link" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800 focus:outline-none" />
                         <a href="${res.reset_link}" class="px-2.5 py-1 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded text-[11px] transition-colors shrink-0">Open Link</a>
