@@ -13,6 +13,11 @@
   --color-buksu-gold-light: #fff8e1;
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 .dashboard-bg {
   position: absolute;
   top: 0;

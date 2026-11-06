@@ -91,36 +91,36 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
     <div class="dashboard-bg"></div>
 
     <!-- Header Navigation -->
-    <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+    <header class="w-full max-w-full bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 overflow-x-clip">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 min-w-0">
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
                 <div
-                    class="w-10 h-10 rounded-xl bg-buksu-navy flex items-center justify-center text-buksu-gold shadow-md border border-buksu-gold/30">
-                    <i class="fa-solid fa-scale-balanced text-lg"></i>
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-buksu-navy flex items-center justify-center text-buksu-gold shadow-md border border-buksu-gold/30 shrink-0">
+                    <i class="fa-solid fa-scale-balanced text-base sm:text-lg"></i>
                 </div>
-                <div>
-                    <span class="font-extrabold text-buksu-navy text-lg tracking-tight">JudgeTab</span>
+                <div class="min-w-0">
+                    <span class="font-extrabold text-buksu-navy text-base sm:text-lg tracking-tight">JudgeTab</span>
                     <span
-                        class="font-medium text-slate-500 text-sm hidden sm:inline-block ms-1.5 border-l border-slate-300 ps-2">Digitalized
+                        class="font-medium text-slate-500 text-sm hidden md:inline-block ms-1.5 border-l border-slate-300 ps-2">Digitalized
                         Judging System</span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 sm:gap-4">
+            <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
                 <!-- Quick Preferences Button -->
-                <button id="openPreferencesBtn" title="Appearance & UI Preferences" class="p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
-                    <i class="fa-solid fa-sliders text-lg"></i>
+                <button id="openPreferencesBtn" title="Appearance & UI Preferences" class="p-1.5 sm:p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200 shrink-0">
+                    <i class="fa-solid fa-sliders text-base sm:text-lg"></i>
                 </button>
 
                 <!-- Topbar Notifications -->
-                <div class="relative" id="notification-wrapper">
-                    <button id="notifBtn" class="relative p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
-                        <i class="fa-solid fa-bell text-lg"></i>
-                        <span id="notifBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white font-extrabold text-[10px] rounded-full flex items-center justify-center border-2 border-white hidden">0</span>
+                <div class="relative shrink-0" id="notification-wrapper">
+                    <button id="notifBtn" aria-label="Notifications" class="relative p-1.5 sm:p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200">
+                        <i class="fa-solid fa-bell text-base sm:text-lg"></i>
+                        <span id="notifBadge" class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-rose-500 text-white font-extrabold text-[9px] sm:text-[10px] rounded-full flex items-center justify-center border-2 border-white hidden">0</span>
                     </button>
 
                     <!-- Notifications Dropdown Drawer -->
-                    <div id="notifDropdown" class="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200/90 z-50 hidden overflow-hidden animate-fade-in">
+                    <div id="notifDropdown" class="absolute right-0 mt-3 w-[calc(100vw-1.5rem)] sm:w-80 md:w-96 max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200/90 z-50 hidden overflow-hidden animate-fade-in">
                         <div class="p-4 bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy text-white flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-bell text-buksu-gold"></i>
@@ -137,14 +137,15 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider"><?= ucfirst($role) ?></span>
+                <div class="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 border border-slate-200 shrink-0" title="Active Role: <?= ucfirst($role) ?>">
+                    <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                    <span class="text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider hidden sm:inline"><?= ucfirst($role) ?></span>
                 </div>
 
-                <button id="logoutBtn"
-                    class="px-3.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-rose-200">
-                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                <button id="logoutBtn" title="Sign Out"
+                    class="px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-rose-200 shrink-0">
+                    <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                    <span class="hidden sm:inline">Sign Out</span>
                 </button>
             </div>
         </div>
@@ -227,28 +228,28 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
                 <!-- Welcome Card -->
                 <div class="rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden bg-white">
                     <!-- Top Section: BukSU Dark Blue Header -->
-                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-6 sm:p-8 text-white relative">
+                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-5 sm:p-8 text-white relative">
                         <!-- Decorative ambient background glow & watermark -->
                         <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
                         <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
                             <i class="fa-solid fa-scale-balanced text-9xl"></i>
                         </div>
 
-                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
-                            <div>
+                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4 min-w-0 max-w-full">
+                            <div class="min-w-0 max-w-full">
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
                                     <i class="fa-solid <?= $badgeInfo['icon'] ?>"></i> <?= strtoupper($role) ?> PORTAL
                                 </span>
-                                <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Welcome back, <?= $username ?>!</h1>
-                                <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2">
-                                    <i class="fa-solid fa-circle-check text-emerald-400 text-[10px]"></i>
-                                    <span><?= $email ? $email : 'Authenticated user session active.' ?></span>
+                                <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight break-words">Welcome back, <?= $username ?>!</h1>
+                                <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2 min-w-0">
+                                    <i class="fa-solid fa-circle-check text-emerald-400 text-[10px] shrink-0"></i>
+                                    <span class="truncate"><?= $email ? $email : 'Authenticated user session active.' ?></span>
                                 </p>
                             </div>
 
                             <?php if ($role === 'admin'): ?>
                                 <button id="open-create-event-modal-btn"
-                                    class="px-5 py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300">
+                                    class="px-4 sm:px-5 py-2.5 sm:py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300 shrink-0">
                                     <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
                                 </button>
                             <?php endif; ?>
@@ -257,36 +258,36 @@ $serverNavPlacement = htmlspecialchars($userPrefs['navPlacement'] ?? 'top');
 
                     <?php if ($role === 'admin'): ?>
                         <!-- Bottom Section: Admin Navigation Tabs -->
-                        <div class="top-nav-bar bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
-                            <div class="flex items-center gap-2 overflow-x-auto" id="admin-tabs">
-                                <button data-tab="events-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
+                        <div class="top-nav-bar bg-slate-50/90 px-3 sm:px-8 py-2.5 sm:py-3.5 border-t border-slate-200/80 w-full max-w-full overflow-hidden">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scroll-smooth w-full min-w-0" id="admin-tabs">
+                                <button data-tab="events-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
                                 </button>
-                                <button data-tab="assignments-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="assignments-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-user-check me-1.5 text-slate-400"></i> Judge Assignments
                                 </button>
-                                <button data-tab="users-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="users-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-users-gear me-1.5 text-slate-400"></i> User Invitations
                                 </button>
-                                <button data-tab="logs-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="logs-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> Audit Logs
                                 </button>
-                                <button data-tab="settings-tab" class="admin-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="settings-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> System Settings
                                 </button>
                             </div>
                         </div>
                     <?php else: ?>
                         <!-- Bottom Section: Judge / Tabulator Navigation Tabs -->
-                        <div class="top-nav-bar bg-slate-50/90 px-6 sm:px-8 py-3.5 border-t border-slate-200/80">
-                            <div class="flex items-center gap-2 overflow-x-auto" id="user-tabs">
-                                <button data-tab="user-events-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer">
+                        <div class="top-nav-bar bg-slate-50/90 px-3 sm:px-8 py-2.5 sm:py-3.5 border-t border-slate-200/80 w-full max-w-full overflow-hidden">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scroll-smooth w-full min-w-0" id="user-tabs">
+                                <button data-tab="user-events-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-clipboard-list me-1.5 text-buksu-gold"></i> Assigned Competitions
                                 </button>
-                                <button data-tab="user-logs-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="user-logs-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> My Activity Logs
                                 </button>
-                                <button data-tab="user-preferences-tab" class="user-tab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer">
+                                <button data-tab="user-preferences-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences
                                 </button>
                             </div>
