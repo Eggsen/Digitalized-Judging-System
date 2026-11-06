@@ -1,4 +1,4 @@
-import { getScores, unlockJudgeScore } from "/scripts/admin/judgingAPI.js";
+import { getScores, unlockJudgeScore, verifyJudgeScore, unverifyJudgeScore } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { openEventQrModal } from "/scripts/admin/eventsUI.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel, onWebSocketStatusChange, getWebSocketStatus } from "/scripts/utils/websocket.js";
@@ -7,6 +7,8 @@ let currentEventId = null;
 let pollInterval = null;
 let cachedData = null;
 let wsStatusUnsub = null;
+let activeBreakdownContestantId = null;
+let activeBreakdownJudgeId = null;
 
 function updateSyncIndicator(status) {
     const indicator = document.getElementById('tab-live-sync-indicator');
@@ -119,6 +121,15 @@ export async function openTabulationBoardModal(eventId, eventName) {
         onScoreUnlocked: (data) => {
             console.log('⚡ [Live Tabulation] Score unlocked in real-time:', data);
             loadTabulationData(false);
+        },
+        onScoreVerified: (data) => {
+            console.log('⚡ [Live Tabulation] Score verification update in real-time:', data);
+            loadTabulationData(false);
+            if (activeBreakdownContestantId && String(activeBreakdownContestantId) === String(data.contestant_id) && activeBreakdownJudgeId && String(activeBreakdownJudgeId) === String(data.judge_id)) {
+                setTimeout(() => {
+                    openScoreBreakdownModal(activeBreakdownContestantId, activeBreakdownJudgeId);
+                }, 200);
+            }
         },
         onJudgingStatusChanged: (data) => {
             console.log('⚡ [Live Tabulation] Judging status changed:', data);
@@ -284,11 +295,13 @@ function renderTabulationBoard(data) {
     const statsContainer = document.getElementById('tab-stats-container');
     if (statsContainer && stats) {
         const totalSubmitted = stats.total_submitted || 0;
+        const totalVerified = stats.total_verified || 0;
         const totalExpected = stats.total_expected || 0;
         const pct = totalExpected > 0 ? Math.round((totalSubmitted / totalExpected) * 100) : 0;
+        const verPct = totalExpected > 0 ? Math.round((totalVerified / totalExpected) * 100) : 0;
 
         statsContainer.innerHTML = `
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs w-full">
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 text-xs w-full">
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
                     <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contestants</span>
                     <span class="text-base font-extrabold text-slate-800">${stats.total_contestants || 0} Entries</span>
@@ -302,9 +315,15 @@ function renderTabulationBoard(data) {
                     <span class="text-base font-extrabold ${pct === 100 ? 'text-emerald-600' : 'text-slate-800'}">${totalSubmitted} / ${totalExpected} (${pct}%)</span>
                 </div>
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tabulator Verified</span>
+                    <span class="text-base font-extrabold ${totalVerified >= totalExpected && totalExpected > 0 ? 'text-emerald-600' : (totalVerified > 0 ? 'text-amber-600' : 'text-slate-700')}">
+                        ${totalVerified} / ${totalExpected} (${verPct}%)
+                    </span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 col-span-2 sm:col-span-4 lg:col-span-1">
                     <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tabulation Status</span>
-                    <span class="text-xs font-black uppercase ${stats.is_completed ? 'text-emerald-600' : 'text-amber-600'}">
-                        ${stats.is_completed ? '<i class="fa-solid fa-circle-check me-1"></i> Completed' : '<i class="fa-solid fa-hourglass-half me-1 animate-pulse"></i> In Tabulation'}
+                    <span class="text-xs font-black uppercase ${stats.is_all_verified ? 'text-emerald-600' : (stats.is_completed ? 'text-blue-600' : 'text-amber-600')}">
+                        ${stats.is_all_verified ? '<i class="fa-solid fa-certificate me-1"></i> Certified' : (stats.is_completed ? '<i class="fa-solid fa-list-check me-1"></i> Verifying' : '<i class="fa-solid fa-hourglass-half me-1 animate-pulse"></i> In Tabulation')}
                     </span>
                 </div>
             </div>
@@ -406,19 +425,33 @@ function renderTabulationBoard(data) {
                         `;
                     }
 
+                    const isVerified = Boolean(entry.is_verified);
+                    let verifyBadgeHtml = '';
+                    if (isVerified) {
+                        verifyBadgeHtml = `
+                            <span class="text-[9px] text-emerald-800 bg-emerald-100/90 font-extrabold px-1.5 py-0.5 rounded border border-emerald-300 flex items-center gap-1 mt-0.5 shadow-2xs">
+                                <i class="fa-solid fa-shield-check text-emerald-600 text-[8px]"></i> Verified
+                            </span>
+                        `;
+                    } else {
+                        verifyBadgeHtml = `
+                            <span class="text-[9px] text-amber-800 bg-amber-100 font-extrabold px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-1 mt-0.5 shadow-2xs animate-pulse">
+                                <i class="fa-solid fa-shield text-amber-600 text-[8px]"></i> Verify
+                            </span>
+                        `;
+                    }
+
                     scoreCell = `
                         <div class="inline-flex flex-col items-center">
-                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-emerald-100/60 transition-all cursor-pointer border border-transparent hover:border-emerald-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect itemized criteria breakdown and verify score">
-                                <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 group-hover:scale-105 transition-transform shadow-2xs">
+                            <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-slate-100/80 transition-all cursor-pointer border border-transparent hover:border-slate-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect itemized criteria breakdown and verify score">
+                                <span class="text-xs font-black ${isVerified ? 'text-emerald-800 bg-emerald-50 border-emerald-300' : 'text-slate-800 bg-slate-50 border-slate-300'} px-2.5 py-0.5 rounded-md border group-hover:scale-105 transition-transform shadow-2xs">
                                     ${parseFloat(entry.total_score).toFixed(precision)}%
                                 </span>
-                                <span class="text-[9px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1 group-hover:underline">
-                                    <i class="fa-solid fa-circle-check text-[8px]"></i> Final &bull; Verify
-                                </span>
+                                ${verifyBadgeHtml}
                             </button>
                             <div class="hidden print-only text-center">
                                 <div class="text-xs font-black text-slate-800 font-mono">${parseFloat(entry.total_score).toFixed(precision)}%</div>
-                                <div class="text-[8px] text-slate-500 uppercase">Final</div>
+                                <div class="text-[8px] text-slate-500 uppercase">${isVerified ? 'Verified' : 'Final'}</div>
                             </div>
                             ${unlockBtnHtml}
                         </div>
@@ -524,6 +557,9 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
     const modal = document.getElementById('score-breakdown-modal');
     if (!modal) return;
 
+    activeBreakdownContestantId = contestantId;
+    activeBreakdownJudgeId = judgeId;
+
     const { matrix = [], judges = [], criteria = [], settings = {}, role = '' } = cachedData;
     const judgingSettings = settings.judging || {};
     const precision = parseInt(judgingSettings.decimalPrecision ?? 2);
@@ -554,6 +590,7 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
     const statusBadgeEl = document.getElementById('breakdown-status-badge');
     const submittedTimeEl = document.getElementById('breakdown-submitted-time');
     const critCountEl = document.getElementById('breakdown-criteria-count');
+    const verBannerEl = document.getElementById('breakdown-verification-banner');
 
     if (numEl) numEl.textContent = `#${contestantRow.contestant_number}`;
     if (nameEl) nameEl.textContent = contestantRow.name;
@@ -577,13 +614,69 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
     }
 
     const isSubmitted = (entry.status === 'submitted');
+    const isVerified = Boolean(entry.is_verified);
+
     if (statusBadgeEl) {
         if (isSubmitted) {
-            statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1';
-            statusBadgeEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Submitted (Final)';
+            if (isVerified) {
+                statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-2xs';
+                statusBadgeEl.innerHTML = '<i class="fa-solid fa-shield-check"></i> Certified &amp; Verified';
+            } else {
+                statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 animate-pulse shadow-2xs';
+                statusBadgeEl.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Pending Verification';
+            }
         } else {
-            statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1';
+            statusBadgeEl.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1';
             statusBadgeEl.innerHTML = '<i class="fa-solid fa-pen-ruler"></i> In-Progress Draft';
+        }
+    }
+
+    // Interactive Verification Banner
+    if (verBannerEl) {
+        if (isSubmitted) {
+            if (isVerified) {
+                const verDateStr = entry.verified_at ? new Date(entry.verified_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+                verBannerEl.innerHTML = `
+                    <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300/80 text-emerald-950 text-xs flex items-center justify-between gap-3 flex-wrap shadow-2xs">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                                <i class="fa-solid fa-certificate"></i>
+                            </div>
+                            <div>
+                                <span class="font-black text-emerald-950 block text-xs">Score Verified &amp; Certified by Tabulator</span>
+                                <span class="text-[11px] text-emerald-800">Checked and certified correct by <strong>${escapeHtml(entry.verified_by || 'Tabulator')}</strong> ${verDateStr ? `on ${escapeHtml(verDateStr)}` : ''}.</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-xl bg-emerald-200/90 text-emerald-950 font-black text-[10px] uppercase tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check text-emerald-700"></i> Certified
+                        </span>
+                    </div>
+                `;
+            } else {
+                verBannerEl.innerHTML = `
+                    <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-3 flex-wrap shadow-2xs">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <span class="font-black text-amber-950 block text-xs">Awaiting Tabulator Verification</span>
+                                <span class="text-[11px] text-amber-800">Please audit the criteria and score categories entered below. Click <strong>"Verify Score"</strong> to certify.</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-xl bg-amber-200 text-amber-950 font-black text-[10px] uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                            <i class="fa-solid fa-hourglass-half"></i> Action Required
+                        </span>
+                    </div>
+                `;
+            }
+        } else {
+            verBannerEl.innerHTML = `
+                <div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 text-xs flex items-center gap-2.5">
+                    <i class="fa-solid fa-pen-ruler text-amber-600 text-sm shrink-0"></i>
+                    <span>Judge evaluation is currently in <strong>Draft</strong>. Only submitted final evaluations can be verified.</span>
+                </div>
+            `;
         }
     }
 
@@ -754,15 +847,15 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
             // Summary card showing formula breakdown
             criteriaHtml += `
                 <div class="p-3.5 rounded-2xl bg-buksu-navy/5 border border-buksu-navy/20 flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div class="space-y-0.5">
+                    <div class="space-y-0.5 min-w-0 flex-1">
                         <span class="font-extrabold text-slate-800 flex items-center gap-1.5">
                             <i class="fa-solid fa-calculator text-buksu-navy"></i> Tabulation Verification Formula
                         </span>
-                        <p class="text-[11px] text-slate-500 font-mono">
-                            ${calculationSteps.join(' + ')} = <strong class="text-buksu-navy">${parseFloat(entry.total_score || 0).toFixed(precision)}%</strong>
+                        <p class="text-[11px] text-slate-600 font-mono break-all sm:break-words">
+                            ${calculationSteps.join(' + ')} = <strong class="text-buksu-navy font-bold">${parseFloat(entry.total_score || 0).toFixed(precision)}%</strong>
                         </p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right shrink-0">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Verified Total</span>
                         <span class="text-base font-black text-buksu-navy font-mono">${parseFloat(entry.total_score || 0).toFixed(precision)}%</span>
                     </div>
@@ -796,13 +889,82 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
         }
     }
 
-    // 5. Unlock action in modal footer
+    // 5. Verify / Unverify action in modal footer
+    const verifyContainer = document.getElementById('breakdown-verify-container');
+    if (verifyContainer) {
+        if ((role === 'admin' || role === 'tabulator') && isSubmitted) {
+            if (!isVerified) {
+                verifyContainer.innerHTML = `
+                    <button type="button" id="modalVerifyScoreBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition-colors inline-flex items-center gap-2 shrink-0">
+                        <i class="fa-solid fa-shield-check text-sm"></i> Verify Score
+                    </button>
+                `;
+
+                const verifyBtn = document.getElementById('modalVerifyScoreBtn');
+                if (verifyBtn) {
+                    verifyBtn.addEventListener('click', async () => {
+                        verifyBtn.disabled = true;
+                        verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Verifying...';
+
+                        const res = await verifyJudgeScore(currentEventId, contestantId, judge.id);
+                        if (res.success) {
+                            showToast(res.message || 'Score verified successfully!', 'success');
+                            await loadTabulationData(false);
+                            openScoreBreakdownModal(contestantId, judge.id);
+                        } else {
+                            showToast(res.message || 'Failed to verify score.', 'error');
+                            verifyBtn.disabled = false;
+                            verifyBtn.innerHTML = '<i class="fa-solid fa-shield-check text-sm"></i> Verify Score';
+                        }
+                    });
+                }
+            } else {
+                verifyContainer.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <span class="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-black inline-flex items-center gap-1.5 shadow-2xs shrink-0">
+                            <i class="fa-solid fa-shield-check text-emerald-600"></i> Verified
+                        </span>
+                        <button type="button" id="modalUnverifyScoreBtn" class="px-3.5 py-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-300 font-bold text-xs rounded-xl cursor-pointer transition-colors inline-flex items-center gap-1 shrink-0" title="Revoke verification if judge needs to revise">
+                            <i class="fa-solid fa-rotate-left text-[10px]"></i> Revoke Verification
+                        </button>
+                    </div>
+                `;
+
+                const unverifyBtn = document.getElementById('modalUnverifyScoreBtn');
+                if (unverifyBtn) {
+                    unverifyBtn.addEventListener('click', async () => {
+                        if (!confirm(`Revoke tabulator verification for this score?\n\nJudge "${judge.username}" score for "${contestantRow.name}" will return to unverified status.`)) {
+                            return;
+                        }
+
+                        unverifyBtn.disabled = true;
+                        unverifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Revoking...';
+
+                        const res = await unverifyJudgeScore(currentEventId, contestantId, judge.id);
+                        if (res.success) {
+                            showToast(res.message || 'Score verification revoked.', 'info');
+                            await loadTabulationData(false);
+                            openScoreBreakdownModal(contestantId, judge.id);
+                        } else {
+                            showToast(res.message || 'Failed to revoke verification.', 'error');
+                            unverifyBtn.disabled = false;
+                            unverifyBtn.innerHTML = '<i class="fa-solid fa-rotate-left text-[10px]"></i> Revoke Verification';
+                        }
+                    });
+                }
+            }
+        } else {
+            verifyContainer.innerHTML = '';
+        }
+    }
+
+    // 6. Unlock action in modal footer
     const unlockContainer = document.getElementById('breakdown-unlock-container');
     if (unlockContainer) {
         if (isSubmitted && (role === 'admin' || role === 'tabulator') && unlockPolicy !== 'locked_after_submit') {
             unlockContainer.innerHTML = `
-                <button type="button" id="modalUnlockJudgeScoreBtn" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-extrabold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs" data-contestant-id="${contestantId}" data-judge-id="${judge.id}" data-judge-name="${escapeHtml(judge.username)}" data-contestant-name="${escapeHtml(contestantRow.name)}">
-                    <i class="fa-solid fa-lock-open text-rose-600"></i> Unlock Score for Judge
+                <button type="button" id="modalUnlockJudgeScoreBtn" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-300 font-extrabold text-xs rounded-xl cursor-pointer transition-colors inline-flex items-center gap-1.5 shadow-2xs shrink-0" data-contestant-id="${contestantId}" data-judge-id="${judge.id}" data-judge-name="${escapeHtml(judge.username)}" data-contestant-name="${escapeHtml(contestantRow.name)}">
+                    <i class="fa-solid fa-lock-open text-rose-600"></i> Unlock Score
                 </button>
             `;
 
@@ -837,6 +999,8 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
 }
 
 export function closeScoreBreakdownModal() {
+    activeBreakdownContestantId = null;
+    activeBreakdownJudgeId = null;
     const modal = document.getElementById('score-breakdown-modal');
     if (modal) modal.classList.add('hidden');
 }

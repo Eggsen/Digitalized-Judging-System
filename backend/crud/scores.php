@@ -294,6 +294,9 @@ if ($method === "GET") {
                 'criteria_scores' => $formattedCriteriaScores,
                 'total_score' => (float)($s['total_score'] ?? 0),
                 'status' => $s['status'] ?? 'draft',
+                'is_verified' => (bool)($s['is_verified'] ?? false),
+                'verified_at' => $s['verified_at'] ?? '',
+                'verified_by' => $s['verified_by'] ?? '',
                 'submitted_at' => $s['submitted_at'] ?? '',
                 'unlocked_at' => $s['unlocked_at'] ?? '',
                 'unlocked_by' => $s['unlocked_by'] ?? ''
@@ -305,6 +308,7 @@ if ($method === "GET") {
         // 3. Build Matrix & Calculate Rankings
         $matrix = [];
         $totalSubmittedEntries = 0;
+        $totalVerifiedEntries = 0;
         foreach ($contestants as $c) {
             $cId = $c['id'];
             $judgeEntries = [];
@@ -325,6 +329,9 @@ if ($method === "GET") {
                         $submittedScoresList[] = $sVal;
                         $submittedCount++;
                         $totalSubmittedEntries++;
+                        if (!empty($entry['is_verified'])) {
+                            $totalVerifiedEntries++;
+                        }
 
                         // Sum per criterion
                         if (!empty($entry['criteria_scores'])) {
@@ -476,8 +483,10 @@ if ($method === "GET") {
                 'total_contestants' => count($contestants),
                 'total_judges' => count($judges),
                 'total_submitted' => $totalSubmittedEntries,
+                'total_verified' => $totalVerifiedEntries,
                 'total_expected' => $totalExpectedEntries,
-                'is_completed' => ($totalExpectedEntries > 0 && $totalSubmittedEntries >= $totalExpectedEntries)
+                'is_completed' => ($totalExpectedEntries > 0 && $totalSubmittedEntries >= $totalExpectedEntries),
+                'is_all_verified' => ($totalExpectedEntries > 0 && $totalVerifiedEntries >= $totalExpectedEntries)
             ]
         ]);
         exit;
@@ -547,7 +556,12 @@ if ($method === "POST") {
                     '$set' => [
                         'status' => 'draft',
                         'unlocked_at' => $nowStr,
-                        'unlocked_by' => $_SESSION['username'] ?? 'Admin'
+                        'unlocked_by' => $_SESSION['username'] ?? 'Admin',
+                        'is_verified' => false
+                    ],
+                    '$unset' => [
+                        'verified_at' => '',
+                        'verified_by' => ''
                     ]
                 ]
             );
@@ -597,6 +611,194 @@ if ($method === "POST") {
                     'contestant_id' => $contestantId,
                     'judge_id' => $targetJudgeId,
                     'status' => 'draft'
+                ]
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ACTION: VERIFY SCORE (Admin or Tabulator only)
+    // ---------------------------------------------------------
+    if ($action === 'verify_score') {
+        if ($role !== 'admin' && $role !== 'tabulator') {
+            echo json_encode(["success" => false, "message" => "Only administrators or tabulators can verify judge scores."]);
+            exit;
+        }
+
+        $eventId = (int)($data['event_id'] ?? 0);
+        $contestantId = trim($data['contestant_id'] ?? '');
+        $targetJudgeId = trim($data['judge_id'] ?? '');
+
+        if ($eventId <= 0 || $contestantId === '' || $targetJudgeId === '') {
+            echo json_encode(["success" => false, "message" => "Event ID, Contestant ID, and Judge ID are required to verify score."]);
+            exit;
+        }
+
+        try {
+            $existing = $scoresCollection->findOne([
+                'event_id' => $eventId,
+                'contestant_id' => $contestantId,
+                'judge_id' => $targetJudgeId
+            ]);
+
+            if (!$existing) {
+                echo json_encode(["success" => false, "message" => "No score record found to verify."]);
+                exit;
+            }
+
+            if (($existing['status'] ?? '') !== 'submitted') {
+                echo json_encode(["success" => false, "message" => "Only submitted final scores can be verified. This score is currently draft."]);
+                exit;
+            }
+
+            $nowStr = (new DateTime())->format('Y-m-d H:i:s');
+            $verifierName = $_SESSION['username'] ?? 'Tabulator';
+
+            $scoresCollection->updateOne(
+                [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId
+                ],
+                [
+                    '$set' => [
+                        'is_verified' => true,
+                        'verified_at' => $nowStr,
+                        'verified_by' => $verifierName
+                    ]
+                ]
+            );
+
+            $contestant = $contestantsCollection->findOne(['_id' => $contestantId]);
+            $cName = $contestant ? ($contestant['name'] ?? "Contestant {$contestantId}") : "Contestant {$contestantId}";
+            $judgeUser = $usersCollection->findOne(['_id' => $targetJudgeId]);
+            $jName = $judgeUser ? ($judgeUser['username'] ?? $targetJudgeId) : $targetJudgeId;
+            $eventDoc = $eventsCollection->findOne(['_id' => $eventId]);
+            $evName = $eventDoc ? ($eventDoc['eventName'] ?? "Event #{$eventId}") : "Event #{$eventId}";
+
+            logSystemAction(
+                $userId,
+                $verifierName,
+                $role,
+                'VERIFY_SCORE',
+                "Verified submitted score ({$existing['total_score']}%) for {$cName} from Judge {$jName} in '{$evName}'."
+            );
+
+            // Broadcast real-time WebSocket event
+            triggerWebSocketEvent("event-{$eventId}", "score-verified", [
+                'event_id'        => $eventId,
+                'contestant_id'   => $contestantId,
+                'judge_id'        => $targetJudgeId,
+                'judge_name'      => $jName,
+                'is_verified'     => true,
+                'verified_by'     => $verifierName,
+                'timestamp'       => $nowStr
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Score from Judge {$jName} for {$cName} successfully verified!",
+                "verified" => [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId,
+                    'is_verified' => true,
+                    'verified_by' => $verifierName,
+                    'verified_at' => $nowStr
+                ]
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ACTION: UNVERIFY SCORE (Admin or Tabulator only)
+    // ---------------------------------------------------------
+    if ($action === 'unverify_score') {
+        if ($role !== 'admin' && $role !== 'tabulator') {
+            echo json_encode(["success" => false, "message" => "Only administrators or tabulators can revoke score verification."]);
+            exit;
+        }
+
+        $eventId = (int)($data['event_id'] ?? 0);
+        $contestantId = trim($data['contestant_id'] ?? '');
+        $targetJudgeId = trim($data['judge_id'] ?? '');
+
+        if ($eventId <= 0 || $contestantId === '' || $targetJudgeId === '') {
+            echo json_encode(["success" => false, "message" => "Event ID, Contestant ID, and Judge ID are required."]);
+            exit;
+        }
+
+        try {
+            $existing = $scoresCollection->findOne([
+                'event_id' => $eventId,
+                'contestant_id' => $contestantId,
+                'judge_id' => $targetJudgeId
+            ]);
+
+            if (!$existing) {
+                echo json_encode(["success" => false, "message" => "No score record found."]);
+                exit;
+            }
+
+            $scoresCollection->updateOne(
+                [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId
+                ],
+                [
+                    '$set' => [
+                        'is_verified' => false
+                    ],
+                    '$unset' => [
+                        'verified_at' => '',
+                        'verified_by' => ''
+                    ]
+                ]
+            );
+
+            $contestant = $contestantsCollection->findOne(['_id' => $contestantId]);
+            $cName = $contestant ? ($contestant['name'] ?? "Contestant {$contestantId}") : "Contestant {$contestantId}";
+            $judgeUser = $usersCollection->findOne(['_id' => $targetJudgeId]);
+            $jName = $judgeUser ? ($judgeUser['username'] ?? $targetJudgeId) : $targetJudgeId;
+            $eventDoc = $eventsCollection->findOne(['_id' => $eventId]);
+            $evName = $eventDoc ? ($eventDoc['eventName'] ?? "Event #{$eventId}") : "Event #{$eventId}";
+
+            logSystemAction(
+                $userId,
+                $_SESSION['username'] ?? 'Tabulator',
+                $role,
+                'UNVERIFY_SCORE',
+                "Revoked verification for {$cName} from Judge {$jName} in '{$evName}'."
+            );
+
+            // Broadcast real-time WebSocket event
+            triggerWebSocketEvent("event-{$eventId}", "score-verified", [
+                'event_id'        => $eventId,
+                'contestant_id'   => $contestantId,
+                'judge_id'        => $targetJudgeId,
+                'judge_name'      => $jName,
+                'is_verified'     => false,
+                'verified_by'     => '',
+                'timestamp'       => (new DateTime())->format('Y-m-d H:i:s')
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Score verification revoked.",
+                "verified" => [
+                    'event_id' => $eventId,
+                    'contestant_id' => $contestantId,
+                    'judge_id' => $targetJudgeId,
+                    'is_verified' => false
                 ]
             ]);
             exit;
@@ -756,6 +958,7 @@ if ($method === "POST") {
             'criteria_scores' => $cleanedScores,
             'total_score' => $totalScore,
             'status' => $status,
+            'is_verified' => false,
             'submitted_at' => $nowStr
         ];
 
@@ -767,6 +970,7 @@ if ($method === "POST") {
             ],
             [
                 '$set' => $docToSet,
+                '$unset' => ['verified_at' => '', 'verified_by' => ''],
                 '$setOnInsert' => ['_id' => $scoreId]
             ],
             ['upsert' => true]

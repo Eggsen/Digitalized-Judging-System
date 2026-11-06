@@ -249,3 +249,43 @@ export async function unlockJudgeScore(eventId, contestantId, judgeId) {
         return { success: false, message: "Network error unlocking score." };
     }
 }
+
+export async function verifyJudgeScore(eventId, contestantId, judgeId) {
+    try {
+        const res = await fetch("/backend/crud/scores.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "verify_score",
+                event_id: parseInt(eventId),
+                contestant_id: contestantId,
+                judge_id: judgeId
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("verifyJudgeScore error: ", e);
+        return { success: false, message: "Network error verifying score." };
+    }
+}
+
+export async function unverifyJudgeScore(eventId, contestantId, judgeId) {
+    try {
+        const res = await fetch("/backend/crud/scores.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "unverify_score",
+                event_id: parseInt(eventId),
+                contestant_id: contestantId,
+                judge_id: judgeId
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("unverifyJudgeScore error: ", e);
+        return { success: false, message: "Network error revoking score verification." };
+    }
+}

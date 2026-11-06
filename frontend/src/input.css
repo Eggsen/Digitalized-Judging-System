@@ -156,6 +156,7 @@ html.dark .shadow-2xl {
 html.dark #create-event-modal > div,
 html.dark #edit-event-modal > div,
 html.dark #tabulation-board-modal > div,
+html.dark #score-breakdown-modal > div,
 html.dark #judge-scoring-modal > div,
 html.dark #view-event-modal > div,
 html.dark #preferences-modal > div {

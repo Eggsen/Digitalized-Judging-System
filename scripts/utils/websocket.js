@@ -172,6 +172,17 @@ export async function subscribeToEventChannel(eventId, callbacks = {}) {
         });
     }
 
+    if (typeof callbacks.onScoreVerified === 'function') {
+        channel.bind('score-verified', (data) => {
+            try {
+                const payload = typeof data === 'string' ? JSON.parse(data) : data;
+                callbacks.onScoreVerified(payload);
+            } catch (e) {
+                callbacks.onScoreVerified(data);
+            }
+        });
+    }
+
     if (typeof callbacks.onJudgingStatusChanged === 'function') {
         channel.bind('judging-status-changed', (data) => {
             try {
