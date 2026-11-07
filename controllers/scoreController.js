@@ -52,8 +52,13 @@ async function submitScore(req, res, next) {
         const scoreQuery = getScoreQuery(event_id, contestant_id, judgeId);
         const existingScore = await collections.scores.findOne(scoreQuery);
 
-        if (existingScore && existingScore.is_locked && !req.body.force_admin_override && action !== 'draft') {
-            return res.status(403).json({ success: false, message: 'Your score has been submitted and locked. Request an unlock to make changes.' });
+        const settings = await collections.settings.findOne({ _id: 'system_settings' });
+        const unlockPolicy = settings?.judging?.unlockPolicy || 'admin_approval';
+
+        if (existingScore && existingScore.is_locked && !req.body.force_admin_override) {
+            if (unlockPolicy !== 'judge_self_unlock') {
+                return res.status(403).json({ success: false, message: 'Your score has been submitted and locked. Request an unlock to make changes.' });
+            }
         }
 
         // Fetch criteria for calculating weighted score
@@ -110,7 +115,6 @@ async function submitScore(req, res, next) {
         }
 
         // Precision
-        const settings = await collections.settings.findOne({ _id: 'system_settings' });
         const precision = parseInt(settings?.judging?.decimalPrecision ?? 2, 10);
         totalScore = parseFloat(totalScore.toFixed(precision));
 
@@ -129,9 +133,9 @@ async function submitScore(req, res, next) {
             is_locked: isSubmit,
             locked_at: isSubmit ? now : null,
             unlock_requested: false,
-            is_verified: existingScore?.is_verified ?? false,
-            verified_by: existingScore?.verified_by ?? null,
-            verified_at: existingScore?.verified_at ?? null,
+            is_verified: false,
+            verified_by: null,
+            verified_at: null,
             updated_at: now
         };
 
@@ -262,6 +266,68 @@ async function approveUnlock(req, res, next) {
             success: true,
             message: isApprove ? 'Score unlocked. Judge may now revise entries.' : 'Unlock request rejected.'
         });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Self Unlock Score (Judge Action under 'judge_self_unlock' policy)
+ */
+async function selfUnlock(req, res, next) {
+    try {
+        const { event_id, contestant_id } = req.body;
+        const judgeId = String(req.user.id);
+
+        if (!event_id || !contestant_id) {
+            return res.status(400).json({ success: false, message: 'Missing event_id or contestant_id.' });
+        }
+
+        const settings = await collections.settings.findOne({ _id: 'system_settings' });
+        const unlockPolicy = settings?.judging?.unlockPolicy || 'admin_approval';
+
+        if (unlockPolicy !== 'judge_self_unlock' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Self-unlock is not permitted under current judging policy.' });
+        }
+
+        const scoreQuery = getScoreQuery(event_id, contestant_id, judgeId);
+        const existingScore = await collections.scores.findOne(scoreQuery);
+
+        if (!existingScore) {
+            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        }
+
+        const now = new Date().toISOString();
+        await collections.scores.updateOne(scoreQuery, {
+            $set: {
+                is_locked: false,
+                status: 'draft',
+                unlock_requested: false,
+                is_verified: false,
+                verified_by: null,
+                verified_at: null,
+                updated_at: now
+            }
+        });
+
+        await triggerPusherEvent(`event-${event_id}`, 'score-unlocked', {
+            event_id,
+            contestant_id,
+            judge_id: judgeId,
+            is_locked: false,
+            status: 'draft'
+        });
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'JUDGE_SELF_UNLOCK',
+            `Judge self-unlocked score for contestant ${contestant_id}.`,
+            req
+        );
+
+        res.json({ success: true, message: 'Score unlocked for revision.' });
     } catch (err) {
         next(err);
     }
@@ -668,6 +734,7 @@ module.exports = {
     lockScore,
     requestUnlock,
     approveUnlock,
+    selfUnlock,
     verifyScore,
     unverifyScore,
     getTabulationMatrix

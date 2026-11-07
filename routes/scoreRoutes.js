@@ -6,9 +6,11 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 router.use(authenticateToken);
 
 // Scoring Submissions (Judge)
+router.post('/', requireRole(['judge', 'admin']), scoreController.submitScore);
 router.post('/submit', requireRole(['judge', 'admin']), scoreController.submitScore);
 router.post('/lock', requireRole(['judge', 'admin']), scoreController.lockScore);
 router.post('/request-unlock', requireRole(['judge']), scoreController.requestUnlock);
+router.post('/self-unlock', requireRole(['judge', 'admin']), scoreController.selfUnlock);
 
 // Tabulation & Unlock Approvals (Admin & Tabulator)
 router.post('/approve-unlock', requireRole(['admin', 'tabulator']), scoreController.approveUnlock);

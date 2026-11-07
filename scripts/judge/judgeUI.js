@@ -1,4 +1,4 @@
-import { getScores, submitScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
+import { getScores, submitScore, selfUnlockJudgeScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel } from "/scripts/utils/websocket.js";
 
@@ -623,10 +623,19 @@ function renderScoringSheet() {
     });
 
     // Bind Unlock Score Edit Button
-    document.getElementById('unlockScoreEditBtn')?.addEventListener('click', () => {
+    document.getElementById('unlockScoreEditBtn')?.addEventListener('click', async () => {
         if (scoringBody) {
             scoringBody.dataset.unlocked = "true";
             renderScoringSheet();
+            try {
+                const res = await selfUnlockJudgeScore(currentEventId, selectedContestantId);
+                if (res?.success && judgeScoresMap[selectedContestantId]) {
+                    judgeScoresMap[selectedContestantId].status = 'draft';
+                    judgeScoresMap[selectedContestantId].is_locked = false;
+                }
+            } catch (err) {
+                console.warn('Self-unlock sync notice:', err);
+            }
         }
     });
 

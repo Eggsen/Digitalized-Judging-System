@@ -62,13 +62,13 @@ export async function deleteContestant(id) {
 
 export async function addContestantComment(contestantId, commentText, memberName = '', awardTitle = '') {
     try {
-        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}`, {
-            method: "PUT",
+        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}/comments`, {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
                 details: commentText,
                 member_name: memberName,
-                award_title: awardTitle
+                award_title: awardTitle || commentText
             }),
             credentials: "include"
         });
@@ -81,10 +81,8 @@ export async function addContestantComment(contestantId, commentText, memberName
 
 export async function deleteContestantComment(contestantId, commentId) {
     try {
-        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ details: '' }),
+        const res = await fetch(`/api/contestants/${encodeURIComponent(contestantId)}/comments/${encodeURIComponent(commentId)}`, {
+            method: "DELETE",
             credentials: "include"
         });
         return await res.json();
@@ -245,6 +243,24 @@ export async function unlockJudgeScore(eventId, contestantId, judgeId) {
     } catch (e) {
         console.error("unlockJudgeScore error: ", e);
         return { success: false, message: "Network error unlocking score." };
+    }
+}
+
+export async function selfUnlockJudgeScore(eventId, contestantId) {
+    try {
+        const res = await fetch("/api/scores/self-unlock", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                event_id: String(eventId),
+                contestant_id: contestantId
+            }),
+            credentials: "include"
+        });
+        return await res.json();
+    } catch (e) {
+        console.error("selfUnlockJudgeScore error: ", e);
+        return { success: false, message: "Network error self-unlocking score." };
     }
 }
 

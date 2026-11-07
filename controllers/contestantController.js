@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { uploadToCloudinary } = require('../utils/cloudinary');
@@ -100,7 +101,18 @@ async function createContestant(req, res, next) {
 async function updateContestant(req, res, next) {
     try {
         const { id } = req.params;
-        const { name, number, contestant_number, representation, photo_url, photo_base64, details } = req.body;
+        const { name, number, contestant_number, representation, photo_url, photo_base64, details, award_title, commentText, comment_id, commentId } = req.body;
+
+        // If request is made by a judge, handle citation/award assignments and deletions
+        if (req.user.role === 'judge') {
+            if (award_title !== undefined || details !== undefined || commentText !== undefined) {
+                return addComment(req, res, next);
+            }
+            if (comment_id !== undefined || commentId !== undefined) {
+                return deleteComment(req, res, next);
+            }
+            return res.status(403).json({ success: false, message: 'Access denied. Requires one of the following roles: admin.' });
+        }
 
         const query = getIdFilter(id);
 
@@ -126,6 +138,136 @@ async function updateContestant(req, res, next) {
         await collections.contestants.updateOne(query, { $set: updateDoc });
 
         res.json({ success: true, message: 'Contestant updated successfully.' });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Add Comment / Special Citation to Contestant (Admin & Judge)
+ */
+async function addComment(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { commentText, text, details, comment, member_name, award_title } = req.body;
+
+        const effectiveText = (award_title || details || text || commentText || comment || '').trim();
+        const effectiveTitle = (award_title || text || details || commentText || comment || 'Special Citation').trim();
+        const effectiveMember = (member_name || '').trim();
+
+        if (!effectiveText) {
+            return res.status(400).json({ success: false, message: 'Citation text or award title is required.' });
+        }
+
+        const query = getIdFilter(id);
+        const contestant = await collections.contestants.findOne(query);
+        if (!contestant) {
+            return res.status(404).json({ success: false, message: 'Contestant not found.' });
+        }
+
+        // If judge, ensure competition event is active
+        if (req.user.role === 'judge') {
+            const evQuery = getIdFilter(contestant.event_id);
+            const event = await collections.events.findOne(evQuery);
+            const jStatus = event?.judgingStatus || event?.judging_status;
+            if (jStatus === 'Finished' || event?.status === 'Completed') {
+                return res.status(403).json({ success: false, message: 'Judging period is finished for this event.' });
+            }
+        }
+
+        const commentId = 'citation-' + crypto.randomBytes(6).toString('hex');
+        const now = new Date().toISOString();
+
+        const newComment = {
+            id: commentId,
+            text: effectiveText,
+            award_title: effectiveTitle,
+            member_name: effectiveMember,
+            comment: (comment || details || text || effectiveText).trim(),
+            judge_id: String(req.user.id),
+            judge_name: req.user.full_name || req.user.username,
+            author: req.user.full_name || req.user.username,
+            author_role: req.user.role,
+            created_at: now
+        };
+
+        await collections.contestants.updateOne(query, {
+            $push: { comments: newComment },
+            $set: { updated_at: now }
+        });
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'ASSIGN_SPECIAL_AWARD',
+            `Assigned citation "${effectiveTitle}" ${effectiveMember ? `(${effectiveMember}) ` : ''}to contestant #${contestant.number || contestant.contestant_number || ''} ${contestant.name}.`,
+            req
+        );
+
+        res.json({
+            success: true,
+            message: 'Special award / citation assigned successfully.',
+            comment: newComment
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Delete Comment / Special Citation from Contestant (Admin & Judge)
+ */
+async function deleteComment(req, res, next) {
+    try {
+        const { id, commentId } = req.params;
+        const targetCommentId = commentId || req.body.comment_id || req.body.commentId;
+
+        if (!targetCommentId) {
+            return res.status(400).json({ success: false, message: 'Comment ID is required.' });
+        }
+
+        const query = getIdFilter(id);
+        const contestant = await collections.contestants.findOne(query);
+        if (!contestant) {
+            return res.status(404).json({ success: false, message: 'Contestant not found.' });
+        }
+
+        const comments = Array.isArray(contestant.comments) ? contestant.comments : [];
+        const target = comments.find(c => String(c.id) === String(targetCommentId));
+
+        if (!target) {
+            return res.status(404).json({ success: false, message: 'Citation record not found.' });
+        }
+
+        // Judges can only delete their own citations, admins can delete any
+        if (req.user.role === 'judge') {
+            const isOwner = (target.judge_id && String(target.judge_id) === String(req.user.id)) ||
+                            (target.author && String(target.author).toLowerCase() === String(req.user.username).toLowerCase());
+            if (!isOwner) {
+                return res.status(403).json({ success: false, message: 'You can only remove awards you personally assigned.' });
+            }
+        }
+
+        const now = new Date().toISOString();
+        await collections.contestants.updateOne(query, {
+            $pull: { comments: { id: targetCommentId } },
+            $set: { updated_at: now }
+        });
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'REMOVE_SPECIAL_AWARD',
+            `Removed citation "${target.award_title || target.text}" from contestant #${contestant.number || contestant.contestant_number || ''} ${contestant.name}.`,
+            req
+        );
+
+        res.json({
+            success: true,
+            message: 'Special award citation removed successfully.'
+        });
     } catch (err) {
         next(err);
     }
@@ -184,5 +326,7 @@ module.exports = {
     createContestant,
     updateContestant,
     deleteContestant,
-    reorderContestants
+    reorderContestants,
+    addComment,
+    deleteComment
 };
