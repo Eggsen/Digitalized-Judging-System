@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'djs_super_secret_jwt_key_2026_buksu';
+const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
 /**
  * Extract token from Authorization Bearer header or HTTP-only cookies

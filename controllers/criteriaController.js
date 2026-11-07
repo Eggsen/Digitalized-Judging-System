@@ -26,6 +26,8 @@ async function listCriteria(req, res, next) {
                 const weightVal = parseFloat(c.percentage !== undefined ? c.percentage : (c.weight || 0)) || 0;
                 const maxVal = parseFloat(c.max_points !== undefined ? c.max_points : (c.max_score || 100)) || 100;
                 const minVal = parseFloat(c.min_points !== undefined ? c.min_points : (c.min_score || 0)) || 0;
+                const scoringTypeVal = c.scoring_type || (Array.isArray(c.scoring_categories) && c.scoring_categories.length > 0 ? 'category' : 'rubric');
+
                 return {
                     ...c,
                     id: String(c._id),
@@ -36,7 +38,12 @@ async function listCriteria(req, res, next) {
                     max_score: maxVal,
                     max_points: maxVal,
                     min_score: minVal,
-                    min_points: minVal
+                    min_points: minVal,
+                    scoring_type: scoringTypeVal,
+                    rubric_ratings: Array.isArray(c.rubric_ratings) ? c.rubric_ratings : [],
+                    scoring_categories: Array.isArray(c.scoring_categories) ? c.scoring_categories : [],
+                    instructions: c.instructions || c.description || '',
+                    score_step: parseFloat(c.score_step) || 0.5
                 };
             }),
             total_weight: totalWeight,
@@ -52,31 +59,79 @@ async function listCriteria(req, res, next) {
  */
 async function createCriterion(req, res, next) {
     try {
-        const { event_id, name, title, description, weight, max_score, min_score, category, order } = req.body;
+        // If weights array was submitted directly to this endpoint (from updateCriteriaWeights)
+        if (Array.isArray(req.body.weights) || (Array.isArray(req.body.criteria) && !req.body.name && !req.body.title)) {
+            return batchUpdateWeights(req, res, next);
+        }
 
-        const criterionName = (name || title || '').trim();
+        const {
+            event_id,
+            name,
+            title,
+            description,
+            instructions,
+            weight,
+            percentage,
+            max_score,
+            max_points,
+            min_score,
+            min_points,
+            score_step,
+            scoring_type,
+            rubric_ratings,
+            scoring_categories,
+            category,
+            order
+        } = req.body;
+
+        const criterionName = (title || name || '').trim();
         if (!event_id || !criterionName) {
             return res.status(400).json({ success: false, message: 'Event ID and criterion name are required.' });
         }
 
-        const criterionWeight = parseFloat(weight !== undefined ? weight : req.body.percentage) || 0;
-        const maxScoreVal = parseFloat(max_score !== undefined ? max_score : req.body.max_points) || 100;
-        const minScoreVal = parseFloat(min_score !== undefined ? min_score : req.body.min_points) || 0;
+        const criterionWeight = parseFloat(percentage !== undefined ? percentage : (weight !== undefined ? weight : 0)) || 0;
+        const maxScoreVal = parseFloat(max_points !== undefined ? max_points : (max_score !== undefined ? max_score : 100)) || 100;
+        const minScoreVal = parseFloat(min_points !== undefined ? min_points : (min_score !== undefined ? min_score : 0)) || 0;
 
         const numEventId = Number(event_id);
         const storedEventId = (!isNaN(numEventId) && Number.isInteger(numEventId)) ? numEventId : String(event_id);
+
+        const scoringTypeVal = (scoring_type === 'category') ? 'category' : 'rubric';
+
+        const cleanRubricRatings = Array.isArray(rubric_ratings) ? rubric_ratings.map((r, idx) => ({
+            id: r.id || `rate-${idx + 1}`,
+            name: (r.name || r.title || '').trim(),
+            score: parseFloat(r.score !== undefined ? r.score : (r.points || 0)) || 0,
+            description: (r.description || '').trim()
+        })).filter(r => r.name.length > 0) : [];
+
+        const cleanScoringCategories = Array.isArray(scoring_categories) ? scoring_categories.map((c, idx) => {
+            const pts = parseFloat(c.points !== undefined ? c.points : (c.max_score || 0)) || 0;
+            return {
+                id: c.id || `cat-${idx + 1}`,
+                name: (c.name || c.title || '').trim(),
+                points: pts,
+                max_score: pts,
+                description: (c.description || '').trim()
+            };
+        }).filter(c => c.name.length > 0) : [];
 
         const newCriterion = {
             event_id: storedEventId,
             name: criterionName,
             title: criterionName,
-            description: (description || '').trim(),
+            description: (description || instructions || '').trim(),
+            instructions: (instructions || description || '').trim(),
             weight: criterionWeight,
             percentage: criterionWeight,
             max_score: maxScoreVal,
             max_points: maxScoreVal,
             min_score: minScoreVal,
             min_points: minScoreVal,
+            score_step: parseFloat(score_step) || 0.5,
+            scoring_type: scoringTypeVal,
+            rubric_ratings: cleanRubricRatings,
+            scoring_categories: cleanScoringCategories,
             category: (category || 'General').trim(),
             order: parseInt(order || '1', 10),
             created_at: new Date().toISOString()
@@ -113,30 +168,80 @@ async function createCriterion(req, res, next) {
 async function updateCriterion(req, res, next) {
     try {
         const { id } = req.params;
-        const { name, title, description, weight, max_score, min_score, category, order } = req.body;
+        const {
+            name,
+            title,
+            description,
+            instructions,
+            weight,
+            percentage,
+            max_score,
+            max_points,
+            min_score,
+            min_points,
+            score_step,
+            scoring_type,
+            rubric_ratings,
+            scoring_categories,
+            category,
+            order
+        } = req.body;
 
         const query = getIdFilter(id);
 
         const updateDoc = { updated_at: new Date().toISOString() };
-        if (name !== undefined || title !== undefined) {
-            updateDoc.name = (name || title || '').trim();
+        if (title !== undefined || name !== undefined) {
+            updateDoc.name = (title || name || '').trim();
             updateDoc.title = updateDoc.name;
         }
-        if (description !== undefined) updateDoc.description = description.trim();
-        if (weight !== undefined || req.body.percentage !== undefined) {
-            const w = parseFloat(weight !== undefined ? weight : req.body.percentage) || 0;
+        if (description !== undefined) {
+            updateDoc.description = description.trim();
+        }
+        if (instructions !== undefined) {
+            updateDoc.instructions = instructions.trim();
+        } else if (description !== undefined) {
+            updateDoc.instructions = description.trim();
+        }
+        if (percentage !== undefined || weight !== undefined) {
+            const w = parseFloat(percentage !== undefined ? percentage : weight) || 0;
             updateDoc.weight = w;
             updateDoc.percentage = w;
         }
-        if (max_score !== undefined || req.body.max_points !== undefined) {
-            const m = parseFloat(max_score !== undefined ? max_score : req.body.max_points) || 100;
+        if (max_points !== undefined || max_score !== undefined) {
+            const m = parseFloat(max_points !== undefined ? max_points : max_score) || 100;
             updateDoc.max_score = m;
             updateDoc.max_points = m;
         }
-        if (min_score !== undefined || req.body.min_points !== undefined) {
-            const mn = parseFloat(min_score !== undefined ? min_score : req.body.min_points) || 0;
+        if (min_points !== undefined || min_score !== undefined) {
+            const mn = parseFloat(min_points !== undefined ? min_points : min_score) || 0;
             updateDoc.min_score = mn;
             updateDoc.min_points = mn;
+        }
+        if (score_step !== undefined) {
+            updateDoc.score_step = parseFloat(score_step) || 0.5;
+        }
+        if (scoring_type !== undefined) {
+            updateDoc.scoring_type = (scoring_type === 'category') ? 'category' : 'rubric';
+        }
+        if (Array.isArray(rubric_ratings)) {
+            updateDoc.rubric_ratings = rubric_ratings.map((r, idx) => ({
+                id: r.id || `rate-${idx + 1}`,
+                name: (r.name || r.title || '').trim(),
+                score: parseFloat(r.score !== undefined ? r.score : (r.points || 0)) || 0,
+                description: (r.description || '').trim()
+            })).filter(r => r.name.length > 0);
+        }
+        if (Array.isArray(scoring_categories)) {
+            updateDoc.scoring_categories = scoring_categories.map((c, idx) => {
+                const pts = parseFloat(c.points !== undefined ? c.points : (c.max_score || 0)) || 0;
+                return {
+                    id: c.id || `cat-${idx + 1}`,
+                    name: (c.name || c.title || '').trim(),
+                    points: pts,
+                    max_score: pts,
+                    description: (c.description || '').trim()
+                };
+            }).filter(c => c.name.length > 0);
         }
         if (category !== undefined) updateDoc.category = category.trim();
         if (order !== undefined) updateDoc.order = parseInt(order, 10);
@@ -170,10 +275,13 @@ async function deleteCriterion(req, res, next) {
  */
 async function batchUpdateWeights(req, res, next) {
     try {
-        const { criteria = [] } = req.body; // array of { id, weight }
+        const items = req.body.weights || req.body.criteria || [];
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'No criteria weights provided.' });
+        }
 
-        for (const item of criteria) {
-            if (item.id) {
+        for (const item of items) {
+            if (item && item.id) {
                 const query = getIdFilter(item.id);
                 const w = parseFloat(item.percentage !== undefined ? item.percentage : (item.weight || 0)) || 0;
                 await collections.criteria.updateOne(query, {

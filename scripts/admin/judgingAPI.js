@@ -155,7 +155,7 @@ export async function editCriterion(data) {
 
 export async function updateCriteriaWeights(eventId, weights) {
     try {
-        const res = await fetch("/api/criteria", {
+        const res = await fetch("/api/criteria/weights", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ event_id: eventId, weights }),

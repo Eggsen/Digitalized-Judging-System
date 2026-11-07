@@ -11,6 +11,9 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const { connectDB, collections } = require('./config/db');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { getIdFilter } = require('./utils/dbHelpers');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
 // Route modules
 const authRoutes = require('./routes/authRoutes');
@@ -87,9 +90,12 @@ app.get(['/', '/index.html'], (req, res) => {
     const token = req.cookies?.djs_token || req.cookies?.jwt_token;
     if (token) {
         try {
-            jwt.verify(token, process.env.JWT_SECRET || 'djs_super_secret_jwt_key_2026_buksu_official_tabulation');
+            jwt.verify(token, JWT_SECRET);
             return res.redirect('/dashboard');
-        } catch (e) {}
+        } catch (e) {
+            res.clearCookie('djs_token');
+            res.clearCookie('jwt_token');
+        }
     }
     return res.redirect('/auth/login');
 });
@@ -103,21 +109,27 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
 
     let decoded;
     try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET || 'djs_super_secret_jwt_key_2026_buksu_official_tabulation');
+        decoded = jwt.verify(token, JWT_SECRET);
     } catch (e) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
         return res.redirect('/auth/login?error=session_expired');
     }
 
     let user;
     try {
-        user = await collections.users.findOne({ _id: new ObjectId(decoded.id) });
+        user = await collections.users.findOne(getIdFilter(decoded.id));
     } catch (e) {}
 
     if (!user) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
         return res.redirect('/auth/login?error=no_account');
     }
 
     if (user.is_active === false || user.status === 'disabled') {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
         return res.redirect('/auth/login?error=account_disabled');
     }
 
@@ -145,12 +157,20 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
 });
 
 app.get(['/auth/login', '/auth/login.html', '/login'], async (req, res) => {
-    const token = req.cookies?.djs_token || req.cookies?.jwt_token;
-    if (token) {
-        try {
-            jwt.verify(token, process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026');
-            return res.redirect('/dashboard');
-        } catch (e) {}
+    if (req.query.error) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+    } else {
+        const token = req.cookies?.djs_token || req.cookies?.jwt_token;
+        if (token) {
+            try {
+                jwt.verify(token, JWT_SECRET);
+                return res.redirect('/dashboard');
+            } catch (e) {
+                res.clearCookie('djs_token');
+                res.clearCookie('jwt_token');
+            }
+        }
     }
 
     try {

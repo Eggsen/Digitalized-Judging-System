@@ -21,11 +21,14 @@
         // Check authentication & load runtime settings
         (async function() {
             try {
-                const meRes = await fetch('/api/auth/me', { credentials: 'include' });
-                const meData = await meRes.json();
-                if (meData.success && meData.user) {
-                    window.location.replace('/dashboard');
-                    return;
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!urlParams.get('error')) {
+                    const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+                    const meData = await meRes.json();
+                    if (meData.success && meData.user) {
+                        window.location.replace('/dashboard');
+                        return;
+                    }
                 }
             } catch(e) {}
 
