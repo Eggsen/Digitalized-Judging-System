@@ -209,6 +209,7 @@ export function initSettingsPanel() {
     initSecuritySettings();
     initBackupAndMaintenance();
     initApiKeysSettings();
+    loadSystemSettings();
 }
 
 export function activateSettingsSubtab(target) {

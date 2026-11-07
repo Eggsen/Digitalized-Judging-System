@@ -109,22 +109,19 @@ async function handleResetRequestSubmit() {
 
     if (res.success) {
         if (noticeWrap && notice) {
-            noticeWrap.className = 'mb-4 p-3 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200';
+            noticeWrap.className = 'mb-4 p-3.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 space-y-1';
             notice.innerHTML = `
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-circle-check text-emerald-600 text-sm shrink-0"></i>
                     <span>${res.message || 'Password reset link sent to your email.'}</span>
                 </div>
-                ${res.reset_link ? `
-                    <div class="text-[11px] font-normal text-slate-600 mt-2 mb-1">Direct reset link:</div>
-                    <div class="flex items-center gap-1.5">
-                        <input type="text" readonly value="${res.reset_link}" id="demo-reset-link" class="w-full px-2 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800 focus:outline-none" />
-                        <a href="${res.reset_link}" class="px-2.5 py-1 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded text-[11px] transition-colors shrink-0">Open Link</a>
-                    </div>
-                ` : ''}
+                <p class="text-[11px] font-normal text-emerald-800 ps-6">Please check your inbox or spam folder for password reset instructions.</p>
             `;
             noticeWrap.classList.remove('hidden');
         }
+        const form = document.getElementById('resetRequestForm');
+        if (form) form.reset();
+        resetRecaptchaWidget('reset-recaptcha');
     } else {
         resetRecaptchaWidget('reset-recaptcha');
         showResetNotice('error', res.message || 'Failed to send reset link.');

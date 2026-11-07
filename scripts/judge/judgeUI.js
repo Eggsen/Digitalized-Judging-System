@@ -422,15 +422,16 @@ function renderScoringSheet() {
             </div>
         `;
     } else if (isSubmitted && !isUnlocked) {
-        const unlockPolicy = currentSettings?.judging?.unlockPolicy || 'admin_approval';
+        const rawPolicy = String(currentSettings?.judging?.unlockPolicy || '').trim().toLowerCase();
+        const isSelfUnlock = rawPolicy === 'judge_self_unlock' || rawPolicy === 'judge-self-unlock' || rawPolicy.includes('self_unlock');
         let lockActionHtml = '';
-        if (unlockPolicy === 'judge_self_unlock') {
+        if (isSelfUnlock) {
             lockActionHtml = `
                 <button type="button" id="unlockScoreEditBtn" class="px-3.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors">
                     <i class="fa-solid fa-pen-to-square"></i> Edit Evaluation
                 </button>
             `;
-        } else if (unlockPolicy === 'admin_approval') {
+        } else if (rawPolicy === 'admin_approval') {
             lockActionHtml = `
                 <div class="px-3 py-1.5 bg-slate-100/90 border border-slate-300/80 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5">
                     <i class="fa-solid fa-lock text-slate-500"></i> Locked by Policy (Ask Tabulator/Admin to unlock)
@@ -1696,8 +1697,9 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                 </div>
             `;
         } else if (isSubmitted && !isUnlocked) {
-            const unlockPolicy = currentSettings?.judging?.unlockPolicy || 'admin_approval';
-            if (unlockPolicy === 'admin_approval') {
+            const rawPolicy = String(currentSettings?.judging?.unlockPolicy || '').trim().toLowerCase();
+            const isSelfUnlock = rawPolicy === 'judge_self_unlock' || rawPolicy === 'judge-self-unlock' || rawPolicy.includes('self_unlock');
+            if (rawPolicy === 'admin_approval') {
                 lockBannerHtml = `
                     <div class="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-300 text-slate-800 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
                         <div class="w-8 h-8 rounded-xl bg-slate-400 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
@@ -1709,7 +1711,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                         </div>
                     </div>
                 `;
-            } else if (unlockPolicy === 'judge_self_unlock') {
+            } else if (isSelfUnlock) {
                 lockBannerHtml = `
                     <div class="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
                         <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">

@@ -29,8 +29,8 @@ function getScoreQuery(eventId, contestantId, judgeId) {
 async function submitScore(req, res, next) {
     try {
         const { event_id, contestant_id, criteria_scores, comments, is_locked, action } = req.body;
-        const judgeId = String(req.user.id);
-        const judgeName = req.user.full_name || req.user.username;
+        const judgeId = String(req.body.judge_id || req.user.id);
+        const judgeName = req.body.judge_name || req.user.full_name || req.user.username;
 
         if (!event_id || !contestant_id || !criteria_scores) {
             return res.status(400).json({ success: false, message: 'Missing required scoring payload fields.' });
@@ -53,10 +53,11 @@ async function submitScore(req, res, next) {
         const existingScore = await collections.scores.findOne(scoreQuery);
 
         const settings = await collections.settings.findOne({ _id: 'system_settings' });
-        const unlockPolicy = settings?.judging?.unlockPolicy || 'admin_approval';
+        const rawPolicy = String(settings?.judging?.unlockPolicy || '').trim().toLowerCase();
+        const isSelfUnlock = rawPolicy === 'judge_self_unlock' || rawPolicy === 'judge-self-unlock' || rawPolicy.includes('self_unlock');
 
-        if (existingScore && existingScore.is_locked && !req.body.force_admin_override) {
-            if (unlockPolicy !== 'judge_self_unlock') {
+        if (existingScore && existingScore.is_locked && !req.body.force_admin_override && req.user.role !== 'admin') {
+            if (!isSelfUnlock) {
                 return res.status(403).json({ success: false, message: 'Your score has been submitted and locked. Request an unlock to make changes.' });
             }
         }
@@ -284,9 +285,10 @@ async function selfUnlock(req, res, next) {
         }
 
         const settings = await collections.settings.findOne({ _id: 'system_settings' });
-        const unlockPolicy = settings?.judging?.unlockPolicy || 'admin_approval';
+        const rawPolicy = String(settings?.judging?.unlockPolicy || '').trim().toLowerCase();
+        const isSelfUnlock = rawPolicy === 'judge_self_unlock' || rawPolicy === 'judge-self-unlock' || rawPolicy.includes('self_unlock');
 
-        if (unlockPolicy !== 'judge_self_unlock' && req.user.role !== 'admin') {
+        if (!isSelfUnlock && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Self-unlock is not permitted under current judging policy.' });
         }
 

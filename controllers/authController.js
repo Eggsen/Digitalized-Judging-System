@@ -410,8 +410,7 @@ async function requestPasswordReset(req, res, next) {
 
         res.json({
             success: true,
-            message: 'Password reset link sent to your email.',
-            reset_link: resetLink
+            message: 'Password reset link sent to your email.'
         });
     } catch (err) {
         next(err);
