@@ -275,22 +275,37 @@ async function deleteCriterion(req, res, next) {
  */
 async function batchUpdateWeights(req, res, next) {
     try {
-        const items = req.body.weights || req.body.criteria || [];
+        const items = Array.isArray(req.body) ? req.body : (req.body.weights || req.body.criteria || []);
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'No criteria weights provided.' });
         }
 
+        let updatedCount = 0;
         for (const item of items) {
-            if (item && item.id) {
-                const query = getIdFilter(item.id);
+            const rawId = item.id || item._id || item.criterion_id;
+            if (rawId) {
+                const query = getIdFilter(rawId);
                 const w = parseFloat(item.percentage !== undefined ? item.percentage : (item.weight || 0)) || 0;
                 await collections.criteria.updateOne(query, {
                     $set: { weight: w, percentage: w, updated_at: new Date().toISOString() }
                 });
+                updatedCount++;
             }
         }
 
-        res.json({ success: true, message: 'Criteria weights updated successfully.' });
+        if (req.user) {
+            const eventId = req.body.event_id || (items[0] && items[0].event_id) || '';
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                'UPDATE_CRITERIA_WEIGHTS',
+                `Updated weights for ${updatedCount} criteria in competition "${eventId}".`,
+                req
+            );
+        }
+
+        res.json({ success: true, message: 'Criteria weights updated successfully.', count: updatedCount });
     } catch (err) {
         next(err);
     }

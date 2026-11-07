@@ -19,6 +19,7 @@ router.post('/', requireRole(['admin']), eventController.createEvent);
 router.put('/:id', requireRole(['admin']), eventController.updateEvent);
 router.delete('/:id', requireRole(['admin']), eventController.deleteEvent);
 router.patch('/:id/archive', requireRole(['admin']), eventController.archiveEvent);
+router.post('/:id/archive', requireRole(['admin']), eventController.archiveEvent);
 router.post('/:id/assign-judges', requireRole(['admin']), eventController.assignJudges);
 
 // Judging Status Control (Admin & Tabulator)

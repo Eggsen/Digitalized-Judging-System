@@ -427,7 +427,7 @@ function renderScoringSheet() {
         if (unlockPolicy === 'judge_self_unlock') {
             lockActionHtml = `
                 <button type="button" id="unlockScoreEditBtn" class="px-3.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors">
-                    <i class="fa-solid fa-pen-to-square"></i> Edit Evaluation (Scores &amp; Awards)
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Evaluation
                 </button>
             `;
         } else if (unlockPolicy === 'admin_approval') {
@@ -1702,19 +1702,14 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                 `;
             } else if (unlockPolicy === 'judge_self_unlock') {
                 lockBannerHtml = `
-                    <div class="p-3.5 rounded-2xl bg-amber-100/90 border border-amber-300 text-amber-900 text-xs flex items-center justify-between gap-3 flex-wrap shadow-2xs animate-fade-in">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
-                                <i class="fa-solid fa-lock"></i>
-                            </div>
-                            <div>
-                                <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked</p>
-                                <p class="text-[11px] text-amber-800 mt-0.5">Evaluation has been submitted. Click <strong>"Edit Evaluation"</strong> to unlock both scoring and citations as a whole.</p>
-                            </div>
+                    <div class="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
+                            <i class="fa-solid fa-lock"></i>
                         </div>
-                        <button type="button" class="unified-edit-eval-trigger px-3.5 py-2 bg-white border border-amber-400 hover:bg-amber-50 text-amber-950 font-black rounded-xl text-xs cursor-pointer shadow-xs flex items-center gap-1.5 transition-all hover:scale-[1.02]">
-                            <i class="fa-solid fa-pen-to-square text-amber-600"></i> Edit Evaluation (Scores &amp; Awards)
-                        </button>
+                        <div>
+                            <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked</p>
+                            <p class="text-[11px] text-amber-800 mt-0.5">Evaluation has been submitted. Click the <strong>"Edit Evaluation"</strong> button at the top of the scoring sheet to revise both scores and citations.</p>
+                        </div>
                     </div>
                 `;
             } else {

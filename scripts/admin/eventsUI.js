@@ -461,12 +461,20 @@ const auditLogsState = {
         page: 1,
         limit: 25,
         search: '',
+        role: 'all',
+        date: '',
+        sort: 'desc',
         total: 0,
         unfilteredTotal: 0,
         totalPages: 1,
         searchInputId: 'logs-search-input',
         clearBtnId: 'logs-search-clear-btn',
         pageSizeId: 'logs-page-size',
+        roleFilterId: 'logs-role-filter',
+        dateFilterId: 'logs-date-filter',
+        dateClearBtnId: 'logs-date-clear-btn',
+        dateSortId: 'logs-date-sort',
+        timestampHeaderId: 'logs-timestamp-header-btn',
         infoId: 'logs-pagination-info',
         controlsId: 'logs-pagination-controls',
         reqId: 0,
@@ -476,12 +484,19 @@ const auditLogsState = {
         page: 1,
         limit: 25,
         search: '',
+        role: 'all',
+        date: '',
+        sort: 'desc',
         total: 0,
         unfilteredTotal: 0,
         totalPages: 1,
         searchInputId: 'user-logs-search-input',
         clearBtnId: 'user-logs-search-clear-btn',
         pageSizeId: 'user-logs-page-size',
+        dateFilterId: 'user-logs-date-filter',
+        dateClearBtnId: 'user-logs-date-clear-btn',
+        dateSortId: 'user-logs-date-sort',
+        timestampHeaderId: 'user-logs-timestamp-header-btn',
         infoId: 'user-logs-pagination-info',
         controlsId: 'user-logs-pagination-controls',
         reqId: 0,
@@ -496,6 +511,12 @@ function initAuditLogsControls(tbodyId = 'logs-tbody') {
     const searchInput = document.getElementById(state.searchInputId);
     const clearBtn = document.getElementById(state.clearBtnId);
     const pageSizeSelect = document.getElementById(state.pageSizeId);
+    const roleFilter = document.getElementById(state.roleFilterId);
+    const dateFilter = document.getElementById(state.dateFilterId);
+    const dateClearBtn = document.getElementById(state.dateClearBtnId);
+    const dateSort = document.getElementById(state.dateSortId);
+    const tsHeaderBtn = document.getElementById(state.timestampHeaderId);
+    const sortIconId = tbodyId === 'user-logs-tbody' ? 'user-logs-sort-icon' : 'logs-sort-icon';
 
     if (searchInput) {
         let debounceTimer = null;
@@ -540,6 +561,71 @@ function initAuditLogsControls(tbodyId = 'logs-tbody') {
                 state.page = 1;
                 loadAuditLogs(tbodyId, 1);
             }
+        });
+    }
+
+    if (roleFilter) {
+        roleFilter.addEventListener('change', (e) => {
+            state.role = e.target.value;
+            state.page = 1;
+            loadAuditLogs(tbodyId, 1);
+        });
+    }
+
+    if (dateFilter) {
+        dateFilter.addEventListener('change', (e) => {
+            const val = e.target.value.trim();
+            state.date = val;
+            if (dateClearBtn) {
+                if (val) dateClearBtn.classList.remove('hidden');
+                else dateClearBtn.classList.add('hidden');
+            }
+            state.page = 1;
+            loadAuditLogs(tbodyId, 1);
+        });
+    }
+
+    if (dateClearBtn) {
+        dateClearBtn.addEventListener('click', () => {
+            if (dateFilter) dateFilter.value = '';
+            dateClearBtn.classList.add('hidden');
+            if (state.date !== '') {
+                state.date = '';
+                state.page = 1;
+                loadAuditLogs(tbodyId, 1);
+            }
+        });
+    }
+
+    function updateSortDisplay(newSort) {
+        state.sort = newSort;
+        if (dateSort && dateSort.value !== newSort) {
+            dateSort.value = newSort;
+        }
+        const icon = document.getElementById(sortIconId);
+        if (icon) {
+            if (newSort === 'asc') {
+                icon.className = 'fa-solid fa-arrow-up-short-wide ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold';
+            } else {
+                icon.className = 'fa-solid fa-arrow-down-wide-short ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold';
+            }
+        }
+    }
+
+    if (dateSort) {
+        dateSort.addEventListener('change', (e) => {
+            updateSortDisplay(e.target.value);
+            state.page = 1;
+            loadAuditLogs(tbodyId, 1);
+        });
+    }
+
+    if (tsHeaderBtn) {
+        tsHeaderBtn.addEventListener('click', () => {
+            const nextSort = state.sort === 'asc' ? 'desc' : 'asc';
+            updateSortDisplay(nextSort);
+            state.page = 1;
+            loadAuditLogs(tbodyId, 1);
         });
     }
 
@@ -680,7 +766,10 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
     const res = await listLogs({
         page: state.page,
         limit: state.limit,
-        search: state.search
+        search: state.search,
+        role: state.role || 'all',
+        date: state.date || '',
+        sort: state.sort || 'desc'
     });
 
     if (currentReqId !== state.reqId) return;
@@ -699,10 +788,15 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
     state.page = typeof res.page === 'number' ? res.page : state.page;
 
     if (res.logs.length === 0) {
-        const emptyMsg = state.search 
-            ? `No activity records found matching "${escapeHtml(state.search)}".` 
+        const filters = [];
+        if (state.search) filters.push(`keyword "${state.search}"`);
+        if (state.role && state.role !== 'all') filters.push(`role "${state.role}"`);
+        if (state.date) filters.push(`date "${state.date}"`);
+
+        const emptyMsg = filters.length > 0 
+            ? `No activity records found matching ${filters.join(', ')}.` 
             : `No activity records logged yet.`;
-        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500 text-xs"><i class="fa-solid fa-inbox text-slate-300 dark:text-slate-600 text-xl block mb-1"></i>${emptyMsg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="px-4 py-8 text-center text-slate-400 dark:text-slate-500 text-xs"><i class="fa-solid fa-inbox text-slate-300 dark:text-slate-600 text-xl block mb-1"></i>${escapeHtml(emptyMsg)}</td></tr>`;
         renderAuditLogsPagination(tbodyId);
         return;
     }

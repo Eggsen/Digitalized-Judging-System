@@ -27,5 +27,6 @@ router.post('/export-backup', authenticateToken, requireRole(['admin']), setting
 router.post('/clear-logs', authenticateToken, requireRole(['admin']), settingsController.clearLogs);
 router.post('/upload-logo', authenticateToken, requireRole(['admin']), settingsController.uploadLogo);
 router.get('/logo-library', authenticateToken, requireRole(['admin']), settingsController.getLogoLibrary);
+router.post('/logo-library', authenticateToken, requireRole(['admin']), settingsController.manageLogoLibrary);
 
 module.exports = router;

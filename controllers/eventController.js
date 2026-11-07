@@ -128,10 +128,14 @@ async function listEvents(req, res, next) {
         const user = req.user;
         const query = {};
 
-        // Only show non-archived events by default unless include_archived is requested
-        if (req.query.include_archived !== 'true') {
+        // Explicit status filter if requested
+        if (req.query.status && req.query.status !== 'ALL') {
+            query.status = req.query.status;
+        } else if (user && user.role !== 'admin' && req.query.include_archived !== 'true') {
+            // Judges and tabulators only see non-archived competitions
             query.status = { $ne: 'Archived' };
         }
+        // Admins see all competitions (including Archived) so they can view, filter, and manage them
 
         const allEvents = await collections.events.find(query).sort({ created_at: -1 }).toArray();
 
@@ -530,6 +534,17 @@ async function archiveEvent(req, res, next) {
         await collections.events.updateOne(query, {
             $set: { status: newStatus, updated_at: new Date().toISOString() }
         });
+
+        if (req.user) {
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                newStatus === 'Archived' ? 'ARCHIVE_EVENT' : 'UNARCHIVE_EVENT',
+                `Competition "${id}" marked as ${newStatus}.`,
+                req
+            );
+        }
 
         res.json({
             success: true,

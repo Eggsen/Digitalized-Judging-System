@@ -428,14 +428,14 @@
 
                 <!-- Search and Rows Filter Bar -->
                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                    <div class="relative flex-1 min-w-[240px] max-w-md">
+                    <div class="relative flex-1 min-w-[240px] max-w-sm">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                             <i class="fa-solid fa-magnifying-glass text-xs"></i>
                         </div>
                         <input 
                             type="text" 
                             id="logs-search-input" 
-                            placeholder="Search audit logs by user, action, details..." 
+                            placeholder="Search logs by user, action, details..." 
                             class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 transition-all"
                         >
                         <button 
@@ -446,6 +446,59 @@
                         >
                             <i class="fa-solid fa-xmark text-xs"></i>
                         </button>
+                    </div>
+
+                    <!-- Role Filter -->
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="logs-role-filter" class="font-semibold whitespace-nowrap flex items-center gap-1">
+                            <i class="fa-solid fa-user-tag text-slate-400"></i> Role:
+                        </label>
+                        <select 
+                            id="logs-role-filter" 
+                            class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                        >
+                            <option value="all">All Roles</option>
+                            <option value="tabulator">Tabulator Only</option>
+                            <option value="judge">Judge Only</option>
+                            <option value="admin">Administrator Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Exact Date Filter -->
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="logs-date-filter" class="font-semibold whitespace-nowrap flex items-center gap-1">
+                            <i class="fa-regular fa-calendar text-slate-400"></i> Date:
+                        </label>
+                        <div class="relative flex items-center">
+                            <input 
+                                type="date" 
+                                id="logs-date-filter" 
+                                class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                                title="Filter by exact date"
+                            >
+                            <button 
+                                type="button" 
+                                id="logs-date-clear-btn" 
+                                class="absolute right-2 text-slate-400 hover:text-rose-500 cursor-pointer hidden" 
+                                title="Clear date filter"
+                            >
+                                <i class="fa-solid fa-circle-xmark text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Date Sort Order -->
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="logs-date-sort" class="font-semibold whitespace-nowrap flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-down-short-wide text-slate-400"></i> Sort:
+                        </label>
+                        <select 
+                            id="logs-date-sort" 
+                            class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                        >
+                            <option value="desc">Newest First (Desc)</option>
+                            <option value="asc">Oldest First (Asc)</option>
+                        </select>
                     </div>
 
                     <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
@@ -467,7 +520,9 @@
                     <table class="w-full text-xs">
                         <thead>
                             <tr class="bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-700">
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Timestamp</th>
+                                <th id="logs-timestamp-header-btn" class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase cursor-pointer hover:text-buksu-navy dark:hover:text-buksu-gold select-none transition-colors" title="Click to toggle ascending / descending date sort">
+                                    Timestamp <i id="logs-sort-icon" class="fa-solid fa-arrow-down-wide-short ms-1 text-[11px] text-slate-400"></i>
+                                </th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">User</th>
                                 <th class="px-4 py-3 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase">Action</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Details</th>
@@ -1462,7 +1517,7 @@
 
                 <!-- Search and Rows Filter Bar -->
                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                    <div class="relative flex-1 min-w-[240px] max-w-md">
+                    <div class="relative flex-1 min-w-[240px] max-w-sm">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                             <i class="fa-solid fa-magnifying-glass text-xs"></i>
                         </div>
@@ -1480,6 +1535,43 @@
                         >
                             <i class="fa-solid fa-xmark text-xs"></i>
                         </button>
+                    </div>
+
+                    <!-- Exact Date Filter -->
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="user-logs-date-filter" class="font-semibold whitespace-nowrap flex items-center gap-1">
+                            <i class="fa-regular fa-calendar text-slate-400"></i> Date:
+                        </label>
+                        <div class="relative flex items-center">
+                            <input 
+                                type="date" 
+                                id="user-logs-date-filter" 
+                                class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                                title="Filter by exact date"
+                            >
+                            <button 
+                                type="button" 
+                                id="user-logs-date-clear-btn" 
+                                class="absolute right-2 text-slate-400 hover:text-rose-500 cursor-pointer hidden" 
+                                title="Clear date filter"
+                            >
+                                <i class="fa-solid fa-circle-xmark text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Date Sort Order -->
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <label for="user-logs-date-sort" class="font-semibold whitespace-nowrap flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-down-short-wide text-slate-400"></i> Sort:
+                        </label>
+                        <select 
+                            id="user-logs-date-sort" 
+                            class="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 cursor-pointer"
+                        >
+                            <option value="desc">Newest First (Desc)</option>
+                            <option value="asc">Oldest First (Asc)</option>
+                        </select>
                     </div>
 
                     <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
@@ -1501,7 +1593,9 @@
                     <table class="w-full text-xs">
                         <thead>
                             <tr class="bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-700">
-                                <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">Timestamp</th>
+                                <th id="user-logs-timestamp-header-btn" class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap cursor-pointer hover:text-buksu-navy dark:hover:text-buksu-gold select-none transition-colors" title="Click to toggle ascending / descending date sort">
+                                    Timestamp <i id="user-logs-sort-icon" class="fa-solid fa-arrow-down-wide-short ms-1 text-[11px] text-slate-400"></i>
+                                </th>
                                 <th class="px-4 py-3 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">Activity</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase">Details</th>
                             </tr>

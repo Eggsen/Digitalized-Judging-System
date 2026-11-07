@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
@@ -557,15 +559,213 @@ async function uploadLogo(req, res, next) {
 }
 
 /**
- * Get Logo Library
+ * Get Logo Library / Repository
  */
 async function getLogoLibrary(req, res, next) {
     try {
-        const logos = await collections.logo_library.find({}).sort({ created_at: -1 }).toArray();
+        const settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const activeLogoUrl = settingsDoc?.branding?.logoUrl || null;
+        const defaultLogoUrl = '/assets/logo/DJS Logo.png';
+
+        // Auto-seed: Inspect local uploads directory for existing logos not yet in database
+        const localUploadsDir = path.join(__dirname, '..', 'assets', 'uploads', 'logos');
+        if (fs.existsSync(localUploadsDir)) {
+            try {
+                const files = fs.readdirSync(localUploadsDir);
+                for (const f of files) {
+                    if (f === '.' || f === '..' || f === '.gitkeep') continue;
+                    const localUrl = `/assets/uploads/logos/${f}`;
+                    const exists = await collections.logo_library.findOne({ url: localUrl });
+                    if (!exists) {
+                        const stats = fs.statSync(path.join(localUploadsDir, f));
+                        await collections.logo_library.insertOne({
+                            url: localUrl,
+                            filename: f,
+                            storage: 'local',
+                            size: stats.size,
+                            uploadedBy: 'Admin',
+                            uploadedAt: new Date(stats.mtime).toISOString().replace('T', ' ').substring(0, 19),
+                            created_at: new Date(stats.mtime).toISOString()
+                        });
+                    }
+                }
+            } catch (fsErr) {
+                console.warn('[LogoLibrary] File system scan notice:', fsErr.message);
+            }
+        }
+
+        // Auto-seed active logo if not yet in library
+        if (activeLogoUrl && activeLogoUrl !== defaultLogoUrl) {
+            const exists = await collections.logo_library.findOne({ url: activeLogoUrl });
+            if (!exists) {
+                const storage = activeLogoUrl.includes('cloudinary.com') ? 'cloudinary' : 'local';
+                const filename = path.basename(new URL(activeLogoUrl, 'http://localhost').pathname) || 'institution_logo';
+                await collections.logo_library.insertOne({
+                    url: activeLogoUrl,
+                    filename,
+                    storage,
+                    uploadedBy: settingsDoc?.updatedBy || 'Admin',
+                    uploadedAt: settingsDoc?.updatedAt || new Date().toISOString(),
+                    created_at: new Date().toISOString()
+                });
+            }
+        }
+
+        const cursor = await collections.logo_library.find({}).sort({ created_at: -1 }).toArray();
+        const items = [];
+
+        // Always include Default BukSU Seal as first option
+        items.push({
+            id: 'default_system_logo',
+            url: defaultLogoUrl,
+            filename: 'BukSU Official Seal (System Default)',
+            storage: 'default',
+            uploadedAt: 'Pre-installed',
+            isDefault: true,
+            isActive: !activeLogoUrl || activeLogoUrl === defaultLogoUrl
+        });
+
+        for (const doc of cursor) {
+            const url = doc.url || '';
+            if (!url) continue;
+
+            items.push({
+                id: String(doc._id),
+                url,
+                filename: doc.filename || path.basename(url) || 'logo',
+                storage: doc.storage || (url.includes('cloudinary') ? 'cloudinary' : 'local'),
+                uploadedBy: doc.uploadedBy || doc.uploaded_by || 'Admin',
+                uploadedAt: doc.uploadedAt || doc.created_at || 'Recently',
+                isDefault: false,
+                isActive: (activeLogoUrl === url)
+            });
+        }
+
         res.json({
             success: true,
-            logos: logos.map(l => ({ ...l, id: String(l._id) }))
+            activeLogoUrl,
+            items
         });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Manage Logo Library (Select or Delete Logo)
+ */
+async function manageLogoLibrary(req, res, next) {
+    try {
+        const defaultLogoUrl = '/assets/logo/DJS Logo.png';
+        const { action } = req.body;
+
+        if (action === 'select_logo') {
+            const selectedUrl = (req.body.url || '').trim();
+            let newLogoVal = null;
+            let effectiveUrl = defaultLogoUrl;
+            let actionNote = 'Reverted active logo to system default BukSU seal.';
+
+            if (selectedUrl && selectedUrl !== defaultLogoUrl && selectedUrl !== 'default_system_logo') {
+                newLogoVal = selectedUrl;
+                effectiveUrl = selectedUrl;
+                actionNote = `Selected logo from library: ${selectedUrl}`;
+            }
+
+            await collections.settings.updateOne(
+                { _id: 'system_settings' },
+                {
+                    $set: {
+                        'branding.logoUrl': newLogoVal,
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: req.user.username || 'Administrator'
+                    }
+                }
+            );
+
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                'SELECT_LOGO_FROM_LIBRARY',
+                actionNote,
+                req
+            );
+
+            let storageType = 'default';
+            if (newLogoVal) {
+                storageType = newLogoVal.includes('cloudinary.com') ? 'cloudinary' : 'local';
+            }
+
+            return res.json({
+                success: true,
+                logoUrl: newLogoVal,
+                effectiveUrl,
+                storage: storageType,
+                message: 'Institution logo updated successfully from library!'
+            });
+        }
+
+        if (action === 'delete_logo') {
+            const id = (req.body.id || '').trim();
+            if (!id || id === 'default_system_logo') {
+                return res.status(400).json({ success: false, message: 'Default system logo cannot be deleted.' });
+            }
+
+            const query = getIdFilter(id);
+            const item = await collections.logo_library.findOne(query);
+            if (!item) {
+                return res.status(404).json({ success: false, message: 'Logo asset not found in library.' });
+            }
+
+            const deletedUrl = item.url || '';
+            const settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+            const activeLogoUrl = settingsDoc?.branding?.logoUrl || null;
+            const wasActive = (activeLogoUrl === deletedUrl);
+
+            if (wasActive) {
+                await collections.settings.updateOne(
+                    { _id: 'system_settings' },
+                    {
+                        $set: {
+                            'branding.logoUrl': null,
+                            updatedAt: new Date().toISOString(),
+                            updatedBy: req.user.username || 'Administrator'
+                        }
+                    }
+                );
+            }
+
+            // If local storage, delete physical file if on disk
+            if (item.storage === 'local' && deletedUrl) {
+                try {
+                    const localPath = path.join(__dirname, '..', deletedUrl.replace(/^\//, ''));
+                    if (fs.existsSync(localPath)) {
+                        fs.unlinkSync(localPath);
+                    }
+                } catch (delErr) {
+                    console.warn('[LogoLibrary] Local file unlink notice:', delErr.message);
+                }
+            }
+
+            await collections.logo_library.deleteOne(query);
+
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                'DELETE_LOGO_FROM_LIBRARY',
+                `Deleted logo asset from library: ${deletedUrl}`,
+                req
+            );
+
+            return res.json({
+                success: true,
+                wasActive,
+                message: 'Logo deleted from repository successfully.'
+            });
+        }
+
+        return res.status(400).json({ success: false, message: 'Invalid action specified.' });
     } catch (err) {
         next(err);
     }
@@ -579,5 +779,6 @@ module.exports = {
     exportBackup,
     clearLogs,
     uploadLogo,
-    getLogoLibrary
+    getLogoLibrary,
+    manageLogoLibrary
 };

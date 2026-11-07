@@ -90,15 +90,11 @@ export async function deleteArchivedEvent(data) {
 export async function listLogs(params = {}) {
     try {
         const query = new URLSearchParams();
-        if (params.page !== undefined && params.page !== null && params.page !== '') {
-            query.set('page', params.page);
-        }
-        if (params.limit !== undefined && params.limit !== null && params.limit !== '') {
-            query.set('limit', params.limit);
-        }
-        if (params.search !== undefined && params.search !== null && params.search !== '') {
-            query.set('search', params.search);
-        }
+        Object.entries(params).forEach(([key, val]) => {
+            if (val !== undefined && val !== null && val !== '') {
+                query.set(key, String(val).trim());
+            }
+        });
 
         const qs = query.toString();
         const url = `/api/logs${qs ? `?${qs}` : ''}`;
