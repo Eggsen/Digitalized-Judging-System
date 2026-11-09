@@ -1136,12 +1136,23 @@ export function closeScoreBreakdownModal() {
 }
 
 /**
- * Helper to resolve an image into base64 Data URL in browser
+ * Helper to resolve an image into clean, standard PNG base64 Data URL in browser.
+ * Uses an offscreen Image and Canvas so ANY format (SVG, WebP, JPG, PNG) is converted
+ * into a valid PNG that pdfmake can render without "Unknown image format" errors.
  */
 async function resolveClientImageBase64(imgElement, fallbackUrl) {
-    if (imgElement && imgElement.src && imgElement.src.startsWith('data:image/')) {
-        return imgElement.src;
+    const rawAttr = imgElement ? imgElement.getAttribute('src') : null;
+    const targetUrl = (rawAttr && rawAttr.trim() !== '') ? imgElement.src : fallbackUrl;
+    if (!targetUrl || typeof targetUrl !== 'string' || targetUrl.trim() === '' || targetUrl.endsWith('/dashboard')) {
+        return null;
     }
+
+    // If it's already a clean PNG data URL
+    if (targetUrl.startsWith('data:image/png;base64,')) {
+        return targetUrl;
+    }
+
+    // Try reading directly from an already loaded and non-tainted image
     if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
         try {
             const canvas = document.createElement('canvas');
@@ -1150,29 +1161,32 @@ async function resolveClientImageBase64(imgElement, fallbackUrl) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(imgElement, 0, 0);
             const data = canvas.toDataURL('image/png');
-            if (data && data.startsWith('data:image/')) return data;
+            if (data && data.startsWith('data:image/png;base64,')) return data;
         } catch (e) {
-            // Tainted canvas or crossOrigin issue
+            // Tainted canvas or crossOrigin issue, fallback to offscreen loader
         }
     }
-    const targetUrl = (imgElement && imgElement.src) || fallbackUrl;
-    if (!targetUrl) return null;
-    if (targetUrl.startsWith('data:image/')) return targetUrl;
-    try {
-        const res = await fetch(targetUrl);
-        if (res.ok) {
-            const blob = await res.blob();
-            return await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(blob);
-            });
-        }
-    } catch (e) {
-        console.warn('[PDF Export] Could not convert image to base64:', e);
-    }
-    return null;
+
+    // Render offscreen to guarantee valid PNG conversion
+    return new Promise((resolve) => {
+        const offscreen = new Image();
+        offscreen.crossOrigin = 'anonymous';
+        offscreen.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = offscreen.naturalWidth || 64;
+                canvas.height = offscreen.naturalHeight || 64;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
+                const pngData = canvas.toDataURL('image/png');
+                resolve(pngData && pngData.startsWith('data:image/png;base64,') ? pngData : null);
+            } catch (err) {
+                resolve(null);
+            }
+        };
+        offscreen.onerror = () => resolve(null);
+        offscreen.src = targetUrl;
+    });
 }
 
 /**
@@ -1636,7 +1650,19 @@ async function downloadOrPreviewTabulationPDF(action = 'download') {
             const qrCodeDataUrl = await resolveClientImageBase64(qrSealImg, qrSealImg?.src);
 
             const docDef = buildClientPdfMakeDocDefinition(cachedData || {}, logoDataUrl, qrCodeDataUrl);
-            const pdfDoc = window.pdfMake.createPdf(docDef);
+            let pdfDoc;
+            try {
+                pdfDoc = window.pdfMake.createPdf(docDef);
+            } catch (pdfErr) {
+                console.warn('[PDF Export] Client rendering error with images, retrying safe fallback:', pdfErr.message);
+                docDef.content[0].columns[0] = { text: '', width: 50 };
+                try {
+                    if (docDef.content[2]?.stack?.[2]?.columns?.[0]?.image) {
+                        docDef.content[2].stack[2].columns[0] = { text: '', width: 42 };
+                    }
+                } catch (e) {}
+                pdfDoc = window.pdfMake.createPdf(docDef);
+            }
 
             if (action === 'preview') {
                 pdfDoc.open();

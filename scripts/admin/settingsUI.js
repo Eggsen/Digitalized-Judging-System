@@ -15,6 +15,7 @@ import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 let cachedSettings = null;
 let apiKeysUnlockToken = null;
 let cachedMaskedKeys = {};
+let unmaskedApiKeys = null;
 
 export async function loadSystemSettings() {
     const loadingEl = document.getElementById('settings-loading-state');
@@ -206,6 +207,10 @@ export function initSettingsPanel() {
 }
 
 export function activateSettingsSubtab(target) {
+    if (target !== 'settings-content-apikeys' && apiKeysUnlockToken) {
+        lockApiKeysInputs();
+    }
+
     const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
     const subTabContents = document.querySelectorAll('.settings-subtab-content');
 
@@ -1122,6 +1127,14 @@ const ENV_KEY_FIELDS = [
     'PUSHER_SECRET'
 ];
 
+const SECRET_ENV_KEYS = [
+    'GOOGLE_CLIENT_SECRET',
+    'RECAPTCHA_SECRET_KEY',
+    'CLOUDINARY_API_SECRET',
+    'PUSHER_SECRET',
+    'SMTP_PASSWORD'
+];
+
 function populateApiKeysForm(apiKeys) {
     if (!apiKeys || typeof apiKeys !== 'object') return;
 
@@ -1131,14 +1144,30 @@ function populateApiKeysForm(apiKeys) {
 
     ENV_KEY_FIELDS.forEach(key => {
         const input = document.getElementById(`setting-env-${key}`);
-        if (input && apiKeys[key] !== undefined) {
+        if (!input) return;
+
+        if (key === 'SMTP_SECURE') {
+            if (apiKeysUnlockToken) {
+                input.value = apiKeys[key] || 'tls';
+            } else {
+                input.value = 'masked';
+            }
+            return;
+        }
+
+        if (apiKeys[key] !== undefined) {
             input.value = apiKeys[key];
         }
     });
 }
 
-function lockApiKeysInputs() {
+function lockApiKeysInputs(latestMasked = null) {
     apiKeysUnlockToken = null;
+    unmaskedApiKeys = null;
+
+    if (latestMasked && typeof latestMasked === 'object') {
+        cachedMaskedKeys = { ...latestMasked };
+    }
 
     ENV_KEY_FIELDS.forEach(key => {
         const input = document.getElementById(`setting-env-${key}`);
@@ -1146,6 +1175,27 @@ function lockApiKeysInputs() {
             input.disabled = true;
             input.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
             input.classList.remove('bg-white', 'text-slate-800');
+
+            if (key === 'SMTP_SECURE') {
+                input.value = 'masked';
+            } else {
+                const hasVal = cachedMaskedKeys && cachedMaskedKeys[key] && String(cachedMaskedKeys[key]).trim() !== '';
+                input.value = hasVal ? '••••••••••••••••' : '';
+            }
+
+            if (SECRET_ENV_KEYS.includes(key)) {
+                input.type = 'password';
+            }
+        }
+    });
+
+    // Reset and disable password visibility toggles
+    document.querySelectorAll('[data-toggle-password]').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-40', 'cursor-not-allowed');
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.className = 'fa-solid fa-eye-slash text-xs';
         }
     });
 
@@ -1176,14 +1226,28 @@ function lockApiKeysInputs() {
     }
 }
 
-function unlockApiKeysInputs() {
+function unlockApiKeysInputs(unmaskedKeys = null) {
+    if (unmaskedKeys && typeof unmaskedKeys === 'object') {
+        unmaskedApiKeys = { ...unmaskedKeys };
+    }
+
     ENV_KEY_FIELDS.forEach(key => {
         const input = document.getElementById(`setting-env-${key}`);
         if (input) {
             input.disabled = false;
             input.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
             input.classList.add('bg-white', 'text-slate-800');
+
+            if (unmaskedApiKeys && unmaskedApiKeys[key] !== undefined) {
+                input.value = unmaskedApiKeys[key];
+            }
         }
+    });
+
+    // Enable password visibility toggles
+    document.querySelectorAll('[data-toggle-password]').forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove('opacity-40', 'cursor-not-allowed');
     });
 
     const unlockTop = document.getElementById('unlockApiKeysBtnTop');
@@ -1242,6 +1306,26 @@ function initApiKeysSettings() {
     // Start locked by default
     lockApiKeysInputs();
 
+    // Password visibility toggle click handlers
+    document.querySelectorAll('[data-toggle-password]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!apiKeysUnlockToken) return;
+            const targetId = btn.dataset.togglePassword;
+            const targetInput = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (!targetInput || !icon) return;
+
+            if (targetInput.type === 'password') {
+                targetInput.type = 'text';
+                icon.className = 'fa-solid fa-eye text-xs text-amber-500';
+            } else {
+                targetInput.type = 'password';
+                icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+            }
+        });
+    });
+
     // Unlock buttons click -> open modal
     document.getElementById('unlockApiKeysBtnTop')?.addEventListener('click', openAdminPinModal);
     document.getElementById('unlockApiKeysBtnBtm')?.addEventListener('click', openAdminPinModal);
@@ -1260,9 +1344,6 @@ function initApiKeysSettings() {
     // Cancel editing / Re-lock handlers
     const handleCancelApiKeys = () => {
         lockApiKeysInputs();
-        if (cachedMaskedKeys && Object.keys(cachedMaskedKeys).length > 0) {
-            populateApiKeysForm(cachedMaskedKeys);
-        }
         showToast("Editing Locked", "API keys inputs have been locked.", "archive");
     };
     document.getElementById('cancelApiKeysBtnTop')?.addEventListener('click', handleCancelApiKeys);
@@ -1296,11 +1377,8 @@ function initApiKeysSettings() {
 
         if (res.success) {
             apiKeysUnlockToken = res.unlock_token;
-            if (res.api_keys) {
-                populateApiKeysForm(res.api_keys);
-            }
             closeAdminPinModal();
-            unlockApiKeysInputs();
+            unlockApiKeysInputs(res.api_keys);
             showToast("Access Granted", "Admin PIN verified. Credentials unlocked for editing.", "create");
         } else {
             if (notice) {
@@ -1357,11 +1435,7 @@ function initApiKeysSettings() {
 
         if (res.success) {
             showToast("Credentials Saved", res.message || "API keys written to .env and synchronized.", "create");
-            if (res.api_keys) {
-                cachedMaskedKeys = { ...res.api_keys };
-                populateApiKeysForm(res.api_keys);
-            }
-            lockApiKeysInputs();
+            lockApiKeysInputs(res.api_keys);
         } else {
             showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
             if (res.message && res.message.toLowerCase().includes('pin')) {

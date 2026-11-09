@@ -120,13 +120,15 @@ async function getSettings(req, res, next) {
             diagnostics
         };
 
-        // If admin, include api_keys from .env and MongoDB with sensitive secrets masked by default
+        // If admin, return masked placeholders by default. Real values are only unlocked via Admin PIN verification.
         if (req.user && req.user.role === 'admin') {
             const rawKeys = getSystemApiKeys(settingsDoc);
-            const masked = { ...rawKeys };
-            for (const f of SECRET_ENV_KEYS) {
-                if (masked[f]) {
-                    masked[f] = maskSecretValue(masked[f]);
+            const masked = {};
+            for (const key of Object.keys(rawKeys)) {
+                if (rawKeys[key] && String(rawKeys[key]).trim() !== '') {
+                    masked[key] = maskSecretValue(rawKeys[key]);
+                } else {
+                    masked[key] = '';
                 }
             }
             responsePayload.api_keys = masked;
@@ -358,12 +360,12 @@ async function saveApiKeys(req, res, next) {
         let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
         const currentSystemKeys = getSystemApiKeys(settingsDoc);
 
-        // Sanitize incoming keys: if a secret field has bullet mask or empty when already set, preserve the real existing value
+        // Sanitize incoming keys: if a field has bullet mask or empty secret when already set, preserve the real existing value
         const sanitizedKeys = { ...incomingKeys };
-        for (const secretField of SECRET_ENV_KEYS) {
-            const incomingVal = sanitizedKeys[secretField];
-            if (isMaskedValue(incomingVal) || (incomingVal === '' && currentSystemKeys[secretField])) {
-                sanitizedKeys[secretField] = currentSystemKeys[secretField] || '';
+        for (const field of Object.keys(currentSystemKeys)) {
+            const incomingVal = sanitizedKeys[field];
+            if (isMaskedValue(incomingVal) || (SECRET_ENV_KEYS.includes(field) && incomingVal === '' && currentSystemKeys[field])) {
+                sanitizedKeys[field] = currentSystemKeys[field] || '';
             }
         }
 
@@ -388,10 +390,12 @@ async function saveApiKeys(req, res, next) {
         // Return masked keys for security
         const updatedDoc = await collections.settings.findOne({ _id: 'system_settings' });
         const latestKeys = getSystemApiKeys(updatedDoc);
-        const maskedLatest = { ...latestKeys };
-        for (const f of SECRET_ENV_KEYS) {
-            if (maskedLatest[f]) {
-                maskedLatest[f] = maskSecretValue(maskedLatest[f]);
+        const maskedLatest = {};
+        for (const key of Object.keys(latestKeys)) {
+            if (latestKeys[key] && String(latestKeys[key]).trim() !== '') {
+                maskedLatest[key] = maskSecretValue(latestKeys[key]);
+            } else {
+                maskedLatest[key] = '';
             }
         }
 
@@ -651,11 +655,11 @@ async function exportBackup(req, res, next) {
             { $set: { 'backup.lastBackupAt': now } }
         );
 
-        // Security: Mask third-party secret keys and sensitive OTP objects from backup JSON dump
+        // Security: Mask all third-party API keys and sensitive OTP objects from backup JSON dump
         let sanitizedSettings = settings ? JSON.parse(JSON.stringify(settings)) : {};
         if (sanitizedSettings.api_keys) {
-            for (const key of ['CLOUDINARY_API_SECRET', 'RECAPTCHA_SECRET_KEY', 'GOOGLE_CLIENT_SECRET', 'PUSHER_SECRET', 'SMTP_PASSWORD']) {
-                if (sanitizedSettings.api_keys[key]) {
+            for (const key of Object.keys(sanitizedSettings.api_keys)) {
+                if (sanitizedSettings.api_keys[key] && String(sanitizedSettings.api_keys[key]).trim() !== '') {
                     sanitizedSettings.api_keys[key] = '••••••••••••••••';
                 }
             }

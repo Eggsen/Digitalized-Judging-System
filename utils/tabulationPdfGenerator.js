@@ -14,18 +14,53 @@ if (typeof pdfmake.setLocalAccessPolicy === 'function') {
 }
 
 /**
+ * Verify whether a buffer or data URL has valid JPEG or PNG magic bytes for PDFKit.
+ * PDFKit strictly requires JPEG (0xFF, 0xD8) or PNG (0x89, 0x50, 0x4E, 0x47).
+ * It will throw "Unknown image format" if passed SVG, WebP, HTML, or corrupted data.
+ */
+function isValidPdfKitImage(dataUrlOrBuffer) {
+    if (!dataUrlOrBuffer) return false;
+    let buf = null;
+    if (Buffer.isBuffer(dataUrlOrBuffer)) {
+        buf = dataUrlOrBuffer;
+    } else if (typeof dataUrlOrBuffer === 'string') {
+        if (dataUrlOrBuffer.startsWith('data:image/')) {
+            const commaIdx = dataUrlOrBuffer.indexOf(',');
+            if (commaIdx === -1) return false;
+            try {
+                buf = Buffer.from(dataUrlOrBuffer.slice(commaIdx + 1), 'base64');
+            } catch (e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+    if (!buf || buf.length < 4) return false;
+    const isJpeg = buf[0] === 0xff && buf[1] === 0xd8;
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    return isJpeg || isPng;
+}
+
+/**
  * Resolve an image (logo or seal) into a base64 Data URL.
- * Handles base64 strings, local filesystem files, localhost URLs, and remote Cloudinary URLs.
+ * Strictly ensures returned data URLs are valid PNG or JPEG for pdfmake.
  */
 async function resolveImageBase64(imageUrl) {
     try {
-        if (!imageUrl) return null;
-        if (typeof imageUrl !== 'string') return null;
-        if (imageUrl.startsWith('data:image/')) return imageUrl;
+        if (!imageUrl || typeof imageUrl !== 'string') return null;
+
+        // 1. If it's already a Data URL, verify magic bytes
+        if (imageUrl.startsWith('data:image/')) {
+            if (isValidPdfKitImage(imageUrl)) {
+                return imageUrl;
+            }
+            return null;
+        }
 
         const cleanUrl = imageUrl.split('?')[0].trim();
 
-        // 1. If it's a localhost or 127.0.0.1 URL, extract the local pathname
+        // 2. If it's a localhost or 127.0.0.1 URL, extract the local pathname
         let pathname = cleanUrl;
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
             try {
@@ -36,7 +71,7 @@ async function resolveImageBase64(imageUrl) {
             } catch (e) {}
         }
 
-        // 2. Check local filesystem paths (decoding URL escapes such as %20)
+        // 3. Check local filesystem paths (decoding URL escapes such as %20)
         const decodedPath = decodeURIComponent(pathname).replace(/^\/+/, '');
         const candidatePaths = [
             path.resolve(__dirname, '..', decodedPath),
@@ -46,24 +81,27 @@ async function resolveImageBase64(imageUrl) {
 
         for (const p of candidatePaths) {
             if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-                const ext = path.extname(p).toLowerCase().replace('.', '') || 'png';
-                const mime = ext === 'jpg' ? 'jpeg' : (ext === 'svg' ? 'svg+xml' : ext);
-                const b64 = fs.readFileSync(p).toString('base64');
-                return `data:image/${mime};base64,${b64}`;
+                const buf = fs.readFileSync(p);
+                if (isValidPdfKitImage(buf)) {
+                    const ext = (buf[0] === 0x89) ? 'png' : 'jpeg';
+                    return `data:image/${ext};base64,${buf.toString('base64')}`;
+                }
             }
         }
 
-        // 3. Remote HTTP/HTTPS (Cloudinary CDN, remote storage)
+        // 4. Remote HTTP/HTTPS (Cloudinary CDN, remote storage)
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
             try {
                 const resp = await axios.get(cleanUrl, {
                     responseType: 'arraybuffer',
                     timeout: 8000,
-                    headers: { 'Accept': 'image/*' }
+                    headers: { 'Accept': 'image/png,image/jpeg,image/*' }
                 });
-                const mime = resp.headers['content-type'] || 'image/png';
-                const b64 = Buffer.from(resp.data).toString('base64');
-                return `data:${mime};base64,${b64}`;
+                const buf = Buffer.from(resp.data);
+                if (isValidPdfKitImage(buf)) {
+                    const ext = (buf[0] === 0x89) ? 'png' : 'jpeg';
+                    return `data:image/${ext};base64,${buf.toString('base64')}`;
+                }
             } catch (netErr) {
                 console.warn('[PDF Generator] Could not fetch remote logo from URL:', cleanUrl, netErr.message);
             }
@@ -116,6 +154,14 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
         });
     } catch (err) {
         console.warn('[PDF Generator] QR Code creation skipped:', err.message);
+    }
+
+    // Validate that image data URLs have valid PNG or JPEG magic bytes
+    if (!isValidPdfKitImage(logoDataUrl)) {
+        logoDataUrl = null;
+    }
+    if (!isValidPdfKitImage(qrCodeDataUrl)) {
+        qrCodeDataUrl = null;
     }
 
     // Dynamic Date
@@ -508,12 +554,30 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
         ]
     };
 
-    const pdfDoc = pdfmake.createPdf(docDefinition);
-    return await pdfDoc.getBuffer();
+    try {
+        const pdfDoc = pdfmake.createPdf(docDefinition);
+        return await pdfDoc.getBuffer();
+    } catch (pdfErr) {
+        console.warn('[PDF Generator] Rendering error:', pdfErr.message);
+        // Automatic fault-tolerant recovery: if any image format error occurs, re-render without images
+        if (logoDataUrl || qrCodeDataUrl) {
+            console.warn('[PDF Generator] Retrying PDF generation without embedded images as fallback...');
+            docDefinition.content[0].columns[0] = { text: '', width: 50 };
+            try {
+                if (docDefinition.content[2]?.stack?.[2]?.columns?.[0]?.image) {
+                    docDefinition.content[2].stack[2].columns[0] = { text: '', width: 42 };
+                }
+            } catch (e) {}
+            const safeDoc = pdfmake.createPdf(docDefinition);
+            return await safeDoc.getBuffer();
+        }
+        throw pdfErr;
+    }
 }
 
 module.exports = {
     generateTabulationPDF,
-    resolveImageBase64
+    resolveImageBase64,
+    isValidPdfKitImage
 };
 
