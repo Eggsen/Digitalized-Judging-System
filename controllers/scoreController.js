@@ -30,8 +30,11 @@ function getScoreQuery(eventId, contestantId, judgeId) {
 async function submitScore(req, res, next) {
     try {
         const { event_id, contestant_id, criteria_scores, comments, is_locked, action } = req.body;
-        const judgeId = String(req.body.judge_id || req.user.id);
-        const judgeName = req.body.judge_name || req.user.full_name || req.user.username;
+        
+        // Security: Prevent judge impersonation. Only admins may specify a custom judge_id or judge_name
+        const isAdmin = req.user && req.user.role === 'admin';
+        const judgeId = (isAdmin && req.body.judge_id) ? String(req.body.judge_id) : String(req.user.id);
+        const judgeName = (isAdmin && req.body.judge_name) ? String(req.body.judge_name) : (req.user.full_name || req.user.username);
 
         if (!event_id || !contestant_id || !criteria_scores) {
             return res.status(400).json({ success: false, message: 'Missing required scoring payload fields.' });
@@ -42,6 +45,23 @@ async function submitScore(req, res, next) {
         const event = await collections.events.findOne(evQuery);
         if (!event) {
             return res.status(404).json({ success: false, message: 'Competition event not found.' });
+        }
+
+        // Security: Verify judge is actually assigned to this competition event
+        if (!isAdmin) {
+            const assigned = Array.isArray(event.assignedjudges) 
+                ? event.assignedjudges 
+                : (Array.isArray(event.assigned_judges) ? event.assigned_judges : []);
+            const isAssigned = assigned.some(j => {
+                const jId = typeof j === 'object' && j !== null ? String(j.id || j._id) : String(j);
+                return jId === String(req.user.id);
+            });
+            if (!isAssigned) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You are not an assigned official judge for this event.'
+                });
+            }
         }
 
         const jStatus = event.judgingStatus || event.judging_status;
@@ -70,15 +90,24 @@ async function submitScore(req, res, next) {
         let totalScore = 0;
         let normalizedScoresArray = [];
 
-        // Handle criteria_scores as array or object
+        // Handle criteria_scores as array or object with strict boundary & sanity validation
         if (Array.isArray(criteria_scores)) {
             normalizedScoresArray = criteria_scores;
             for (const item of criteria_scores) {
                 const crit = criteriaList.find(c => String(c._id) === String(item.criteria_id));
-                const rawScore = parseFloat(item.score) || 0;
+                const rawScore = parseFloat(item.score);
+                if (isNaN(rawScore) || !isFinite(rawScore)) {
+                    return res.status(400).json({ success: false, message: 'Invalid score value provided.' });
+                }
+                const maxScore = parseFloat(crit?.max_points !== undefined ? crit.max_points : (crit?.max_score !== undefined ? crit.max_score : 100)) || 100;
+                if (rawScore < 0 || rawScore > maxScore) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Score for criterion "${crit?.name || crit?.title || 'Criteria'}" must be between 0 and ${maxScore}.`
+                    });
+                }
                 if (crit) {
                     const weightPct = parseFloat(crit.percentage !== undefined ? crit.percentage : (crit.weight !== undefined ? crit.weight : 0)) || 0;
-                    const maxScore = parseFloat(crit.max_points !== undefined ? crit.max_points : (crit.max_score !== undefined ? crit.max_score : 100)) || 100;
                     if (maxScore > 0 && weightPct > 0) {
                         totalScore += (rawScore / maxScore) * weightPct;
                     } else {
@@ -95,7 +124,16 @@ async function submitScore(req, res, next) {
                     ? parseFloat(criteria_scores[critId]) 
                     : (parseFloat(criteria_scores[crit.name || crit.title]) || 0);
 
+                if (isNaN(rawVal) || !isFinite(rawVal)) {
+                    return res.status(400).json({ success: false, message: 'Invalid score value provided.' });
+                }
                 const maxScore = parseFloat(crit.max_points !== undefined ? crit.max_points : (crit.max_score !== undefined ? crit.max_score : 100)) || 100;
+                if (rawVal < 0 || rawVal > maxScore) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Score for criterion "${crit.name || crit.title}" must be between 0 and ${maxScore}.`
+                    });
+                }
                 const weightPct = parseFloat(crit.percentage !== undefined ? crit.percentage : (crit.weight !== undefined ? crit.weight : 0)) || 0;
 
                 normalizedScoresArray.push({

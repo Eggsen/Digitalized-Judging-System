@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const { collections } = require('../config/db');
+const { getIdFilter } = require('../utils/dbHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
@@ -13,8 +15,12 @@ function extractToken(req) {
     if (req.cookies && (req.cookies.djs_token || req.cookies.jwt_token || req.cookies.token)) {
         return req.cookies.djs_token || req.cookies.jwt_token || req.cookies.token;
     }
+    // Only permit query token on specific download/export endpoints (e.g. PDF export)
     if (req.query && req.query.token) {
-        return req.query.token;
+        const isDownloadEndpoint = req.path.includes('/export-pdf') || req.path.includes('/download') || req.path.includes('/qr');
+        if (isDownloadEndpoint) {
+            return req.query.token;
+        }
     }
     return null;
 }
@@ -49,12 +55,33 @@ function authenticateToken(req, res, next) {
         });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, JWT_SECRET, async (err, decoded) => {
         if (err) {
             return res.status(401).json({
                 success: false,
                 message: 'Session expired or invalid. Please sign in again.'
             });
+        }
+
+        // Active account & role verification: ensures disabled accounts or altered roles apply immediately
+        try {
+            if (collections.users && decoded.id) {
+                const u = await collections.users.findOne(
+                    getIdFilter(decoded.id),
+                    { projection: { is_active: 1, status: 1, role: 1 } }
+                );
+                if (u && (u.is_active === false || u.status === 'disabled')) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your account has been deactivated. Please contact an administrator.'
+                    });
+                }
+                if (u && u.role) {
+                    decoded.role = u.role.toLowerCase();
+                }
+            }
+        } catch (dbErr) {
+            // Fail open on database connection hiccup
         }
 
         req.user = decoded;

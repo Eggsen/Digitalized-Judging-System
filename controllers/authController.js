@@ -47,7 +47,7 @@ async function login(req, res, next) {
         });
 
         if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials. No account found with this email address.' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         if (user.is_active === false || user.status === 'disabled') {
@@ -102,11 +102,11 @@ async function login(req, res, next) {
                 const remaining = 5 - failed;
                 return res.status(401).json({
                     success: false,
-                    message: `Invalid credentials. Incorrect password. ${remaining} attempt(s) remaining.`
+                    message: `Invalid email or password. ${remaining} attempt(s) remaining.`
                 });
             }
 
-            return res.status(401).json({ success: false, message: 'Invalid credentials. Incorrect password.' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         // Admin PIN verification for admin role
@@ -606,18 +606,11 @@ async function requestPasswordReset(req, res, next) {
             email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') }
         });
 
-        // Exact match check: do NOT pretend to succeed if account doesn't exist
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'No registered account found with this email address.'
-            });
-        }
-
-        if (!user.email) {
-            return res.status(400).json({
-                success: false,
-                message: 'This account does not have a registered email address. Please contact an administrator.'
+        // Security: Mitigate account enumeration by returning a generic success message
+        if (!user || !user.email) {
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email address, a password reset link has been sent.'
             });
         }
 
@@ -628,14 +621,16 @@ async function requestPasswordReset(req, res, next) {
             });
         }
 
-        const resetToken = crypto.randomBytes(16).toString('hex');
+        // Generate high-entropy reset token and store its SHA-256 hash in MongoDB (protects against token theft in DB leaks)
+        const rawResetToken = crypto.randomBytes(24).toString('hex');
+        const hashedResetToken = crypto.createHash('sha256').update(rawResetToken).digest('hex');
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
 
         await collections.users.updateOne(
             { _id: user._id },
             {
                 $set: {
-                    reset_token: resetToken,
+                    reset_token: hashedResetToken,
                     reset_token_expires_at: expiresAt,
                     reset_requested_at: new Date().toISOString()
                 }
@@ -644,7 +639,7 @@ async function requestPasswordReset(req, res, next) {
 
         const protocol = req.protocol;
         const host = req.get('host');
-        const resetLink = `${protocol}://${host}/auth/reset-password?token=${resetToken}`;
+        const resetLink = `${protocol}://${host}/auth/reset-password?token=${rawResetToken}`;
 
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -664,7 +659,7 @@ async function requestPasswordReset(req, res, next) {
 
         res.json({
             success: true,
-            message: 'Password reset link sent to your email.'
+            message: 'If an account exists with this email address, a password reset link has been sent.'
         });
     } catch (err) {
         next(err);
@@ -681,7 +676,13 @@ async function verifyResetToken(req, res, next) {
             return res.status(400).json({ success: false, message: 'Reset token is required.' });
         }
 
-        const user = await collections.users.findOne({ reset_token: token });
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const user = await collections.users.findOne({
+            $or: [
+                { reset_token: hashedToken },
+                { reset_token: token }
+            ]
+        });
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
         }
@@ -739,7 +740,13 @@ async function resetPassword(req, res, next) {
             return res.status(400).json({ success: false, message: 'Password must contain at least one number (0-9).' });
         }
 
-        const user = await collections.users.findOne({ reset_token: token });
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const user = await collections.users.findOne({
+            $or: [
+                { reset_token: hashedToken },
+                { reset_token: token }
+            ]
+        });
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
         }

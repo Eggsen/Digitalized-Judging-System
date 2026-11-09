@@ -6,6 +6,8 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
 const { ObjectId } = require('mongodb');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
@@ -30,13 +32,63 @@ const logRoutes = require('./routes/logRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for Android, iOS, and Web clients
+// HTTP Security Headers (Clickjacking, MIME sniffing, XSS, Referrer Policy)
+app.use(helmet({
+    contentSecurityPolicy: false, // Compatibility with inline EJS templates, Pusher, and CDNs
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    frameguard: { action: 'sameorigin' }
+}));
+
+// CORS Origin Validation
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
 app.use(cors({
-    origin: true,
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return callback(null, true);
+        }
+        if (configuredOrigins.length === 0 || configuredOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Blocked by CORS policy'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Recaptcha-Token']
 }));
+
+// Rate Limiters: Brute-force and DDoS Defense
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 30, // 30 requests per 15 minutes per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many authentication attempts from this IP address. Please wait a few minutes before trying again.'
+    }
+});
+
+const generalApiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 300, // 300 requests per minute per IP (ample headroom for 3s auto-sync live polling)
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many requests. Please slow down.'
+    }
+});
+
+// Apply rate limiters
+app.use(['/api/auth/login', '/api/auth/verify-login-pin', '/api/auth/request-reset', '/api/auth/reset-password'], authLimiter);
+app.use('/api', generalApiLimiter);
 
 // Body parsing with base64 image support (up to 15mb)
 app.use(express.json({ limit: '15mb' }));

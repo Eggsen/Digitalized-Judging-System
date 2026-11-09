@@ -651,6 +651,19 @@ async function exportBackup(req, res, next) {
             { $set: { 'backup.lastBackupAt': now } }
         );
 
+        // Security: Mask third-party secret keys and sensitive OTP objects from backup JSON dump
+        let sanitizedSettings = settings ? JSON.parse(JSON.stringify(settings)) : {};
+        if (sanitizedSettings.api_keys) {
+            for (const key of ['CLOUDINARY_API_SECRET', 'RECAPTCHA_SECRET_KEY', 'GOOGLE_CLIENT_SECRET', 'PUSHER_SECRET', 'SMTP_PASSWORD']) {
+                if (sanitizedSettings.api_keys[key]) {
+                    sanitizedSettings.api_keys[key] = '••••••••••••••••';
+                }
+            }
+        }
+        if (sanitizedSettings.pending_security_change) {
+            delete sanitizedSettings.pending_security_change;
+        }
+
         await logSystemAction(req.user.id, req.user.username, req.user.role, 'EXPORT_BACKUP', 'Downloaded system JSON database backup.', req);
 
         res.json({
@@ -665,7 +678,7 @@ async function exportBackup(req, res, next) {
                     exportedBy: req.user.username,
                     schemaVersion: '3.0'
                 },
-                settings,
+                settings: sanitizedSettings,
                 events,
                 contestants,
                 criteria,
