@@ -13,6 +13,9 @@ function extractToken(req) {
     if (req.cookies && (req.cookies.djs_token || req.cookies.jwt_token || req.cookies.token)) {
         return req.cookies.djs_token || req.cookies.jwt_token || req.cookies.token;
     }
+    if (req.query && req.query.token) {
+        return req.query.token;
+    }
     return null;
 }
 

@@ -98,18 +98,21 @@ export function initTabulatorUI() {
         }
     });
 
-    // Print button wrapper (lock feedback) & Print button
-    document.getElementById('printTabulationWrapper')?.addEventListener('click', () => {
+    document.getElementById('printTabulationBtn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const printBtn = document.getElementById('printTabulationBtn');
-        if (printBtn && printBtn.disabled) {
-            showToast("Print Matrix Locked", printBtn.title || "All final scores must be verified before generating PDF / Print Matrix.", "warning");
+        if (printBtn && !printBtn.disabled && currentEventId) {
+            await downloadOrPreviewTabulationPDF('download');
         }
     });
 
-    document.getElementById('printTabulationBtn')?.addEventListener('click', () => {
-        const printBtn = document.getElementById('printTabulationBtn');
-        if (printBtn && !printBtn.disabled) {
-            window.print();
+    document.getElementById('previewTabulationPdfBtn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const previewBtn = document.getElementById('previewTabulationPdfBtn');
+        if (previewBtn && !previewBtn.disabled && currentEventId) {
+            await downloadOrPreviewTabulationPDF('preview');
         }
     });
 
@@ -389,8 +392,9 @@ function renderTabulationBoard(data) {
         }
     }
 
-    // Update Print Matrix button state (Locked until ALL final scores are verified)
+    // Update PDF Export button state (Locked until ALL final scores are verified)
     const printBtn = document.getElementById('printTabulationBtn');
+    const previewBtn = document.getElementById('previewTabulationPdfBtn');
     if (printBtn) {
         const totalSubmitted = stats.total_submitted || 0;
         const totalVerified = stats.total_verified || 0;
@@ -400,20 +404,32 @@ function renderTabulationBoard(data) {
         if (isAllVerified) {
             printBtn.disabled = false;
             printBtn.className = "px-3.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5";
-            printBtn.innerHTML = '<i class="fa-solid fa-print"></i> Print Matrix / PDF';
-            printBtn.title = "Print or export official certified tabulation matrix PDF";
+            printBtn.innerHTML = '<i class="fa-solid fa-file-pdf text-buksu-gold"></i> Export PDF';
+            printBtn.title = "Download official certified tabulation matrix PDF";
+
+            if (previewBtn) {
+                previewBtn.classList.remove('hidden');
+                previewBtn.classList.add('inline-flex');
+                previewBtn.disabled = false;
+            }
         } else {
             printBtn.disabled = true;
             printBtn.className = "px-3.5 py-1.5 bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none";
-            printBtn.innerHTML = '<i class="fa-solid fa-lock text-slate-400"></i> Print Matrix';
+            printBtn.innerHTML = '<i class="fa-solid fa-lock text-slate-400"></i> Export PDF';
 
-            let msg = "Official Print Matrix is unavailable until all final judge scores are verified.";
+            let msg = "Official PDF export is unavailable until all final judge scores are verified.";
             if (totalSubmitted < totalExpected) {
-                msg = `Print Matrix is locked: Incomplete submissions (${totalSubmitted}/${totalExpected} scores submitted). All scores must be submitted and verified before generating PDF.`;
+                msg = `PDF export is locked: Incomplete submissions (${totalSubmitted}/${totalExpected} scores submitted). All scores must be submitted and verified before generating PDF.`;
             } else if (totalVerified < totalSubmitted) {
-                msg = `Print Matrix is locked: ${totalSubmitted - totalVerified} final score(s) awaiting verification. Click 'Verify' on each final score or 'Verify All Scores' to unlock.`;
+                msg = `PDF export is locked: ${totalSubmitted - totalVerified} final score(s) awaiting verification. Click 'Verify' on each final score or 'Verify All Scores' to unlock.`;
             }
             printBtn.title = msg;
+
+            if (previewBtn) {
+                previewBtn.classList.add('hidden');
+                previewBtn.classList.remove('inline-flex');
+                previewBtn.disabled = true;
+            }
         }
     }
 
@@ -1099,6 +1115,497 @@ export function closeScoreBreakdownModal() {
     activeBreakdownJudgeId = null;
     const modal = document.getElementById('score-breakdown-modal');
     if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Helper to extract base64 from an existing img element on the page
+ */
+function getBase64FromImageElement(imgElement) {
+    if (!imgElement || !imgElement.src) return null;
+    try {
+        if (imgElement.src.startsWith('data:image/')) return imgElement.src;
+        const canvas = document.createElement('canvas');
+        canvas.width = imgElement.naturalWidth || imgElement.width || 64;
+        canvas.height = imgElement.naturalHeight || imgElement.height || 64;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/png');
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Build docDefinition for client-side pdfmake generation
+ */
+function buildClientPdfMakeDocDefinition(data) {
+    const event = data.event || {};
+    const judges = data.judges || [];
+    const matrix = data.matrix || [];
+    const stats = data.stats || {};
+    const settings = data.settings || {};
+    const branding = settings.branding || {};
+    const judgingSettings = settings.judging || {};
+    const precision = parseInt(judgingSettings.decimalPrecision ?? 2, 10);
+    const tabMethod = judgingSettings.tabulationMethod || 'standard_average';
+    const isAllVerified = Boolean(stats.is_all_verified);
+
+    const logoImg = document.getElementById('tab-print-logo');
+    const logoDataUrl = getBase64FromImageElement(logoImg);
+
+    const qrSealImg = document.getElementById('tab-print-qr-seal');
+    const qrCodeDataUrl = getBase64FromImageElement(qrSealImg);
+
+    const formattedDate = new Date().toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    });
+
+    const institutionName = branding.institutionName || 'BUKIDNON STATE UNIVERSITY';
+    const tabulationSubtitle = branding.tabulationSubtitle || 'OFFICE OF STUDENT AFFAIRS & SERVICES • TABULATION COMMITTEE';
+    const eventTitle = event.eventName || event.name || event.title || `Competition #${currentEventId}`;
+
+    const judgeCount = Math.max(1, judges.length);
+    const judgeColWidth = Math.max(48, Math.min(80, Math.floor(340 / judgeCount)));
+
+    const colWidths = [
+        36,
+        '*',
+        ...judges.map(() => judgeColWidth),
+        68,
+        42
+    ];
+
+    const headerRow = [
+        { text: 'RANK', bold: true, alignment: 'center', fillColor: '#0F2C59', color: '#FFFFFF', fontSize: 8 },
+        { text: 'CONTESTANT ENTRY', bold: true, fillColor: '#0F2C59', color: '#FFFFFF', fontSize: 8 },
+        ...judges.map(j => ({
+            text: `${j.username || j.name || 'Judge'}\n(Official Judge)`,
+            bold: true,
+            alignment: 'center',
+            fillColor: '#0F2C59',
+            color: '#FFFFFF',
+            fontSize: 7.5
+        })),
+        { text: 'FINAL SCORE', bold: true, alignment: 'center', fillColor: '#0F2C59', color: '#FFFFFF', fontSize: 8 },
+        { text: 'RANK', bold: true, alignment: 'center', fillColor: '#0F2C59', color: '#FFFFFF', fontSize: 8 }
+    ];
+
+    const bodyRows = [headerRow];
+
+    if (!matrix || matrix.length === 0) {
+        bodyRows.push([
+            {
+                colSpan: colWidths.length,
+                text: 'No contestant scores recorded for this event.',
+                alignment: 'center',
+                italics: true,
+                color: '#64748B',
+                fontSize: 9,
+                margin: [0, 16, 0, 16]
+            },
+            ...new Array(colWidths.length - 1).fill({})
+        ]);
+    } else {
+        matrix.forEach((row, idx) => {
+            const isAlternate = idx % 2 === 1;
+            const defaultRowBg = isAlternate ? '#F8FAFC' : '#FFFFFF';
+
+            let rankText = `${row.rank}`;
+            let rankBg = defaultRowBg;
+            let rankColor = '#1E293B';
+            if (row.rank === 1) {
+                rankText = '1st';
+                rankBg = '#FEF3C7';
+                rankColor = '#B45309';
+            } else if (row.rank === 2) {
+                rankText = '2nd';
+                rankBg = '#F1F5F9';
+                rankColor = '#334155';
+            } else if (row.rank === 3) {
+                rankText = '3rd';
+                rankBg = '#FFEDD5';
+                rankColor = '#C2410C';
+            }
+
+            const rankCell = {
+                text: rankText,
+                bold: true,
+                alignment: 'center',
+                fillColor: rankBg,
+                color: rankColor,
+                fontSize: 8.5
+            };
+
+            const contestantStack = [
+                {
+                    text: [
+                        { text: `#${row.contestant_number} `, bold: true, color: '#0F2C59', fontSize: 8.5 },
+                        { text: row.name || 'Contestant', bold: true, color: '#0F172A', fontSize: 8.5 }
+                    ]
+                }
+            ];
+
+            if (row.department_or_org) {
+                contestantStack.push({
+                    text: row.department_or_org,
+                    fontSize: 7,
+                    color: '#64748B',
+                    margin: [0, 1, 0, 0]
+                });
+            }
+
+            if (row.team_members && Array.isArray(row.team_members) && row.team_members.length > 0) {
+                contestantStack.push({
+                    text: `Team: ${row.team_members.join(', ')}`,
+                    fontSize: 6.5,
+                    color: '#64748B',
+                    italics: true,
+                    margin: [0, 1, 0, 0]
+                });
+            }
+
+            const contestantCell = {
+                stack: contestantStack,
+                fillColor: defaultRowBg,
+                alignment: 'left'
+            };
+
+            const judgeCells = judges.map(j => {
+                const entry = row.judge_scores ? row.judge_scores[j.id] : null;
+                if (!entry || entry.status === 'pending' || entry.total_score === null) {
+                    return {
+                        text: 'Pending',
+                        fontSize: 7,
+                        italics: true,
+                        color: '#94A3B8',
+                        alignment: 'center',
+                        fillColor: defaultRowBg
+                    };
+                }
+
+                const scoreVal = parseFloat(entry.total_score || 0).toFixed(precision);
+                const isVerified = Boolean(entry.is_verified);
+
+                return {
+                    stack: [
+                        { text: `${scoreVal}%`, bold: true, fontSize: 8, color: '#0F172A' },
+                        {
+                            text: isVerified ? 'Verified' : 'Final',
+                            fontSize: 6,
+                            color: isVerified ? '#059669' : '#D97706',
+                            bold: isVerified
+                        }
+                    ],
+                    alignment: 'center',
+                    fillColor: defaultRowBg
+                };
+            });
+
+            const avgVal = parseFloat(row.average_score || 0).toFixed(precision);
+            const finalScoreStack = [
+                { text: `${avgVal}%`, bold: true, fontSize: 8.5, color: '#0F2C59' }
+            ];
+            if (row.is_olympic_trimmed) {
+                finalScoreStack.push({
+                    text: 'Trimmed',
+                    fontSize: 6,
+                    color: '#64748B',
+                    italics: true
+                });
+            }
+
+            const finalScoreCell = {
+                stack: finalScoreStack,
+                alignment: 'center',
+                fillColor: defaultRowBg
+            };
+
+            const finalRankCell = {
+                text: `#${row.rank}`,
+                bold: true,
+                alignment: 'center',
+                fillColor: rankBg,
+                color: rankColor,
+                fontSize: 8.5
+            };
+
+            bodyRows.push([
+                rankCell,
+                contestantCell,
+                ...judgeCells,
+                finalScoreCell,
+                finalRankCell
+            ]);
+        });
+    }
+
+    const defaultSignatories = [
+        { name: 'John Doe', role: 'Tabulator' },
+        { name: 'Jane Smith', role: 'Head Tabulator' },
+        { name: 'Dr. Alex Morgan', role: 'Chairman of the Board' }
+    ];
+    const rawSignatories = Array.isArray(branding.signatories) && branding.signatories.length >= 2
+        ? branding.signatories
+        : defaultSignatories;
+
+    const signatoryColumns = rawSignatories.map(sig => ({
+        stack: [
+            { text: '', margin: [0, 20, 0, 0] },
+            { canvas: [{ type: 'line', x1: 20, y1: 0, x2: 180, y2: 0, lineWidth: 1, lineColor: '#334155' }] },
+            { text: (sig.name || 'Signatory Name').toUpperCase(), bold: true, fontSize: 8, color: '#0F172A', alignment: 'center', margin: [0, 4, 0, 1] },
+            { text: (sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
+        ]
+    }));
+
+    let tabMethodDisplay = 'Standard Average';
+    if (tabMethod === 'olympic_trimming') {
+        tabMethodDisplay = 'Olympic Trimming (Highest & Lowest Scores Dropped)';
+    } else if (tabMethod === 'weighted_criteria') {
+        tabMethodDisplay = 'Weighted Criteria Aggregation';
+    }
+
+    const certBadgeText = isAllVerified ? 'OFFICIAL REPORT\nCERTIFIED CORRECT' : 'PRELIMINARY\nUNVERIFIED DRAFT';
+    const certBadgeColor = isAllVerified ? '#0F2C59' : '#B45309';
+    const certBadgeBg = isAllVerified ? '#F8FAFC' : '#FEF3C7';
+
+    let watermarkConfig = null;
+    if (!isAllVerified) {
+        watermarkConfig = { text: 'UNVERIFIED DRAFT', color: '#E2E8F0', opacity: 0.12, bold: true };
+    } else if (branding.watermarkEnabled) {
+        watermarkConfig = { text: branding.watermarkText || 'OFFICIAL TABULATION SHEET', color: '#E2E8F0', opacity: 0.12, bold: true };
+    }
+
+    return {
+        pageSize: 'A4',
+        pageOrientation: 'landscape',
+        pageMargins: [35, 28, 35, 32],
+        watermark: watermarkConfig,
+        footer: function (currentPage, pageCount) {
+            return {
+                margin: [35, 10, 35, 0],
+                columns: [
+                    {
+                        text: 'BukSU Digitalized Judging System • Certified Official Tabulation Sheet',
+                        fontSize: 7,
+                        color: '#94A3B8'
+                    },
+                    {
+                        text: `Page ${currentPage} of ${pageCount}`,
+                        fontSize: 7,
+                        alignment: 'right',
+                        bold: true,
+                        color: '#64748B'
+                    }
+                ]
+            };
+        },
+        content: [
+            {
+                columns: [
+                    logoDataUrl ? { image: logoDataUrl, width: 48, height: 48 } : { text: '', width: 48 },
+                    {
+                        width: '*',
+                        text: [
+                            { text: `${institutionName}\n`, fontSize: 13, bold: true, color: '#0F2C59' },
+                            { text: `${tabulationSubtitle}\n`, fontSize: 7.5, bold: true, color: '#475569' },
+                            { text: `${eventTitle}\n`, fontSize: 11, bold: true, color: '#0F172A' },
+                            { text: `Certified Official Tabulation Report • Generated: ${formattedDate}`, fontSize: 7.5, color: '#64748B' }
+                        ],
+                        alignment: 'center'
+                    },
+                    {
+                        width: 80,
+                        table: {
+                            widths: ['*'],
+                            body: [
+                                [
+                                    {
+                                        text: certBadgeText,
+                                        alignment: 'center',
+                                        bold: true,
+                                        fontSize: 7,
+                                        color: certBadgeColor,
+                                        fillColor: certBadgeBg
+                                    }
+                                ]
+                            ]
+                        },
+                        layout: {
+                            hLineWidth: () => 1,
+                            vLineWidth: () => 1,
+                            hLineColor: () => certBadgeColor,
+                            vLineColor: () => certBadgeColor
+                        }
+                    }
+                ]
+            },
+            {
+                margin: [0, 6, 0, 8],
+                columns: [
+                    {
+                        text: [
+                            { text: 'Contestants: ', bold: true, color: '#334155' },
+                            { text: `${matrix.length} Entries   `, color: '#64748B' },
+                            { text: 'Judges: ', bold: true, color: '#334155' },
+                            { text: `${judges.length} Judges   `, color: '#64748B' },
+                            { text: 'Tabulation Method: ', bold: true, color: '#334155' },
+                            { text: `${tabMethodDisplay}   `, color: '#64748B' },
+                            { text: 'Precision: ', bold: true, color: '#334155' },
+                            { text: `${precision} Decimals`, color: '#64748B' }
+                        ],
+                        fontSize: 7.5
+                    },
+                    {
+                        text: isAllVerified ? '✓ All Scores Verified & Certified' : '⚠ Incomplete / Pending Verification',
+                        alignment: 'right',
+                        bold: true,
+                        fontSize: 7.5,
+                        color: isAllVerified ? '#059669' : '#D97706'
+                    }
+                ]
+            },
+            {
+                table: {
+                    headerRows: 1,
+                    dontBreakRows: true,
+                    widths: colWidths,
+                    body: bodyRows
+                },
+                layout: {
+                    hLineWidth: () => 0.5,
+                    vLineWidth: () => 0.5,
+                    hLineColor: () => '#CBD5E1',
+                    vLineColor: () => '#CBD5E1',
+                    paddingLeft: () => 5,
+                    paddingRight: () => 5,
+                    paddingTop: () => 4.5,
+                    paddingBottom: () => 4.5
+                }
+            },
+            {
+                margin: [0, 14, 0, 0],
+                unbreakable: true,
+                stack: [
+                    {
+                        text: 'CERTIFIED CORRECT AND APPROVED BY THE BOARD OF JUDGES & TABULATION COMMITTEE:',
+                        fontSize: 7.5,
+                        bold: true,
+                        alignment: 'center',
+                        color: '#334155',
+                        margin: [0, 0, 0, 4]
+                    },
+                    {
+                        columns: signatoryColumns
+                    },
+                    {
+                        margin: [0, 12, 0, 0],
+                        columns: [
+                            qrCodeDataUrl ? { image: qrCodeDataUrl, width: 42, height: 42 } : { text: '', width: 42 },
+                            {
+                                width: '*',
+                                margin: [8, 2, 0, 0],
+                                stack: [
+                                    { text: 'DIGITAL VERIFICATION SEAL', bold: true, fontSize: 7.5, color: '#0F2C59' },
+                                    { text: `Event Reference: #${currentEventId} • Validated through BukSU Digitalized Judging System`, fontSize: 7, color: '#475569', margin: [0, 1, 0, 1] },
+                                    { text: 'Scan QR code with any mobile device to inspect certified immutable tally logs and score signatures.', fontSize: 6.5, color: '#94A3B8' }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
+}
+
+/**
+ * Export official tabulation PDF via pdfmake integration
+ * @param {'download'|'preview'} action
+ */
+async function downloadOrPreviewTabulationPDF(action = 'download') {
+    if (!currentEventId) return;
+
+    const printBtn = document.getElementById('printTabulationBtn');
+    const previewBtn = document.getElementById('previewTabulationPdfBtn');
+    const targetBtn = action === 'preview' ? previewBtn : printBtn;
+
+    const originalHtml = targetBtn ? targetBtn.innerHTML : '';
+    if (targetBtn) {
+        targetBtn.disabled = true;
+        targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
+    }
+
+    try {
+        const eventTitle = document.getElementById('tabulation-event-title')?.textContent || `Competition_${currentEventId}`;
+        const safeTitle = eventTitle.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
+        const filename = `BukSU_Tabulation_${safeTitle}.pdf`;
+
+        const endpoint = `/api/scores/export-pdf?event_id=${encodeURIComponent(currentEventId)}&action=${encodeURIComponent(action)}`;
+
+        let serverSuccess = false;
+        try {
+            const res = await fetch(endpoint, {
+                headers: {
+                    'Accept': 'application/pdf'
+                }
+            });
+
+            if (res.ok) {
+                serverSuccess = true;
+                if (action === 'preview') {
+                    window.open(endpoint, '_blank');
+                    showToast("Opening PDF Preview", "Certified tabulation PDF preview opened in a new tab.", "info");
+                } else {
+                    const blob = await res.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+
+                    showToast("PDF Downloaded", "Official Tabulation Matrix PDF downloaded successfully.", "success");
+                }
+            } else if (res.status === 404) {
+                console.warn('[PDF Export] Server route 404. Falling back to client-side pdfmake.');
+            } else {
+                const errJson = await res.json().catch(() => ({}));
+                throw new Error(errJson.message || `Failed to generate PDF (${res.status})`);
+            }
+        } catch (fetchErr) {
+            console.warn('[PDF Export] Server fetch error, checking client-side pdfmake:', fetchErr.message);
+        }
+
+        // Fallback to client-side pdfmake if server hasn't been restarted or is unreachable
+        if (!serverSuccess) {
+            if (typeof window.pdfMake === 'undefined') {
+                throw new Error("PDF export failed. Please restart your Node.js server (in your terminal press Ctrl+C, then run 'npm run dev' or 'node server.js') to activate the new PDF route.");
+            }
+
+            console.log('[PDF Export] Generating official tabulation PDF client-side using pdfmake...');
+            const docDef = buildClientPdfMakeDocDefinition(cachedData || {});
+            const pdfDoc = window.pdfMake.createPdf(docDef);
+
+            if (action === 'preview') {
+                pdfDoc.open();
+                showToast("Opening PDF Preview", "Official tabulation PDF preview opened in a new tab.", "info");
+            } else {
+                pdfDoc.download(filename);
+                showToast("PDF Downloaded", "Official Tabulation Matrix PDF downloaded successfully.", "success");
+            }
+        }
+    } catch (err) {
+        console.error('[PDF Export] Error:', err);
+        showToast("PDF Export Failed", err.message || "Failed to generate PDF document.", "error");
+    } finally {
+        if (targetBtn) {
+            targetBtn.disabled = false;
+            targetBtn.innerHTML = originalHtml;
+        }
+    }
 }
 
 function escapeHtml(str) {

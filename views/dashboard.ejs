@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="/assets/vendor/pdfmake/pdfmake.min.js"></script>
+    <script src="/assets/vendor/pdfmake/vfs_fonts.js"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
     <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
     <title><%= badgeInfo.title %> | BukSU DJS</title>
@@ -2650,9 +2652,12 @@
                     <button type="button" id="refreshTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
                         <i class="fa-solid fa-rotate-right"></i> Refresh
                     </button>
-                    <div id="printTabulationWrapper" class="relative inline-block">
-                        <button type="button" id="printTabulationBtn" class="px-3.5 py-1.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none" disabled title="All scores must be verified before printing or exporting PDF">
-                            <i class="fa-solid fa-lock"></i> Print Matrix
+                    <div id="printTabulationWrapper" class="relative inline-flex items-center gap-1.5">
+                        <button type="button" id="printTabulationBtn" class="px-3.5 py-1.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none" disabled title="All scores must be verified before exporting PDF">
+                            <i class="fa-solid fa-lock"></i> Export PDF
+                        </button>
+                        <button type="button" id="previewTabulationPdfBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all hidden items-center gap-1 cursor-pointer" title="Preview PDF in a new tab">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Preview
                         </button>
                     </div>
                     <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>

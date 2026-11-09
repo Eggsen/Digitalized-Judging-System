@@ -16,6 +16,9 @@ router.post('/self-unlock', requireRole(['judge', 'admin']), scoreController.sel
 router.post('/approve-unlock', requireRole(['admin', 'tabulator']), scoreController.approveUnlock);
 router.get('/matrix', requireRole(['admin', 'tabulator', 'judge']), scoreController.getTabulationMatrix);
 
+// Official Tabulation PDF Export (Generated via pdfmake npm)
+router.get('/export-pdf', requireRole(['admin', 'tabulator', 'judge']), scoreController.exportTabulationPDF);
+
 // Score Verification (Tabulator Action)
 router.post('/verify', requireRole(['admin', 'tabulator']), scoreController.verifyScore);
 router.post('/unverify', requireRole(['admin', 'tabulator']), scoreController.unverifyScore);

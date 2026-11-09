@@ -52,6 +52,7 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/frontend', express.static(path.join(__dirname, 'frontend')));
 app.use('/scripts', express.static(path.join(__dirname, 'scripts')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/vendor/pdfmake', express.static(path.join(__dirname, 'node_modules/pdfmake/build')));
 
 // -------------------------------------------------------------
 // RESTful API Routes (Modern Architecture - Android/Web/iOS)
