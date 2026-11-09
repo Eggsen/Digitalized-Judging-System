@@ -1,4 +1,4 @@
-import { getScores, unlockJudgeScore, verifyJudgeScore, unverifyJudgeScore, verifyAllJudgeScores } from "/scripts/admin/judgingAPI.js";
+import { getScores, unlockJudgeScore, verifyJudgeScore, unverifyJudgeScore, verifyAllJudgeScores, getScoreHistory } from "/scripts/admin/judgingAPI.js";
 import { showToast } from "/scripts/utils/uiUtils.js";
 import { openEventQrModal } from "/scripts/admin/eventsUI.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel, onWebSocketStatusChange, getWebSocketStatus } from "/scripts/utils/websocket.js";
@@ -624,7 +624,17 @@ function renderTabulationBoard(data) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[8px]"></i> Unlocking...';
 
-            const res = await unlockJudgeScore(currentEventId, cid, jid);
+            const contestantRow = cachedData?.matrix?.find(r => String(r.contestant_id) === String(cid));
+            const scoreEntry = contestantRow?.judge_scores ? contestantRow.judge_scores[jid] : null;
+            const expVer = scoreEntry?.version || 1;
+
+            const res = await unlockJudgeScore(currentEventId, cid, jid, expVer);
+            if (res?.conflict) {
+                showToast('Score Modified (Conflict)', res.message || 'Score was modified concurrently. Refreshing...', 'warning');
+                await loadTabulationData(false);
+                return;
+            }
+
             if (res.success) {
                 showToast(res.message || 'Score unlocked successfully!', 'success');
                 await loadTabulationData(false);
@@ -697,6 +707,19 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
 
     if (totalScoreEl) {
         totalScoreEl.textContent = `${parseFloat(entry.total_score || 0).toFixed(precision)}%`;
+    }
+
+    const verBadgeEl = document.getElementById('breakdown-version-badge');
+    if (verBadgeEl) {
+        verBadgeEl.textContent = `v${entry.version || 1}`;
+    }
+
+    // Bind Version History Modal launcher
+    const historyBtn = document.getElementById('openScoreHistoryBtn');
+    if (historyBtn) {
+        historyBtn.onclick = () => {
+            openScoreHistoryModal(contestantId, judge.id, contestantRow.name, judge.username);
+        };
     }
 
     const isSubmitted = (entry.status === 'submitted');
@@ -1002,7 +1025,14 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                         verifyBtn.disabled = true;
                         verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Verifying...';
 
-                        const res = await verifyJudgeScore(currentEventId, contestantId, judge.id);
+                        const res = await verifyJudgeScore(currentEventId, contestantId, judge.id, entry.version || 1);
+                        if (res?.conflict) {
+                            showToast('Score Modified (Conflict)', res.message || 'Score was modified concurrently. Refreshing...', 'warning');
+                            await loadTabulationData(false);
+                            openScoreBreakdownModal(contestantId, judge.id);
+                            return;
+                        }
+
                         if (res.success) {
                             showToast(res.message || 'Score verified successfully!', 'success');
                             await loadTabulationData(false);
@@ -1036,7 +1066,14 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                         unverifyBtn.disabled = true;
                         unverifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Revoking...';
 
-                        const res = await unverifyJudgeScore(currentEventId, contestantId, judge.id);
+                        const res = await unverifyJudgeScore(currentEventId, contestantId, judge.id, entry.version || 1);
+                        if (res?.conflict) {
+                            showToast('Score Modified (Conflict)', res.message || 'Score was modified concurrently. Refreshing...', 'warning');
+                            await loadTabulationData(false);
+                            openScoreBreakdownModal(contestantId, judge.id);
+                            return;
+                        }
+
                         if (res.success) {
                             showToast(res.message || 'Score verification revoked.', 'info');
                             await loadTabulationData(false);
@@ -1074,7 +1111,14 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                     unlockBtn.disabled = true;
                     unlockBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Unlocking...';
 
-                    const res = await unlockJudgeScore(currentEventId, contestantId, judge.id);
+                    const res = await unlockJudgeScore(currentEventId, contestantId, judge.id, entry.version || 1);
+                    if (res?.conflict) {
+                        showToast('Score Modified (Conflict)', res.message || 'Score was modified concurrently. Refreshing...', 'warning');
+                        await loadTabulationData(false);
+                        openScoreBreakdownModal(contestantId, judge.id);
+                        return;
+                    }
+
                     if (res.success) {
                         showToast(res.message || 'Score unlocked successfully!', 'success');
                         closeScoreBreakdownModal();
@@ -1093,6 +1137,131 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
 
     modal.classList.remove('hidden');
 }
+
+/**
+ * Open Score Version History Modal (MVCC Timeline)
+ */
+export async function openScoreHistoryModal(contestantId, judgeId, contestantName = '', judgeName = '') {
+    const modal = document.getElementById('score-version-history-modal');
+    if (!modal) return;
+
+    const cNameEl = document.getElementById('score-history-meta-contestant');
+    const jNameEl = document.getElementById('score-history-meta-judge');
+    const countEl = document.getElementById('score-history-version-count');
+    const container = document.getElementById('score-history-timeline-container');
+
+    if (cNameEl) cNameEl.innerHTML = `<span class="text-slate-400 font-normal">Contestant:</span> <strong>${escapeHtml(contestantName || '#' + contestantId)}</strong>`;
+    if (jNameEl) jNameEl.innerHTML = `<span class="text-slate-400 font-normal">Evaluating Judge:</span> <strong>${escapeHtml(judgeName || 'Judge')}</strong>`;
+    if (countEl) countEl.textContent = 'Loading...';
+
+    if (container) {
+        container.innerHTML = `
+            <div class="py-12 text-center text-slate-400 text-xs">
+                <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-buksu-navy"></i>
+                <p>Retrieving immutable MVCC audit history...</p>
+            </div>
+        `;
+    }
+
+    modal.classList.remove('hidden');
+
+    // Fetch history from MVCC backend
+    const res = await getScoreHistory({
+        event_id: currentEventId,
+        contestant_id: contestantId,
+        judge_id: judgeId
+    });
+
+    if (!res.success || !Array.isArray(res.history)) {
+        if (container) {
+            container.innerHTML = `
+                <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs text-center">
+                    <i class="fa-solid fa-triangle-exclamation mb-1 text-sm block"></i>
+                    ${escapeHtml(res.message || 'Failed to retrieve version history.')}
+                </div>
+            `;
+        }
+        if (countEl) countEl.textContent = '0 Revisions';
+        return;
+    }
+
+    const versions = [...res.history].reverse(); // Show latest version first
+    if (countEl) countEl.textContent = `${versions.length} ${versions.length === 1 ? 'Revision' : 'Revisions'}`;
+
+    if (container) {
+        if (versions.length === 0) {
+            container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">No version history recorded yet.</div>`;
+            return;
+        }
+
+        const actionColors = {
+            'DRAFT_CREATED': { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', icon: 'fa-pen-ruler', label: 'Draft Initialized' },
+            'DRAFT_UPDATED': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'fa-pencil', label: 'Draft Updated' },
+            'INITIAL_SUBMISSION': { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-300', icon: 'fa-paper-plane', label: 'Initial Submission' },
+            'OFFICIAL_SUBMISSION': { bg: 'bg-emerald-100', text: 'text-emerald-900', border: 'border-emerald-400', icon: 'fa-certificate', label: 'Official Submission' },
+            'SCORE_LOCKED': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300', icon: 'fa-lock', label: 'Score Locked' },
+            'SELF_UNLOCKED_BY_JUDGE': { bg: 'bg-indigo-50', text: 'text-indigo-800', border: 'border-indigo-300', icon: 'fa-lock-open', label: 'Judge Self-Unlocked' },
+            'ADMIN_UNLOCKED': { bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-300', icon: 'fa-key', label: 'Tabulator Unlocked' },
+            'UNLOCK_REJECTED': { bg: 'bg-rose-100', text: 'text-rose-900', border: 'border-rose-300', icon: 'fa-xmark', label: 'Unlock Rejected' },
+            'VERIFIED_BY_TABULATOR': { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-600', icon: 'fa-shield-check', label: 'Certified & Verified' },
+            'UNVERIFIED_BY_TABULATOR': { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', icon: 'fa-rotate-left', label: 'Verification Revoked' }
+        };
+
+        container.innerHTML = `
+            <div class="relative border-l-2 border-slate-200 ms-4 ps-5 space-y-4 my-2">
+                ${versions.map((ver, idx) => {
+                    const conf = actionColors[ver.action] || { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', icon: 'fa-code-commit', label: ver.action || 'Updated' };
+                    const isLatest = (idx === 0);
+                    const dateStr = ver.created_at ? new Date(ver.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'medium' }) : 'N/A';
+                    const modBy = ver.modified_by ? `${ver.modified_by.username} (${ver.modified_by.role})` : (ver.judge_name || 'System');
+
+                    return `
+                        <div class="relative group">
+                            <!-- Marker Dot on Timeline -->
+                            <div class="absolute -left-[31px] top-3 w-5 h-5 rounded-full ${isLatest ? 'bg-buksu-navy text-buksu-gold ring-4 ring-buksu-navy/20' : 'bg-white border-2 border-slate-300 text-slate-500'} flex items-center justify-center text-[9px] font-black shadow-xs">
+                                ${isLatest ? '<i class="fa-solid fa-star text-[8px]"></i>' : ver.version}
+                            </div>
+
+                            <!-- Version Card -->
+                            <div class="p-3.5 rounded-2xl ${isLatest ? 'bg-slate-50/90 border-2 border-buksu-navy/30 shadow-xs' : 'bg-white border border-slate-200 shadow-2xs'} space-y-2">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="px-2 py-0.5 rounded font-mono font-black text-xs ${isLatest ? 'bg-buksu-navy text-buksu-gold' : 'bg-slate-200 text-slate-700'}">
+                                            v${ver.version}
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${conf.bg} ${conf.text} border ${conf.border} flex items-center gap-1">
+                                            <i class="fa-solid ${conf.icon} text-[9px]"></i> ${conf.label}
+                                        </span>
+                                        ${isLatest ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-600 text-white uppercase tracking-wider">Current Head</span>' : ''}
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-mono font-black text-slate-900 text-sm">${parseFloat(ver.total_score || 0).toFixed(2)}%</span>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-slate-700 font-medium">${escapeHtml(ver.change_summary || '')}</p>
+
+                                <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100 flex-wrap gap-2">
+                                    <span><i class="fa-solid fa-user-circle me-1 text-slate-400"></i>Actor: <strong class="text-slate-600">${escapeHtml(modBy)}</strong></span>
+                                    <span><i class="fa-regular fa-clock me-1 text-slate-400"></i>${escapeHtml(dateStr)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+}
+
+// Bind close button listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.close-score-history-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('score-version-history-modal')?.classList.add('hidden');
+        });
+    });
+});
 
 export function closeScoreBreakdownModal() {
     activeBreakdownContestantId = null;

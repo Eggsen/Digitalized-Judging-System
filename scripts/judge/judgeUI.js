@@ -629,10 +629,16 @@ function renderScoringSheet() {
             scoringBody.dataset.unlocked = "true";
             renderScoringSheet();
             try {
-                const res = await selfUnlockJudgeScore(currentEventId, selectedContestantId);
+                const curScore = judgeScoresMap[selectedContestantId];
+                const expVer = curScore?.version || (curScore?.id ? 1 : null);
+                const res = await selfUnlockJudgeScore(currentEventId, selectedContestantId, expVer);
                 if (res?.success && judgeScoresMap[selectedContestantId]) {
                     judgeScoresMap[selectedContestantId].status = 'draft';
                     judgeScoresMap[selectedContestantId].is_locked = false;
+                    if (res.version) judgeScoresMap[selectedContestantId].version = res.version;
+                } else if (res?.conflict) {
+                    showToast('Concurrency Notice', res.message || 'Score was modified elsewhere. Reloading data...', 'warning');
+                    await loadJudgeEventData();
                 }
             } catch (err) {
                 console.warn('Self-unlock sync notice:', err);
@@ -1376,24 +1382,35 @@ async function handleSaveScore(action) {
     const btn = document.getElementById('saveDraftScoreBtn');
     if (btn) btn.disabled = true;
 
+    const existingScoreObj = judgeScoresMap[selectedContestantId];
+    const expectedVer = existingScoreObj?.version || (existingScoreObj?.id ? 1 : null);
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'draft'
+        action: 'draft',
+        expected_version: expectedVer
     });
 
     if (btn) btn.disabled = false;
 
+    if (res?.conflict) {
+        showToast('Score Modified (Conflict)', res.message || 'Score was modified by another action. Reloading latest evaluation...', 'warning');
+        await loadJudgeEventData();
+        return;
+    }
+
     if (res.success) {
         showToast('Draft Score Saved!', res.message || 'Your draft score has been saved.', 'success');
 
-        // Update local cache
+        // Update local cache with new MVCC version
         judgeScoresMap[selectedContestantId] = {
             id: res.score_id,
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || (expectedVer ? expectedVer + 1 : 1),
             status: 'draft',
             submitted_at: new Date().toISOString()
         };
@@ -1595,14 +1612,25 @@ async function executeSubmitFinalScore() {
         };
     });
 
+    const existingScoreObj = judgeScoresMap[selectedContestantId];
+    const expectedVer = existingScoreObj?.version || (existingScoreObj?.id ? 1 : null);
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'submit'
+        action: 'submit',
+        expected_version: expectedVer
     });
 
     if (confirmBtn) confirmBtn.disabled = false;
+
+    if (res?.conflict) {
+        document.getElementById('judge-submission-summary-modal')?.classList.add('hidden');
+        showToast('Score Modified (Conflict)', res.message || 'Score was modified by another action. Reloading latest evaluation...', 'warning');
+        await loadJudgeEventData();
+        return;
+    }
 
     if (res.success) {
         // Close summary confirmation modal
@@ -1610,12 +1638,13 @@ async function executeSubmitFinalScore() {
 
         showToast('Final Score Submitted!', res.message || 'Your score has been successfully transmitted to the Tabulator.', 'success');
 
-        // Update local cache
+        // Update local cache with new MVCC version
         judgeScoresMap[selectedContestantId] = {
             id: res.score_id,
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || (expectedVer ? expectedVer + 1 : 1),
             status: 'submitted',
             submitted_at: new Date().toISOString()
         };

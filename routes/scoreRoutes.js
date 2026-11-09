@@ -20,5 +20,9 @@ router.get('/matrix', requireRole(['admin', 'tabulator', 'judge']), scoreControl
 router.post('/verify', requireRole(['admin', 'tabulator']), scoreController.verifyScore);
 router.post('/unverify', requireRole(['admin', 'tabulator']), scoreController.unverifyScore);
 
+// MVCC Score Version History & Snapshot Inspection (Admin, Tabulator, Judge)
+router.get('/history', requireRole(['admin', 'tabulator', 'judge']), scoreController.getScoreHistory);
+router.get('/version/:version', requireRole(['admin', 'tabulator', 'judge']), scoreController.getScoreVersionSnapshot);
+
 module.exports = router;
 

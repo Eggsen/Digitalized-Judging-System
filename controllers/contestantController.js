@@ -283,14 +283,18 @@ async function deleteContestant(req, res, next) {
 
         await collections.contestants.deleteOne(query);
 
-        // Also delete scores for this contestant
+        // Also delete scores and version history for this contestant
         const strId = String(id);
-        await collections.scores.deleteMany({
+        const contestantScoreQuery = {
             $or: [
                 { contestant_id: strId },
                 { contestant_id: id }
             ]
-        });
+        };
+        await collections.scores.deleteMany(contestantScoreQuery);
+        if (collections.score_versions) {
+            await collections.score_versions.deleteMany(contestantScoreQuery);
+        }
 
         res.json({ success: true, message: 'Contestant removed successfully.' });
     } catch (err) {

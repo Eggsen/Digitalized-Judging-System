@@ -2679,6 +2679,7 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Score Audit &amp; Verification</span>
                             <span id="breakdown-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">Submitted</span>
+                            <span id="breakdown-version-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-300 font-mono">v1</span>
                         </div>
                         <h3 id="breakdown-modal-title" class="font-extrabold text-slate-800 text-base leading-tight truncate">Judge Score Breakdown</h3>
                     </div>
@@ -2744,9 +2745,14 @@
 
             <!-- Modal Footer with Verify, Unlock & Close actions -->
             <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 mt-auto">
-                <button type="button" class="close-breakdown-modal-btn w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center">
-                    Close Audit
-                </button>
+                <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                    <button type="button" class="close-breakdown-modal-btn w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center">
+                        Close Audit
+                    </button>
+                    <button type="button" id="openScoreHistoryBtn" class="w-full sm:w-auto px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-2xs">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Version History (MVCC)
+                    </button>
+                </div>
                 <div id="breakdown-actions-container" class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-start sm:justify-end">
                     <div id="breakdown-verify-container" class="flex flex-wrap items-center gap-2">
                         <!-- Dynamic Verify / Verified Button -->
@@ -2755,6 +2761,46 @@
                         <!-- Dynamic Unlock Button if applicable -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SCORE VERSION HISTORY & AUDIT TRAIL (MVCC) -->
+    <div id="score-version-history-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-[70] hidden no-print">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-black shadow-xs border border-buksu-gold/30 shrink-0">
+                        <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Multi-Version Concurrency Control (MVCC)</span>
+                            <span id="score-history-version-count" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-300 font-mono">0 Revisions</span>
+                        </div>
+                        <h3 class="font-extrabold text-slate-800 text-base leading-tight truncate">Score Revision History &amp; Audit Trail</h3>
+                    </div>
+                </div>
+                <button type="button" class="close-score-history-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none transition-colors shrink-0 ms-2">&times;</button>
+            </div>
+
+            <!-- Target Summary Strip -->
+            <div id="score-history-meta-banner" class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs flex items-center justify-between flex-wrap gap-2 shrink-0">
+                <span id="score-history-meta-contestant" class="font-bold text-slate-700">Contestant</span>
+                <span id="score-history-meta-judge" class="text-slate-500">Judge</span>
+            </div>
+
+            <!-- Timeline of Version Snapshots -->
+            <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="score-history-timeline-container">
+                <!-- Dynamically populated via tabulatorUI.js -->
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end shrink-0 mt-auto">
+                <button type="button" class="close-score-history-modal-btn px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Back to Score Breakdown
+                </button>
             </div>
         </div>
     </div>

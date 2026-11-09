@@ -501,6 +501,9 @@ async function deleteEvent(req, res, next) {
         await collections.contestants.deleteMany(eventIdQuery);
         await collections.criteria.deleteMany(eventIdQuery);
         await collections.scores.deleteMany(eventIdQuery);
+        if (collections.score_versions) {
+            await collections.score_versions.deleteMany(eventIdQuery);
+        }
 
         await logSystemAction(
             req.user.id,

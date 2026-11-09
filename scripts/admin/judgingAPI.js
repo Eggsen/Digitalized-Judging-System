@@ -226,17 +226,21 @@ export async function submitScore(data) {
     }
 }
 
-export async function unlockJudgeScore(eventId, contestantId, judgeId) {
+export async function unlockJudgeScore(eventId, contestantId, judgeId, expectedVersion = null) {
     try {
+        const payload = {
+            event_id: String(eventId),
+            contestant_id: contestantId,
+            judge_id: judgeId,
+            approve: true
+        };
+        if (expectedVersion !== null && expectedVersion !== undefined) {
+            payload.expected_version = expectedVersion;
+        }
         const res = await fetch("/api/scores/approve-unlock", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                event_id: String(eventId),
-                contestant_id: contestantId,
-                judge_id: judgeId,
-                approve: true
-            }),
+            body: JSON.stringify(payload),
             credentials: "include"
         });
         return await res.json();
@@ -246,15 +250,19 @@ export async function unlockJudgeScore(eventId, contestantId, judgeId) {
     }
 }
 
-export async function selfUnlockJudgeScore(eventId, contestantId) {
+export async function selfUnlockJudgeScore(eventId, contestantId, expectedVersion = null) {
     try {
+        const payload = {
+            event_id: String(eventId),
+            contestant_id: contestantId
+        };
+        if (expectedVersion !== null && expectedVersion !== undefined) {
+            payload.expected_version = expectedVersion;
+        }
         const res = await fetch("/api/scores/self-unlock", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                event_id: String(eventId),
-                contestant_id: contestantId
-            }),
+            body: JSON.stringify(payload),
             credentials: "include"
         });
         return await res.json();
@@ -264,16 +272,20 @@ export async function selfUnlockJudgeScore(eventId, contestantId) {
     }
 }
 
-export async function verifyJudgeScore(eventId, contestantId, judgeId) {
+export async function verifyJudgeScore(eventId, contestantId, judgeId, expectedVersion = null) {
     try {
+        const payload = {
+            event_id: String(eventId),
+            contestant_id: contestantId,
+            judge_id: judgeId
+        };
+        if (expectedVersion !== null && expectedVersion !== undefined) {
+            payload.expected_version = expectedVersion;
+        }
         const res = await fetch("/api/scores/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                event_id: String(eventId),
-                contestant_id: contestantId,
-                judge_id: judgeId
-            }),
+            body: JSON.stringify(payload),
             credentials: "include"
         });
         return await res.json();
@@ -283,16 +295,20 @@ export async function verifyJudgeScore(eventId, contestantId, judgeId) {
     }
 }
 
-export async function unverifyJudgeScore(eventId, contestantId, judgeId) {
+export async function unverifyJudgeScore(eventId, contestantId, judgeId, expectedVersion = null) {
     try {
+        const payload = {
+            event_id: String(eventId),
+            contestant_id: contestantId,
+            judge_id: judgeId
+        };
+        if (expectedVersion !== null && expectedVersion !== undefined) {
+            payload.expected_version = expectedVersion;
+        }
         const res = await fetch("/api/scores/unverify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                event_id: String(eventId),
-                contestant_id: contestantId,
-                judge_id: judgeId
-            }),
+            body: JSON.stringify(payload),
             credentials: "include"
         });
         return await res.json();
@@ -317,6 +333,41 @@ export async function verifyAllJudgeScores(eventId) {
     } catch (e) {
         console.error("verifyAllJudgeScores error: ", e);
         return { success: false, message: "Network error verifying all scores." };
+    }
+}
+
+// -------------------------------------------------------------
+// MVCC SCORES VERSION HISTORY API
+// -------------------------------------------------------------
+export async function getScoreHistory(params = {}) {
+    try {
+        const q = new URLSearchParams();
+        if (params.score_id) q.set('score_id', params.score_id);
+        if (params.event_id) q.set('event_id', params.event_id);
+        if (params.contestant_id) q.set('contestant_id', params.contestant_id);
+        if (params.judge_id) q.set('judge_id', params.judge_id);
+
+        const res = await fetch(`/api/scores/history?${q.toString()}`, { credentials: "include" });
+        return await res.json();
+    } catch (e) {
+        console.error("getScoreHistory error: ", e);
+        return { success: false, message: "Network error retrieving score history." };
+    }
+}
+
+export async function getScoreVersionSnapshot(version, params = {}) {
+    try {
+        const q = new URLSearchParams();
+        if (params.score_id) q.set('score_id', params.score_id);
+        if (params.event_id) q.set('event_id', params.event_id);
+        if (params.contestant_id) q.set('contestant_id', params.contestant_id);
+        if (params.judge_id) q.set('judge_id', params.judge_id);
+
+        const res = await fetch(`/api/scores/version/${encodeURIComponent(version)}?${q.toString()}`, { credentials: "include" });
+        return await res.json();
+    } catch (e) {
+        console.error("getScoreVersionSnapshot error: ", e);
+        return { success: false, message: "Network error retrieving score snapshot." };
     }
 }
 

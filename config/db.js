@@ -20,6 +20,7 @@ const collections = {
     contestants: null,
     criteria: null,
     scores: null,
+    score_versions: null,
     settings: null,
     logs: null,
     notifications: null,
@@ -47,12 +48,22 @@ async function connectDB() {
         collections.contestants = db.collection('contestants');
         collections.criteria = db.collection('criteria');
         collections.scores = db.collection('scores');
+        collections.score_versions = db.collection('score_versions');
         collections.settings = db.collection('settings');
         collections.logs = db.collection('logs');
         collections.notifications = db.collection('notifications');
         collections.logo_library = db.collection('logo_library');
 
         console.log(`[Database] Connected successfully to MongoDB Atlas (${dbName})`);
+
+        // Initialize MVCC score indexes
+        try {
+            await collections.scores.createIndex({ event_id: 1, contestant_id: 1, judge_id: 1 });
+            await collections.score_versions.createIndex({ score_id: 1, version: -1 });
+            await collections.score_versions.createIndex({ event_id: 1, contestant_id: 1, judge_id: 1, version: -1 });
+        } catch (idxErr) {
+            console.warn('[Database] MVCC Index init notice:', idxErr.message);
+        }
 
         // Overlay api_keys from system_settings into process.env to persist across cloud restarts
         try {
