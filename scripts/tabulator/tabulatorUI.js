@@ -253,6 +253,10 @@ function renderTabulationBoard(data) {
     if (printInstEl) {
         printInstEl.textContent = branding.institutionName || 'Bukidnon State University';
     }
+    const printUnitEl = document.getElementById('tab-print-campus-unit');
+    if (printUnitEl) {
+        printUnitEl.textContent = branding.campusUnit || 'Office of Student Affairs & Services • Tabulation Committee';
+    }
     const printTitleEl = document.getElementById('tab-print-event-title');
     if (printTitleEl) {
         printTitleEl.textContent = `${event.eventName || `Competition #${currentEventId}`} — Official Tabulation Matrix`;
@@ -273,17 +277,19 @@ function renderTabulationBoard(data) {
     const watermarkEl = document.getElementById('tab-print-watermark');
     const watermarkTextEl = document.getElementById('tab-print-watermark-text');
     if (watermarkEl && watermarkTextEl) {
-        if (branding.watermarkEnabled) {
-            watermarkTextEl.textContent = branding.watermarkText || 'OFFICIAL TABULATION SHEET';
+        const showWatermark = branding.showWatermark !== false && (branding.showWatermark || branding.watermarkEnabled);
+        if (showWatermark) {
+            watermarkTextEl.textContent = branding.watermarkText || branding.institutionName || 'OFFICIAL TABULATION SHEET';
             watermarkEl.classList.remove('hidden');
         } else {
             watermarkEl.classList.add('hidden');
         }
     }
 
-    // Dynamic Institution Logo on Print Header
+    // Dynamic Institution Logo & Print Header Seal
     const printLogoEl = document.getElementById('tab-print-logo');
     if (printLogoEl) {
+        printLogoEl.crossOrigin = 'anonymous';
         printLogoEl.src = branding.logoUrl || '/assets/logo/DJS Logo.png';
         printLogoEl.style.display = 'block';
     }
@@ -296,7 +302,7 @@ function renderTabulationBoard(data) {
             { name: "Jane Smith", role: "Head Tabulator" },
             { name: "Dr. Alex Morgan", role: "Chairman of the Board" }
         ];
-        const signatories = (Array.isArray(branding.signatories) && branding.signatories.length === 3) 
+        const signatories = (Array.isArray(branding.signatories) && branding.signatories.length >= 2) 
             ? branding.signatories 
             : defaultSignatories;
 
@@ -304,7 +310,7 @@ function renderTabulationBoard(data) {
             <div class="flex flex-col items-center">
                 <div class="w-48 border-b-2 border-slate-800 mb-2 h-12"></div>
                 <span class="text-xs font-black uppercase text-slate-900 leading-tight">${escapeHtml(sig.name || 'Signatory Name')}</span>
-                <span class="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mt-0.5">${escapeHtml(sig.role || 'Designated Signatory')}</span>
+                <span class="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mt-0.5">${escapeHtml(sig.title || sig.role || 'Designated Signatory')}</span>
             </div>
         `).join('');
     }
@@ -1130,27 +1136,49 @@ export function closeScoreBreakdownModal() {
 }
 
 /**
- * Helper to extract base64 from an existing img element on the page
+ * Helper to resolve an image into base64 Data URL in browser
  */
-function getBase64FromImageElement(imgElement) {
-    if (!imgElement || !imgElement.src) return null;
-    try {
-        if (imgElement.src.startsWith('data:image/')) return imgElement.src;
-        const canvas = document.createElement('canvas');
-        canvas.width = imgElement.naturalWidth || imgElement.width || 64;
-        canvas.height = imgElement.naturalHeight || imgElement.height || 64;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL('image/png');
-    } catch (e) {
-        return null;
+async function resolveClientImageBase64(imgElement, fallbackUrl) {
+    if (imgElement && imgElement.src && imgElement.src.startsWith('data:image/')) {
+        return imgElement.src;
     }
+    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = imgElement.naturalWidth;
+            canvas.height = imgElement.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0);
+            const data = canvas.toDataURL('image/png');
+            if (data && data.startsWith('data:image/')) return data;
+        } catch (e) {
+            // Tainted canvas or crossOrigin issue
+        }
+    }
+    const targetUrl = (imgElement && imgElement.src) || fallbackUrl;
+    if (!targetUrl) return null;
+    if (targetUrl.startsWith('data:image/')) return targetUrl;
+    try {
+        const res = await fetch(targetUrl);
+        if (res.ok) {
+            const blob = await res.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        }
+    } catch (e) {
+        console.warn('[PDF Export] Could not convert image to base64:', e);
+    }
+    return null;
 }
 
 /**
  * Build docDefinition for client-side pdfmake generation
  */
-function buildClientPdfMakeDocDefinition(data) {
+function buildClientPdfMakeDocDefinition(data, logoDataUrl = null, qrCodeDataUrl = null) {
     const event = data.event || {};
     const judges = data.judges || [];
     const matrix = data.matrix || [];
@@ -1162,19 +1190,14 @@ function buildClientPdfMakeDocDefinition(data) {
     const tabMethod = judgingSettings.tabulationMethod || 'standard_average';
     const isAllVerified = Boolean(stats.is_all_verified);
 
-    const logoImg = document.getElementById('tab-print-logo');
-    const logoDataUrl = getBase64FromImageElement(logoImg);
-
-    const qrSealImg = document.getElementById('tab-print-qr-seal');
-    const qrCodeDataUrl = getBase64FromImageElement(qrSealImg);
-
     const formattedDate = new Date().toLocaleString('en-US', {
         dateStyle: 'medium',
         timeStyle: 'short'
     });
 
-    const institutionName = branding.institutionName || 'BUKIDNON STATE UNIVERSITY';
-    const tabulationSubtitle = branding.tabulationSubtitle || 'OFFICE OF STUDENT AFFAIRS & SERVICES • TABULATION COMMITTEE';
+    const institutionName = (branding.institutionName || 'BUKIDNON STATE UNIVERSITY').toUpperCase();
+    const campusUnit = branding.campusUnit || 'Office of Student Affairs & Services • Tabulation Committee';
+    const headerSubtitle = branding.headerSubtitle || '';
     const eventTitle = event.eventName || event.name || event.title || `Competition #${currentEventId}`;
 
     const judgeCount = Math.max(1, judges.length);
@@ -1366,7 +1389,7 @@ function buildClientPdfMakeDocDefinition(data) {
             { text: '', margin: [0, 20, 0, 0] },
             { canvas: [{ type: 'line', x1: 20, y1: 0, x2: 180, y2: 0, lineWidth: 1, lineColor: '#334155' }] },
             { text: (sig.name || 'Signatory Name').toUpperCase(), bold: true, fontSize: 8, color: '#0F172A', alignment: 'center', margin: [0, 4, 0, 1] },
-            { text: (sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
+            { text: (sig.title || sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
         ]
     }));
 
@@ -1381,11 +1404,17 @@ function buildClientPdfMakeDocDefinition(data) {
     const certBadgeColor = isAllVerified ? '#0F2C59' : '#B45309';
     const certBadgeBg = isAllVerified ? '#F8FAFC' : '#FEF3C7';
 
+    const showWatermark = branding.showWatermark !== false && (branding.showWatermark || branding.watermarkEnabled);
     let watermarkConfig = null;
     if (!isAllVerified) {
         watermarkConfig = { text: 'UNVERIFIED DRAFT', color: '#E2E8F0', opacity: 0.12, bold: true };
-    } else if (branding.watermarkEnabled) {
-        watermarkConfig = { text: branding.watermarkText || 'OFFICIAL TABULATION SHEET', color: '#E2E8F0', opacity: 0.12, bold: true };
+    } else if (showWatermark) {
+        watermarkConfig = {
+            text: (branding.watermarkText || branding.institutionName || 'OFFICIAL TABULATION SHEET').toUpperCase(),
+            color: '#E2E8F0',
+            opacity: 0.10,
+            bold: true
+        };
     }
 
     return {
@@ -1398,7 +1427,7 @@ function buildClientPdfMakeDocDefinition(data) {
                 margin: [35, 10, 35, 0],
                 columns: [
                     {
-                        text: 'BukSU Digitalized Judging System • Certified Official Tabulation Sheet',
+                        text: `${institutionName} • Certified Official Tabulation Sheet`,
                         fontSize: 7,
                         color: '#94A3B8'
                     },
@@ -1415,15 +1444,16 @@ function buildClientPdfMakeDocDefinition(data) {
         content: [
             {
                 columns: [
-                    logoDataUrl ? { image: logoDataUrl, width: 48, height: 48 } : { text: '', width: 48 },
+                    logoDataUrl ? { image: logoDataUrl, width: 50, height: 50 } : { text: '', width: 50 },
                     {
                         width: '*',
                         text: [
                             { text: `${institutionName}\n`, fontSize: 13, bold: true, color: '#0F2C59' },
-                            { text: `${tabulationSubtitle}\n`, fontSize: 7.5, bold: true, color: '#475569' },
-                            { text: `${eventTitle}\n`, fontSize: 11, bold: true, color: '#0F172A' },
+                            campusUnit ? { text: `${campusUnit.toUpperCase()}\n`, fontSize: 8, bold: true, color: '#475569' } : null,
+                            headerSubtitle ? { text: `${headerSubtitle}\n`, fontSize: 7.5, italics: true, color: '#64748B' } : null,
+                            { text: `${eventTitle} — Official Tabulation Matrix\n`, fontSize: 11, bold: true, color: '#0F172A' },
                             { text: `Certified Official Tabulation Report • Generated: ${formattedDate}`, fontSize: 7.5, color: '#64748B' }
-                        ],
+                        ].filter(Boolean),
                         alignment: 'center'
                     },
                     {
@@ -1598,7 +1628,14 @@ async function downloadOrPreviewTabulationPDF(action = 'download') {
             }
 
             console.log('[PDF Export] Generating official tabulation PDF client-side using pdfmake...');
-            const docDef = buildClientPdfMakeDocDefinition(cachedData || {});
+            const logoImg = document.getElementById('tab-print-logo');
+            const branding = cachedData?.settings?.branding || {};
+            const logoDataUrl = await resolveClientImageBase64(logoImg, branding.logoUrl || '/assets/logo/DJS Logo.png');
+
+            const qrSealImg = document.getElementById('tab-print-qr-seal');
+            const qrCodeDataUrl = await resolveClientImageBase64(qrSealImg, qrSealImg?.src);
+
+            const docDef = buildClientPdfMakeDocDefinition(cachedData || {}, logoDataUrl, qrCodeDataUrl);
             const pdfDoc = window.pdfMake.createPdf(docDef);
 
             if (action === 'preview') {

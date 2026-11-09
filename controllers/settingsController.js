@@ -701,7 +701,7 @@ async function clearLogs(req, res, next) {
  */
 async function uploadLogo(req, res, next) {
     try {
-        const { logo_base64, logo_url, action } = req.body;
+        const { logo_base64, logo_url, action, filename } = req.body;
 
         if (action === 'reset_default_logo') {
             await collections.settings.updateOne(
@@ -715,11 +715,43 @@ async function uploadLogo(req, res, next) {
         let storage = 'local';
 
         if (logo_base64) {
-            const { uploadToCloudinary } = require('../utils/cloudinary');
-            const uploadRes = await uploadToCloudinary(logo_base64, 'djs_institution_logos');
-            if (uploadRes.success) {
-                finalUrl = uploadRes.url;
-                storage = 'cloudinary';
+            // Attempt Cloudinary upload if credentials are configured
+            try {
+                const { isCloudinaryConfiguredAsync, uploadToCloudinary } = require('../utils/cloudinary');
+                const hasCloudinary = await isCloudinaryConfiguredAsync();
+                if (hasCloudinary) {
+                    const uploadRes = await uploadToCloudinary(logo_base64, 'djs_institution_logos');
+                    if (uploadRes && uploadRes.success) {
+                        finalUrl = uploadRes.url;
+                        storage = 'cloudinary';
+                    }
+                }
+            } catch (cloudErr) {
+                console.warn('[Logo Upload] Cloudinary upload bypassed, falling back to local storage:', cloudErr.message);
+            }
+
+            // Local filesystem storage fallback
+            if (!finalUrl && typeof logo_base64 === 'string' && logo_base64.startsWith('data:image/')) {
+                const matches = logo_base64.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+                if (matches) {
+                    let ext = matches[1].toLowerCase();
+                    if (ext === 'jpeg') ext = 'jpg';
+                    if (ext === 'svg+xml') ext = 'svg';
+                    const base64Data = matches[2];
+                    const buffer = Buffer.from(base64Data, 'base64');
+
+                    const safeName = (filename ? path.parse(filename).name : 'logo')
+                        .replace(/[^a-zA-Z0-9_-]/g, '_')
+                        .substring(0, 32);
+                    const fname = `logo_${Date.now()}_${safeName}.${ext}`;
+                    const targetDir = path.join(__dirname, '..', 'assets', 'uploads', 'logos');
+                    if (!fs.existsSync(targetDir)) {
+                        fs.mkdirSync(targetDir, { recursive: true });
+                    }
+                    fs.writeFileSync(path.join(targetDir, fname), buffer);
+                    finalUrl = `/assets/uploads/logos/${fname}`;
+                    storage = 'local';
+                }
             }
         }
 
@@ -729,18 +761,21 @@ async function uploadLogo(req, res, next) {
                 { $set: { 'branding.logoUrl': finalUrl, updatedAt: new Date().toISOString() } }
             );
 
-            // Add to logo library
-            await collections.logo_library.insertOne({
-                url: finalUrl,
-                storage,
-                uploaded_by: req.user.username,
-                created_at: new Date().toISOString()
-            });
+            // Add to logo library if not already present
+            const exists = await collections.logo_library.findOne({ url: finalUrl });
+            if (!exists) {
+                await collections.logo_library.insertOne({
+                    url: finalUrl,
+                    storage,
+                    uploaded_by: req.user ? req.user.username : 'Administrator',
+                    created_at: new Date().toISOString()
+                });
+            }
         }
 
         res.json({
-            success: true,
-            message: 'Logo updated successfully.',
+            success: Boolean(finalUrl),
+            message: finalUrl ? 'Logo updated successfully.' : 'Failed to process logo image.',
             logoUrl: finalUrl,
             storage
         });

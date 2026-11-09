@@ -355,13 +355,21 @@ function initLogoUploader() {
         triggerBtn.disabled = true;
         triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-buksu-gold"></i> Uploading...';
 
-        const formData = new FormData();
-        formData.append('logo_file', file);
-
         try {
+            const base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error("Failed to read image file"));
+                reader.readAsDataURL(file);
+            });
+
             const resp = await fetch('/api/settings/upload-logo', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    logo_base64: base64Data,
+                    filename: file.name
+                })
             });
             const data = await resp.json();
 
@@ -383,7 +391,7 @@ function initLogoUploader() {
             }
         } catch (err) {
             console.error("Logo upload error:", err);
-            showToast("Network Error", "Could not complete logo upload.", "error");
+            showToast("Upload Error", err.message || "Could not complete logo upload.", "error");
         } finally {
             triggerBtn.disabled = false;
             triggerBtn.innerHTML = originalBtnHtml;
@@ -400,13 +408,11 @@ function initLogoUploader() {
         resetBtn.disabled = true;
         resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[11px]"></i> Resetting...';
 
-        const formData = new FormData();
-        formData.append('action', 'reset_default_logo');
-
         try {
             const resp = await fetch('/api/settings/upload-logo', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reset_default_logo' })
             });
             const data = await resp.json();
 

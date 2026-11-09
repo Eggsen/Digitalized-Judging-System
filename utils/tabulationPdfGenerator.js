@@ -1,6 +1,7 @@
 const pdfmake = require('pdfmake');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 const { generateQRCodeDataURL } = require('./qrcode');
 
 // Configure Roboto standard fonts
@@ -13,31 +14,59 @@ if (typeof pdfmake.setLocalAccessPolicy === 'function') {
 }
 
 /**
- * Resolve an image (logo) into a base64 Data URL
+ * Resolve an image (logo or seal) into a base64 Data URL.
+ * Handles base64 strings, local filesystem files, localhost URLs, and remote Cloudinary URLs.
  */
-function resolveImageBase64(imageUrl) {
+async function resolveImageBase64(imageUrl) {
     try {
         if (!imageUrl) return null;
+        if (typeof imageUrl !== 'string') return null;
         if (imageUrl.startsWith('data:image/')) return imageUrl;
 
-        // Clean query params
-        const cleanUrl = imageUrl.split('?')[0];
+        const cleanUrl = imageUrl.split('?')[0].trim();
 
-        // Check local filesystem paths
-        let localPath = null;
-        if (cleanUrl.startsWith('/assets/')) {
-            localPath = path.join(__dirname, '..', cleanUrl);
-        } else if (cleanUrl.startsWith('/uploads/')) {
-            localPath = path.join(__dirname, '..', cleanUrl);
-        } else if (cleanUrl.startsWith('assets/') || cleanUrl.startsWith('uploads/')) {
-            localPath = path.join(__dirname, '..', cleanUrl);
+        // 1. If it's a localhost or 127.0.0.1 URL, extract the local pathname
+        let pathname = cleanUrl;
+        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+            try {
+                const parsed = new URL(cleanUrl);
+                if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+                    pathname = parsed.pathname;
+                }
+            } catch (e) {}
         }
 
-        if (localPath && fs.existsSync(localPath)) {
-            const ext = path.extname(localPath).toLowerCase().replace('.', '') || 'png';
-            const mime = ext === 'jpg' ? 'jpeg' : ext;
-            const b64 = fs.readFileSync(localPath).toString('base64');
-            return `data:image/${mime};base64,${b64}`;
+        // 2. Check local filesystem paths (decoding URL escapes such as %20)
+        const decodedPath = decodeURIComponent(pathname).replace(/^\/+/, '');
+        const candidatePaths = [
+            path.resolve(__dirname, '..', decodedPath),
+            path.resolve(__dirname, decodedPath),
+            path.resolve(process.cwd(), decodedPath)
+        ];
+
+        for (const p of candidatePaths) {
+            if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+                const ext = path.extname(p).toLowerCase().replace('.', '') || 'png';
+                const mime = ext === 'jpg' ? 'jpeg' : (ext === 'svg' ? 'svg+xml' : ext);
+                const b64 = fs.readFileSync(p).toString('base64');
+                return `data:image/${mime};base64,${b64}`;
+            }
+        }
+
+        // 3. Remote HTTP/HTTPS (Cloudinary CDN, remote storage)
+        if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+            try {
+                const resp = await axios.get(cleanUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 8000,
+                    headers: { 'Accept': 'image/*' }
+                });
+                const mime = resp.headers['content-type'] || 'image/png';
+                const b64 = Buffer.from(resp.data).toString('base64');
+                return `data:${mime};base64,${b64}`;
+            } catch (netErr) {
+                console.warn('[PDF Generator] Could not fetch remote logo from URL:', cleanUrl, netErr.message);
+            }
         }
     } catch (err) {
         console.warn('[PDF Generator] Could not load image:', err.message);
@@ -63,10 +92,13 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
     const tabMethod = judgingSettings.tabulationMethod || 'standard_average';
     const isAllVerified = Boolean(stats.is_all_verified);
 
-    // Resolve Logo
-    let logoDataUrl = resolveImageBase64(branding.logoUrl);
+    // Resolve Logo / Print Header Seal
+    let logoDataUrl = null;
+    if (branding.logoUrl) {
+        logoDataUrl = await resolveImageBase64(branding.logoUrl);
+    }
     if (!logoDataUrl) {
-        logoDataUrl = resolveImageBase64('/assets/logo/DJS Logo.png');
+        logoDataUrl = await resolveImageBase64('/assets/logo/DJS Logo.png');
     }
 
     // Generate Verification QR Code
@@ -92,9 +124,10 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
         timeStyle: 'short'
     });
 
-    // Formatting Helpers
-    const institutionName = branding.institutionName || 'BUKIDNON STATE UNIVERSITY';
-    const tabulationSubtitle = branding.tabulationSubtitle || 'OFFICE OF STUDENT AFFAIRS & SERVICES • TABULATION COMMITTEE';
+    // Formatting Helpers: Institutional Identity configured in Settings
+    const institutionName = (branding.institutionName || 'BUKIDNON STATE UNIVERSITY').toUpperCase();
+    const campusUnit = branding.campusUnit || 'Office of Student Affairs & Services • Tabulation Committee';
+    const headerSubtitle = branding.headerSubtitle || '';
     const eventTitle = event.eventName || event.name || event.title || `Competition #${eventId}`;
 
     // Calculate dynamic column widths
@@ -295,7 +328,7 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
             { text: '', margin: [0, 20, 0, 0] },
             { canvas: [{ type: 'line', x1: 20, y1: 0, x2: 180, y2: 0, lineWidth: 1, lineColor: '#334155' }] },
             { text: (sig.name || 'Signatory Name').toUpperCase(), bold: true, fontSize: 8, color: '#0F172A', alignment: 'center', margin: [0, 4, 0, 1] },
-            { text: (sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
+            { text: (sig.title || sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
         ]
     }));
 
@@ -312,12 +345,18 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
     const certBadgeColor = isAllVerified ? '#0F2C59' : '#B45309';
     const certBadgeBg = isAllVerified ? '#F8FAFC' : '#FEF3C7';
 
-    // Watermark configuration
+    // Watermark configuration (respects University Watermark toggle in Settings)
+    const showWatermark = branding.showWatermark !== false && (branding.showWatermark || branding.watermarkEnabled);
     let watermarkConfig = null;
     if (!isAllVerified) {
         watermarkConfig = { text: 'UNVERIFIED DRAFT', color: '#E2E8F0', opacity: 0.12, bold: true };
-    } else if (branding.watermarkEnabled) {
-        watermarkConfig = { text: branding.watermarkText || 'OFFICIAL TABULATION SHEET', color: '#E2E8F0', opacity: 0.12, bold: true };
+    } else if (showWatermark) {
+        watermarkConfig = {
+            text: (branding.watermarkText || branding.institutionName || 'OFFICIAL TABULATION SHEET').toUpperCase(),
+            color: '#E2E8F0',
+            opacity: 0.10,
+            bold: true
+        };
     }
 
     // Assemble Document Definition
@@ -331,7 +370,7 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
                 margin: [35, 10, 35, 0],
                 columns: [
                     {
-                        text: 'BukSU Digitalized Judging System • Certified Official Tabulation Sheet',
+                        text: `${institutionName} • Certified Official Tabulation Sheet`,
                         fontSize: 7,
                         color: '#94A3B8'
                     },
@@ -349,15 +388,16 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
             // Top Banner: Logo + Institution Titles + Certified Badge
             {
                 columns: [
-                    logoDataUrl ? { image: logoDataUrl, width: 48, height: 48 } : { text: '', width: 48 },
+                    logoDataUrl ? { image: logoDataUrl, width: 50, height: 50 } : { text: '', width: 50 },
                     {
                         width: '*',
                         text: [
                             { text: `${institutionName}\n`, fontSize: 13, bold: true, color: '#0F2C59' },
-                            { text: `${tabulationSubtitle}\n`, fontSize: 7.5, bold: true, color: '#475569' },
-                            { text: `${eventTitle}\n`, fontSize: 11, bold: true, color: '#0F172A' },
+                            campusUnit ? { text: `${campusUnit.toUpperCase()}\n`, fontSize: 8, bold: true, color: '#475569' } : null,
+                            headerSubtitle ? { text: `${headerSubtitle}\n`, fontSize: 7.5, italics: true, color: '#64748B' } : null,
+                            { text: `${eventTitle} — Official Tabulation Matrix\n`, fontSize: 11, bold: true, color: '#0F172A' },
                             { text: `Certified Official Tabulation Report • Generated: ${formattedDate}`, fontSize: 7.5, color: '#64748B' }
-                        ],
+                        ].filter(Boolean),
                         alignment: 'center'
                     },
                     {
@@ -473,6 +513,7 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
 }
 
 module.exports = {
-    generateTabulationPDF
+    generateTabulationPDF,
+    resolveImageBase64
 };
 
