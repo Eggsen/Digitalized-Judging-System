@@ -1,4 +1,5 @@
 const { collections } = require('../config/db');
+const { formatActionTerm, ACTION_MAPPINGS } = require('../utils/logger');
 
 /**
  * List System Audit Activity Logs
@@ -47,8 +48,12 @@ async function listLogs(req, res, next) {
         // Action filter
         if (action && action !== 'all') {
             const escapedAction = action.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const actionRegex = new RegExp(`^${escapedAction}$`, 'i');
             andConditions.push({
-                action: { $regex: new RegExp(`^${escapedAction}$`, 'i') }
+                $or: [
+                    { action: actionRegex },
+                    { raw_action: actionRegex }
+                ]
             });
         }
 
@@ -77,18 +82,36 @@ async function listLogs(req, res, next) {
 
         // Text search across multiple fields
         if (search && search.trim()) {
-            const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const trimmedSearch = search.trim();
+            const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escapedSearch, 'i');
-            andConditions.push({
-                $or: [
-                    { username: regex },
-                    { role: regex },
-                    { details: regex },
-                    { message: regex },
-                    { action: regex },
-                    { ip_address: regex }
-                ]
-            });
+
+            // Find matching action keys if search query matches readable descriptions
+            const matchingActionKeys = [];
+            if (typeof ACTION_MAPPINGS === 'object') {
+                for (const [key, label] of Object.entries(ACTION_MAPPINGS)) {
+                    if (label.toLowerCase().includes(trimmedSearch.toLowerCase()) || key.toLowerCase().includes(trimmedSearch.toLowerCase())) {
+                        matchingActionKeys.push(key);
+                    }
+                }
+            }
+
+            const searchOr = [
+                { username: regex },
+                { role: regex },
+                { details: regex },
+                { message: regex },
+                { action: regex },
+                { raw_action: regex },
+                { ip_address: regex }
+            ];
+
+            if (matchingActionKeys.length > 0) {
+                searchOr.push({ action: { $in: matchingActionKeys } });
+                searchOr.push({ raw_action: { $in: matchingActionKeys } });
+            }
+
+            andConditions.push({ $or: searchOr });
         }
 
         const query = andConditions.length > 0 ? { $and: andConditions } : {};
@@ -110,15 +133,20 @@ async function listLogs(req, res, next) {
 
         res.json({
             success: true,
-            logs: logs.map(l => ({
-                ...l,
-                id: String(l._id),
-                timestamp: l.timestamp || l.created_at || new Date().toISOString(),
-                username: l.username || 'System',
-                role: l.role || 'user',
-                action: l.action || 'ACTIVITY',
-                details: l.details || l.message || ''
-            })),
+            logs: logs.map(l => {
+                const rawAction = l.raw_action || l.action || 'ACTIVITY';
+                const readableAction = formatActionTerm(l.action || rawAction);
+                return {
+                    ...l,
+                    id: String(l._id),
+                    timestamp: l.timestamp || l.created_at || new Date().toISOString(),
+                    username: l.username || 'System',
+                    role: l.role || 'user',
+                    rawAction: rawAction,
+                    action: readableAction,
+                    details: l.details || l.message || ''
+                };
+            }),
             total,
             unfilteredTotal,
             page,

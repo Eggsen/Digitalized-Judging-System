@@ -1,6 +1,6 @@
 import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, deleteArchivedEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
-import { showToast, formatDateTime, toDateTimeLocalValue } from "../utils/uiUtils.js";
+import { showToast, formatDateTime, toDateTimeLocalValue, formatActionTerm } from "../utils/uiUtils.js";
 import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
@@ -406,8 +406,8 @@ async function loadJudgeAssignments() {
  * SYSTEM & USER AUDIT LOGS VIEW
  * ------------------------------------------------------------- */
 function getActionBadge(actionName, rawAction) {
-    const text = actionName || rawAction || 'Activity';
-    const act = (rawAction || actionName || '').toLowerCase();
+    const text = formatActionTerm(actionName || rawAction || 'Activity');
+    const act = (rawAction || actionName || text || '').toLowerCase();
 
     let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
     let icon = 'fa-regular fa-clock';
@@ -424,30 +424,39 @@ function getActionBadge(actionName, rawAction) {
     } else if (act.includes('lock')) {
         badgeClass = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
         icon = 'fa-solid fa-lock';
-    } else if (act.includes('revoke')) {
+    } else if (act.includes('revoke') || act.includes('reject')) {
         badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800';
         icon = 'fa-solid fa-ban';
     } else if (act.includes('delete') || act.includes('clear') || act.includes('decline') || act.includes('remove')) {
         badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800';
         icon = 'fa-solid fa-trash';
-    } else if (act.includes('create') || act.includes('add') || act.includes('register') || act.includes('accept_invitation') || act.includes('activated')) {
+    } else if (act.includes('create') || act.includes('add') || act.includes('register') || act.includes('accept') || act.includes('award')) {
         badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
         icon = 'fa-solid fa-circle-plus';
-    } else if (act.includes('edit') || act.includes('update') || act.includes('adjust') || act.includes('configure')) {
+    } else if (act.includes('edit') || act.includes('update') || act.includes('adjust') || act.includes('configure') || act.includes('change')) {
         badgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800';
         icon = 'fa-solid fa-pen-to-square';
     } else if (act.includes('assign')) {
         badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800';
         icon = 'fa-solid fa-user-check';
-    } else if (act.includes('login') || act.includes('sign in')) {
+    } else if (act.includes('login') || act.includes('sign in') || act.includes('signed in')) {
         badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
         icon = 'fa-solid fa-right-to-bracket';
-    } else if (act.includes('logout') || act.includes('sign out')) {
+    } else if (act.includes('logout') || act.includes('sign out') || act.includes('signed out')) {
         badgeClass = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
         icon = 'fa-solid fa-right-from-bracket';
     } else if (act.includes('archive')) {
         badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
         icon = 'fa-solid fa-box-archive';
+    } else if (act.includes('verify') || act.includes('verified')) {
+        badgeClass = 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800';
+        icon = 'fa-solid fa-shield-check';
+    } else if (act.includes('reset')) {
+        badgeClass = 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800';
+        icon = 'fa-solid fa-key';
+    } else if (act.includes('backup') || act.includes('export')) {
+        badgeClass = 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800';
+        icon = 'fa-solid fa-cloud-arrow-down';
     }
 
     return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border ${badgeClass}"><i class="${icon} text-[10px]"></i><span>${escapeHtml(text)}</span></span>`;
