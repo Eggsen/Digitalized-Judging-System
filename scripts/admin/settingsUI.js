@@ -7,21 +7,14 @@ import {
     requestSecurityChange,
     confirmSecurityChange,
     resendSecurityCode,
+    verifyAdminPin,
     saveApiKeys
 } from "/scripts/admin/settingsAPI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
-const userRole = document.body.dataset.role;
-
-if (userRole === 'admin') {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSettingsPanel);
-    } else {
-        initSettingsPanel();
-    }
-}
-
 let cachedSettings = null;
+let apiKeysUnlockToken = null;
+let cachedMaskedKeys = {};
 
 export async function loadSystemSettings() {
     const loadingEl = document.getElementById('settings-loading-state');
@@ -1126,6 +1119,10 @@ const ENV_KEY_FIELDS = [
 function populateApiKeysForm(apiKeys) {
     if (!apiKeys || typeof apiKeys !== 'object') return;
 
+    if (!apiKeysUnlockToken) {
+        cachedMaskedKeys = { ...apiKeys };
+    }
+
     ENV_KEY_FIELDS.forEach(key => {
         const input = document.getElementById(`setting-env-${key}`);
         if (input && apiKeys[key] !== undefined) {
@@ -1134,32 +1131,195 @@ function populateApiKeysForm(apiKeys) {
     });
 }
 
+function lockApiKeysInputs() {
+    apiKeysUnlockToken = null;
+
+    ENV_KEY_FIELDS.forEach(key => {
+        const input = document.getElementById(`setting-env-${key}`);
+        if (input) {
+            input.disabled = true;
+            input.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+            input.classList.remove('bg-white', 'text-slate-800');
+        }
+    });
+
+    const unlockTop = document.getElementById('unlockApiKeysBtnTop');
+    const cancelTop = document.getElementById('cancelApiKeysBtnTop');
+    const saveTop = document.getElementById('saveApiKeysBtnTop');
+    const unlockBtm = document.getElementById('unlockApiKeysBtnBtm');
+    const cancelBtm = document.getElementById('cancelApiKeysBtnBtm');
+    const saveBtm = document.getElementById('saveApiKeysBtn');
+    const statusBadge = document.getElementById('apiKeysLockStatusBadge');
+    const lockNotice = document.getElementById('apiKeysLockNotice');
+
+    if (unlockTop) unlockTop.classList.remove('hidden');
+    if (cancelTop) cancelTop.classList.add('hidden');
+    if (saveTop) saveTop.classList.add('hidden');
+
+    if (unlockBtm) unlockBtm.classList.remove('hidden');
+    if (cancelBtm) cancelBtm.classList.add('hidden');
+    if (saveBtm) saveBtm.classList.add('hidden');
+
+    if (statusBadge) {
+        statusBadge.className = 'px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1';
+        statusBadge.innerHTML = '<i class="fa-solid fa-lock text-amber-400"></i> Locked (Protected)';
+    }
+
+    if (lockNotice) {
+        lockNotice.innerHTML = 'Inputs are protected and read-only. Click <strong>Edit Credentials</strong> and verify your exclusive Admin PIN to modify keys.';
+    }
+}
+
+function unlockApiKeysInputs() {
+    ENV_KEY_FIELDS.forEach(key => {
+        const input = document.getElementById(`setting-env-${key}`);
+        if (input) {
+            input.disabled = false;
+            input.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+            input.classList.add('bg-white', 'text-slate-800');
+        }
+    });
+
+    const unlockTop = document.getElementById('unlockApiKeysBtnTop');
+    const cancelTop = document.getElementById('cancelApiKeysBtnTop');
+    const saveTop = document.getElementById('saveApiKeysBtnTop');
+    const unlockBtm = document.getElementById('unlockApiKeysBtnBtm');
+    const cancelBtm = document.getElementById('cancelApiKeysBtnBtm');
+    const saveBtm = document.getElementById('saveApiKeysBtn');
+    const statusBadge = document.getElementById('apiKeysLockStatusBadge');
+    const lockNotice = document.getElementById('apiKeysLockNotice');
+
+    if (unlockTop) unlockTop.classList.add('hidden');
+    if (cancelTop) cancelTop.classList.remove('hidden');
+    if (saveTop) saveTop.classList.remove('hidden');
+
+    if (unlockBtm) unlockBtm.classList.add('hidden');
+    if (cancelBtm) cancelBtm.classList.remove('hidden');
+    if (saveBtm) saveBtm.classList.remove('hidden');
+
+    if (statusBadge) {
+        statusBadge.className = 'px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1';
+        statusBadge.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-400"></i> Unlocked for Editing';
+    }
+
+    if (lockNotice) {
+        lockNotice.innerHTML = '<span class="text-emerald-600 font-bold"><i class="fa-solid fa-check me-1"></i>Unlocked for editing.</span> Changes will be saved to <code class="font-mono">.env</code> and cloud database.';
+    }
+}
+
+function openAdminPinModal() {
+    const modal = document.getElementById('admin-pin-modal');
+    const input = document.getElementById('admin-pin-input');
+    const notice = document.getElementById('admin-pin-modal-notice');
+    if (!modal) return;
+
+    if (notice) {
+        notice.className = 'hidden';
+        notice.textContent = '';
+    }
+    if (input) {
+        input.value = '';
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        input?.focus();
+    }, 100);
+}
+
+function closeAdminPinModal() {
+    const modal = document.getElementById('admin-pin-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 function initApiKeysSettings() {
-    // Password visibility toggle buttons
-    document.querySelectorAll('.toggle-password-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetId = btn.dataset.target;
-            const targetInput = document.getElementById(targetId);
-            if (!targetInput) return;
-            const icon = btn.querySelector('i');
-            if (targetInput.type === 'password') {
-                targetInput.type = 'text';
-                if (icon) {
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                }
-            } else {
-                targetInput.type = 'password';
-                if (icon) {
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                }
+    // Start locked by default
+    lockApiKeysInputs();
+
+    // Unlock buttons click -> open modal
+    document.getElementById('unlockApiKeysBtnTop')?.addEventListener('click', openAdminPinModal);
+    document.getElementById('unlockApiKeysBtnBtm')?.addEventListener('click', openAdminPinModal);
+
+    // Cancel modal buttons
+    document.getElementById('closeAdminPinModalBtn')?.addEventListener('click', closeAdminPinModal);
+    document.getElementById('cancelAdminPinModalBtn')?.addEventListener('click', closeAdminPinModal);
+
+    // Modal background click to close
+    document.getElementById('admin-pin-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'admin-pin-modal') {
+            closeAdminPinModal();
+        }
+    });
+
+    // Cancel editing / Re-lock handlers
+    const handleCancelApiKeys = () => {
+        lockApiKeysInputs();
+        if (cachedMaskedKeys && Object.keys(cachedMaskedKeys).length > 0) {
+            populateApiKeysForm(cachedMaskedKeys);
+        }
+        showToast("Editing Locked", "API keys inputs have been locked.", "archive");
+    };
+    document.getElementById('cancelApiKeysBtnTop')?.addEventListener('click', handleCancelApiKeys);
+    document.getElementById('cancelApiKeysBtnBtm')?.addEventListener('click', handleCancelApiKeys);
+
+    // PIN Form submission
+    const pinForm = document.getElementById('adminPinVerifyForm');
+    pinForm?.addEventListener('submit', async () => {
+        const pinInput = document.getElementById('admin-pin-input');
+        const pin = (pinInput?.value || '').trim();
+        const notice = document.getElementById('admin-pin-modal-notice');
+        const btn = document.getElementById('confirmAdminPinBtn');
+        const btnText = document.getElementById('confirm-admin-pin-btn-text');
+
+        if (!pin) {
+            if (notice) {
+                notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600';
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1.5"></i>Please enter your Admin PIN.';
+                notice.classList.remove('hidden');
             }
-        });
+            return;
+        }
+
+        btn.disabled = true;
+        btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Verifying...';
+
+        const res = await verifyAdminPin(pin);
+
+        btn.disabled = false;
+        btnText.textContent = 'Verify & Unlock';
+
+        if (res.success) {
+            apiKeysUnlockToken = res.unlock_token;
+            if (res.api_keys) {
+                populateApiKeysForm(res.api_keys);
+            }
+            closeAdminPinModal();
+            unlockApiKeysInputs();
+            showToast("Access Granted", "Admin PIN verified. Credentials unlocked for editing.", "create");
+        } else {
+            if (notice) {
+                let errorMsg = res.message || 'Incorrect Admin PIN.';
+                if (errorMsg.includes('API endpoint not found') || errorMsg.includes('Cannot POST')) {
+                    errorMsg = 'Verification service not recognized. Please restart your Node.js server to register the new endpoint.';
+                }
+                notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600';
+                notice.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1.5"></i>${errorMsg}`;
+                notice.classList.remove('hidden');
+            }
+            if (pinInput) {
+                pinInput.value = '';
+                pinInput.focus();
+            }
+        }
     });
 
     // Save API keys handler
     const handleSaveApiKeys = async () => {
+        if (!apiKeysUnlockToken) {
+            openAdminPinModal();
+            return;
+        }
+
         const topBtn = document.getElementById('saveApiKeysBtnTop');
         const btmBtn = document.getElementById('saveApiKeysBtn');
         const buttons = [topBtn, btmBtn].filter(Boolean);
@@ -1177,7 +1337,7 @@ function initApiKeysSettings() {
             }
         });
 
-        const res = await saveApiKeys(payload);
+        const res = await saveApiKeys(payload, apiKeysUnlockToken);
 
         buttons.forEach(b => {
             b.disabled = false;
@@ -1192,14 +1352,30 @@ function initApiKeysSettings() {
         if (res.success) {
             showToast("Credentials Saved", res.message || "API keys written to .env and synchronized.", "create");
             if (res.api_keys) {
+                cachedMaskedKeys = { ...res.api_keys };
                 populateApiKeysForm(res.api_keys);
             }
+            lockApiKeysInputs();
         } else {
             showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
+            if (res.message && res.message.toLowerCase().includes('pin')) {
+                lockApiKeysInputs();
+                openAdminPinModal();
+            }
         }
     };
 
     document.getElementById('saveApiKeysBtn')?.addEventListener('click', handleSaveApiKeys);
     document.getElementById('saveApiKeysBtnTop')?.addEventListener('click', handleSaveApiKeys);
+}
+
+const userRole = document.body.dataset.role;
+
+if (userRole === 'admin') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSettingsPanel);
+    } else {
+        initSettingsPanel();
+    }
 }
 

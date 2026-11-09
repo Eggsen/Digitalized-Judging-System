@@ -1,11 +1,35 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getSystemApiKeys, updateEnvFile } = require('../utils/envManager');
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+
+const SECRET_ENV_KEYS = [
+    'GOOGLE_CLIENT_SECRET',
+    'RECAPTCHA_SECRET_KEY',
+    'CLOUDINARY_API_SECRET',
+    'PUSHER_SECRET',
+    'SMTP_PASSWORD'
+];
+
+function maskSecretValue(val) {
+    if (!val || String(val).trim() === '') return '';
+    return '••••••••••••••••';
+}
+
+function isMaskedValue(val) {
+    if (val === undefined || val === null) return false;
+    const str = String(val).trim();
+    if (!str) return false;
+    return /^[•*]+$/.test(str) || str.includes('••••');
+}
 
 function getDefaultSettings() {
     return {
@@ -96,9 +120,16 @@ async function getSettings(req, res, next) {
             diagnostics
         };
 
-        // If admin, include api_keys from .env and MongoDB
+        // If admin, include api_keys from .env and MongoDB with sensitive secrets masked by default
         if (req.user && req.user.role === 'admin') {
-            responsePayload.api_keys = getSystemApiKeys(settingsDoc);
+            const rawKeys = getSystemApiKeys(settingsDoc);
+            const masked = { ...rawKeys };
+            for (const f of SECRET_ENV_KEYS) {
+                if (masked[f]) {
+                    masked[f] = maskSecretValue(masked[f]);
+                }
+            }
+            responsePayload.api_keys = masked;
         } else {
             // For public / unauthenticated forms, include public client keys
             responsePayload.api_keys = {
@@ -177,6 +208,110 @@ async function saveSettings(req, res, next) {
 }
 
 /**
+ * Verify Admin PIN to unlock API Keys / Environment (.env) editing
+ */
+async function verifyAdminPin(req, res, next) {
+    try {
+        const { pin } = req.body;
+        const submittedPin = String(pin || '').trim();
+
+        if (!submittedPin) {
+            return res.status(400).json({ success: false, message: 'Please enter your Admin PIN.' });
+        }
+
+        const userDoc = await collections.users.findOne(getIdFilter(req.user.id));
+        if (!userDoc) {
+            return res.status(404).json({ success: false, message: 'Admin user not found.' });
+        }
+
+        // Rate-limiting / lockout check
+        if (userDoc.pin_locked_until && new Date() < new Date(userDoc.pin_locked_until)) {
+            const remainingMinutes = Math.ceil((new Date(userDoc.pin_locked_until) - new Date()) / 60000);
+            return res.status(429).json({
+                success: false,
+                message: `Too many failed PIN attempts. Access locked. Please wait ${remainingMinutes} minute(s) before trying again.`
+            });
+        }
+
+        let isMatch = false;
+        if (userDoc.admin_pin) {
+            isMatch = await bcrypt.compare(submittedPin, userDoc.admin_pin);
+        } else {
+            // Fallback for existing admin accounts: match process.env.ADMIN_PIN
+            const envPin = (process.env.ADMIN_PIN || '').trim();
+            if (envPin && submittedPin === envPin) {
+                isMatch = true;
+                // Automatically persist and hash this PIN exclusively for this admin
+                const hashedPin = await bcrypt.hash(submittedPin, 10);
+                await collections.users.updateOne(
+                    { _id: userDoc._id },
+                    { $set: { admin_pin: hashedPin } }
+                );
+            }
+        }
+
+        if (!isMatch) {
+            const currentFailed = (userDoc.pin_failed_attempts || 0) + 1;
+            const updateDoc = { pin_failed_attempts: currentFailed };
+            if (currentFailed >= 5) {
+                updateDoc.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                updateDoc.pin_failed_attempts = 0;
+            }
+            await collections.users.updateOne({ _id: userDoc._id }, { $set: updateDoc });
+
+            const remaining = 5 - currentFailed;
+            return res.status(401).json({
+                success: false,
+                message: currentFailed >= 5
+                    ? 'Too many failed attempts. Admin PIN is locked for 15 minutes.'
+                    : `Incorrect Admin PIN. ${remaining} attempt(s) remaining.`
+            });
+        }
+
+        // Reset failed attempts on success
+        if (userDoc.pin_failed_attempts || userDoc.pin_locked_until) {
+            await collections.users.updateOne(
+                { _id: userDoc._id },
+                { $set: { pin_failed_attempts: 0, pin_locked_until: null } }
+            );
+        }
+
+        // Generate 15-minute unlock token
+        const unlockToken = jwt.sign(
+            {
+                userId: String(userDoc._id),
+                username: userDoc.username,
+                role: 'admin',
+                purpose: 'env_credentials_unlock'
+            },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const unmaskedKeys = getSystemApiKeys(settingsDoc);
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'VERIFY_ADMIN_PIN',
+            'Successfully verified exclusive Admin PIN to unlock environment configuration.',
+            req
+        );
+
+        res.json({
+            success: true,
+            message: 'Admin PIN verified successfully. Environment credentials unlocked for editing.',
+            unlock_token: unlockToken,
+            api_keys: unmaskedKeys
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
  * Save API Keys (.env and MongoDB sync)
  */
 async function saveApiKeys(req, res, next) {
@@ -186,15 +321,61 @@ async function saveApiKeys(req, res, next) {
             return res.status(400).json({ success: false, message: 'Invalid API keys format.' });
         }
 
+        const unlockToken = req.headers['x-unlock-token'] || req.body.unlock_token;
+        const submittedPin = req.headers['x-admin-pin'] || req.body.pin;
+
+        let isAuthorized = false;
+
+        // Verify unlock token
+        if (unlockToken) {
+            try {
+                const decoded = jwt.verify(unlockToken, JWT_SECRET);
+                if (decoded.purpose === 'env_credentials_unlock' && decoded.userId === String(req.user.id)) {
+                    isAuthorized = true;
+                }
+            } catch (e) {}
+        }
+
+        // Fallback: Verify direct PIN if provided
+        if (!isAuthorized && submittedPin) {
+            const userDoc = await collections.users.findOne(getIdFilter(req.user.id));
+            if (userDoc) {
+                if (userDoc.admin_pin) {
+                    isAuthorized = await bcrypt.compare(String(submittedPin).trim(), userDoc.admin_pin);
+                } else if (process.env.ADMIN_PIN && String(submittedPin).trim() === process.env.ADMIN_PIN.trim()) {
+                    isAuthorized = true;
+                }
+            }
+        }
+
+        if (!isAuthorized) {
+            return res.status(403).json({
+                success: false,
+                message: 'Elevated authorization required. Please verify your exclusive Admin PIN before saving credentials.'
+            });
+        }
+
+        let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const currentSystemKeys = getSystemApiKeys(settingsDoc);
+
+        // Sanitize incoming keys: if a secret field has bullet mask or empty when already set, preserve the real existing value
+        const sanitizedKeys = { ...incomingKeys };
+        for (const secretField of SECRET_ENV_KEYS) {
+            const incomingVal = sanitizedKeys[secretField];
+            if (isMaskedValue(incomingVal) || (incomingVal === '' && currentSystemKeys[secretField])) {
+                sanitizedKeys[secretField] = currentSystemKeys[secretField] || '';
+            }
+        }
+
         // 1. Update physical .env on server
-        updateEnvFile(incomingKeys);
+        updateEnvFile(sanitizedKeys);
 
         // 2. Persist to MongoDB system_settings to survive restarts
         await collections.settings.updateOne(
             { _id: 'system_settings' },
             {
                 $set: {
-                    api_keys: incomingKeys,
+                    api_keys: sanitizedKeys,
                     updatedAt: new Date().toISOString(),
                     updatedBy: req.user.username
                 }
@@ -204,10 +385,20 @@ async function saveApiKeys(req, res, next) {
 
         await logSystemAction(req.user.id, req.user.username, req.user.role, 'UPDATE_API_KEYS', 'Updated environment credentials in .env file and database.', req);
 
+        // Return masked keys for security
+        const updatedDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const latestKeys = getSystemApiKeys(updatedDoc);
+        const maskedLatest = { ...latestKeys };
+        for (const f of SECRET_ENV_KEYS) {
+            if (maskedLatest[f]) {
+                maskedLatest[f] = maskSecretValue(maskedLatest[f]);
+            }
+        }
+
         res.json({
             success: true,
             message: 'API credentials successfully updated in .env and synchronized with cloud database.',
-            api_keys: getSystemApiKeys({ api_keys: incomingKeys })
+            api_keys: maskedLatest
         });
     } catch (err) {
         next(err);
@@ -774,6 +965,7 @@ async function manageLogoLibrary(req, res, next) {
 module.exports = {
     getSettings,
     saveSettings,
+    verifyAdminPin,
     saveApiKeys,
     updateSecurityControls,
     exportBackup,

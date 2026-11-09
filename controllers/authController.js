@@ -58,6 +58,16 @@ async function login(req, res, next) {
             return res.status(403).json({ success: false, message: 'Your invitation has not yet been accepted. Please check your email to activate your account.' });
         }
 
+        // Lockout check for admin accounts
+        if (user.role === 'admin' && user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
+            const remainingMinutes = Math.ceil((new Date(user.pin_locked_until) - new Date()) / 60000);
+            return res.status(429).json({
+                success: false,
+                is_locked: true,
+                message: `Too many failed attempts. This admin account is locked for ${remainingMinutes} more minute(s).`
+            });
+        }
+
         // Support bcrypt comparison with $2y$ (PHP legacy) and $2a$/$2b$
         let isMatch = false;
         if (user.password) {
@@ -73,11 +83,104 @@ async function login(req, res, next) {
         }
 
         if (!isMatch) {
+            if (user.role === 'admin') {
+                const failed = (user.pin_failed_attempts || 0) + 1;
+                const update = { pin_failed_attempts: failed };
+                if (failed >= 5) {
+                    update.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                    update.pin_failed_attempts = 0;
+                }
+                await collections.users.updateOne({ _id: user._id }, { $set: update });
+
+                if (failed >= 5) {
+                    return res.status(429).json({
+                        success: false,
+                        is_locked: true,
+                        message: 'Too many failed login attempts. This admin account has been locked for 15 minutes.'
+                    });
+                }
+                const remaining = 5 - failed;
+                return res.status(401).json({
+                    success: false,
+                    message: `Invalid credentials. Incorrect password. ${remaining} attempt(s) remaining.`
+                });
+            }
+
             return res.status(401).json({ success: false, message: 'Invalid credentials. Incorrect password.' });
         }
 
-        // Seamlessly upgrade legacy PHP $2y$ hashes to modern bcrypt
-        const updateFields = { last_login: new Date().toISOString() };
+        // Admin PIN verification for admin role
+        if (user.role === 'admin') {
+            const adminPin = (req.body.admin_pin || '').trim();
+
+            if (!adminPin) {
+                const challengeToken = jwt.sign(
+                    {
+                        userId: String(user._id),
+                        username: user.username,
+                        email: user.email,
+                        role: 'admin',
+                        purpose: 'admin_login_challenge'
+                    },
+                    JWT_SECRET,
+                    { expiresIn: '5m' }
+                );
+
+                return res.json({
+                    success: false,
+                    require_admin_pin: true,
+                    challenge_token: challengeToken,
+                    message: 'Administrator verification required: Please enter your exclusive Admin PIN.'
+                });
+            }
+
+            let isPinMatch = false;
+            if (user.admin_pin) {
+                isPinMatch = await bcrypt.compare(adminPin, user.admin_pin);
+            } else {
+                const envPin = (process.env.ADMIN_PIN || '').trim();
+                if (envPin && adminPin === envPin) {
+                    isPinMatch = true;
+                    const hashedPin = await bcrypt.hash(adminPin, 10);
+                    await collections.users.updateOne(
+                        { _id: user._id },
+                        { $set: { admin_pin: hashedPin } }
+                    );
+                }
+            }
+
+            if (!isPinMatch) {
+                const failed = (user.pin_failed_attempts || 0) + 1;
+                const update = { pin_failed_attempts: failed };
+                if (failed >= 5) {
+                    update.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                    update.pin_failed_attempts = 0;
+                }
+                await collections.users.updateOne({ _id: user._id }, { $set: update });
+
+                if (failed >= 5) {
+                    return res.status(429).json({
+                        success: false,
+                        is_locked: true,
+                        message: 'Too many failed attempts. This admin account has been locked for 15 minutes.'
+                    });
+                }
+
+                const remaining = 5 - failed;
+                return res.status(401).json({
+                    success: false,
+                    require_admin_pin: true,
+                    message: `Incorrect Admin PIN. ${remaining} attempt(s) remaining.`
+                });
+            }
+        }
+
+        // Reset failed attempts & upgrade legacy hash if needed
+        const updateFields = {
+            last_login: new Date().toISOString(),
+            pin_failed_attempts: 0,
+            pin_locked_until: null
+        };
         if (user.password && user.password.startsWith('$2y$')) {
             updateFields.password = await bcrypt.hash(password, 10);
         }
@@ -98,12 +201,142 @@ async function login(req, res, next) {
         res.cookie('djs_token', token, cookieOptions);
         res.cookie('jwt_token', token, cookieOptions);
 
-        await logSystemAction(user._id, user.username, user.role, 'LOGIN_LOCAL', 'User signed in via username/password credentials.', req);
+        await logSystemAction(user._id, user.username, user.role, 'LOGIN_LOCAL', 'User signed in successfully.', req);
 
         res.json({
             success: true,
             message: 'Authentication successful.',
             token,
+            redirect: '/dashboard',
+            user: {
+                id: String(user._id),
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                full_name: user.full_name || user.name || user.username
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Verify Admin PIN during 2FA Login Challenge (POST /api/auth/verify-login-pin)
+ */
+async function verifyLoginPin(req, res, next) {
+    try {
+        const { challenge_token, pin, admin_pin } = req.body;
+        const submittedPin = String(pin || admin_pin || '').trim();
+
+        if (!challenge_token) {
+            return res.status(400).json({ success: false, message: 'Authentication challenge expired. Please sign in again.' });
+        }
+
+        if (!submittedPin) {
+            return res.status(400).json({ success: false, message: 'Please enter your Admin PIN.' });
+        }
+
+        let decoded;
+        try {
+            decoded = jwt.verify(challenge_token, JWT_SECRET);
+        } catch (e) {
+            return res.status(401).json({ success: false, message: 'Your login verification session has expired. Please sign in again.' });
+        }
+
+        if (decoded.purpose !== 'admin_login_challenge' || !decoded.userId) {
+            return res.status(401).json({ success: false, message: 'Invalid challenge session.' });
+        }
+
+        const user = await collections.users.findOne(getIdFilter(decoded.userId));
+        if (!user || user.role !== 'admin') {
+            return res.status(404).json({ success: false, message: 'Admin account not found.' });
+        }
+
+        if (user.is_active === false || user.status === 'disabled') {
+            return res.status(403).json({ success: false, message: 'Your account has been deactivated. Please contact an administrator.' });
+        }
+
+        // Check lockout
+        if (user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
+            const remainingMinutes = Math.ceil((new Date(user.pin_locked_until) - new Date()) / 60000);
+            return res.status(429).json({
+                success: false,
+                is_locked: true,
+                message: `Too many failed attempts. This admin account is locked for ${remainingMinutes} more minute(s).`
+            });
+        }
+
+        let isPinMatch = false;
+        if (user.admin_pin) {
+            isPinMatch = await bcrypt.compare(submittedPin, user.admin_pin);
+        } else {
+            const envPin = (process.env.ADMIN_PIN || '').trim();
+            if (envPin && submittedPin === envPin) {
+                isPinMatch = true;
+                const hashedPin = await bcrypt.hash(submittedPin, 10);
+                await collections.users.updateOne(
+                    { _id: user._id },
+                    { $set: { admin_pin: hashedPin } }
+                );
+            }
+        }
+
+        if (!isPinMatch) {
+            const failed = (user.pin_failed_attempts || 0) + 1;
+            const update = { pin_failed_attempts: failed };
+            if (failed >= 5) {
+                update.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                update.pin_failed_attempts = 0;
+            }
+            await collections.users.updateOne({ _id: user._id }, { $set: update });
+
+            if (failed >= 5) {
+                return res.status(429).json({
+                    success: false,
+                    is_locked: true,
+                    message: 'Too many failed attempts. This admin account has been locked for 15 minutes.'
+                });
+            }
+
+            const remaining = 5 - failed;
+            return res.status(401).json({
+                success: false,
+                require_admin_pin: true,
+                message: `Incorrect Admin PIN. ${remaining} attempt(s) remaining.`
+            });
+        }
+
+        // Reset failed attempts
+        await collections.users.updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    last_login: new Date().toISOString(),
+                    pin_failed_attempts: 0,
+                    pin_locked_until: null
+                }
+            }
+        );
+
+        const token = generateToken(user);
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        };
+
+        res.cookie('djs_token', token, cookieOptions);
+        res.cookie('jwt_token', token, cookieOptions);
+
+        await logSystemAction(user._id, user.username, user.role, 'LOGIN_LOCAL', 'Admin completed 2FA PIN verification and signed in.', req);
+
+        res.json({
+            success: true,
+            message: 'Admin authentication successful.',
+            token,
+            redirect: '/dashboard',
             user: {
                 id: String(user._id),
                 username: user.username,
@@ -270,6 +503,27 @@ async function googleCallback(req, res) {
             { _id: user._id },
             { $set: updateFields }
         );
+
+        // If user is administrator, require Admin PIN verification challenge
+        if (user.role === 'admin') {
+            if (user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
+                return res.redirect('/auth/login?error=account_locked');
+            }
+
+            const challengeToken = jwt.sign(
+                {
+                    userId: String(user._id),
+                    username: user.username,
+                    email: user.email,
+                    role: 'admin',
+                    purpose: 'admin_login_challenge'
+                },
+                JWT_SECRET,
+                { expiresIn: '5m' }
+            );
+
+            return res.redirect(`/auth/login?admin_pin_challenge=${encodeURIComponent(challengeToken)}&email=${encodeURIComponent(user.email)}`);
+        }
 
         const token = generateToken(user);
         const cookieOptions = {
@@ -660,6 +914,7 @@ async function acceptInvitation(req, res, next) {
 
 module.exports = {
     login,
+    verifyLoginPin,
     getMe,
     logout,
     googleRedirect,

@@ -34,6 +34,25 @@ export async function loginUser(credentials) {
 // Retain loginAdmin alias for backward compatibility
 export const loginAdmin = loginUser;
 
+export async function verifyLoginPin(payload) {
+    try {
+        const response = await fetch("/api/auth/verify-login-pin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            credentials: "include"
+        });
+
+        return await parseResponse(response, "Unable to verify Admin PIN.");
+    } catch (error) {
+        console.error("Verify Login PIN Error: ", error);
+        return {
+            success: false,
+            message: "Unable to verify Admin PIN. Please check your network connection."
+        };
+    }
+}
+
 export async function logoutUser() {
     try {
         const response = await fetch("/api/auth/logout", {

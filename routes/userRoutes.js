@@ -15,6 +15,7 @@ router.use(requireRole(['admin']));
 router.get('/', userController.listUsers);
 router.post('/', userController.createUser);
 router.patch('/:id/role', userController.updateRole);
+router.post('/:id/reset-pin', userController.resetAdminPin);
 router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

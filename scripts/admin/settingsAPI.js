@@ -116,12 +116,31 @@ export async function resendSecurityCode() {
     }
 }
 
-export async function saveApiKeys(apiKeysData) {
+export async function verifyAdminPin(pin) {
     try {
-        const response = await fetch("/api/settings/api-keys", {
+        const response = await fetch("/api/settings/verify-admin-pin", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ api_keys: apiKeysData }),
+            body: JSON.stringify({ pin }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Verify Admin PIN API Error: ", error);
+        return { success: false, message: "Unable to verify Admin PIN." };
+    }
+}
+
+export async function saveApiKeys(apiKeysData, unlockToken = null) {
+    try {
+        const headers = { "Content-Type": "application/json" };
+        if (unlockToken) {
+            headers["x-unlock-token"] = unlockToken;
+        }
+        const response = await fetch("/api/settings/api-keys", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ api_keys: apiKeysData, unlock_token: unlockToken }),
             credentials: "include"
         });
         return await response.json();

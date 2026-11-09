@@ -21,6 +21,7 @@ router.get('/websocket-config', (req, res) => {
 
 // Admin-Only System Actions
 router.post('/save', authenticateToken, requireRole(['admin']), settingsController.saveSettings);
+router.post('/verify-admin-pin', authenticateToken, requireRole(['admin']), settingsController.verifyAdminPin);
 router.post('/api-keys', authenticateToken, requireRole(['admin']), settingsController.saveApiKeys);
 router.post('/security-controls', authenticateToken, requireRole(['admin']), settingsController.updateSecurityControls);
 router.post('/export-backup', authenticateToken, requireRole(['admin']), settingsController.exportBackup);

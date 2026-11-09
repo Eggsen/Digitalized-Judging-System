@@ -166,6 +166,24 @@
                     </div>
                 </div>
 
+                <!-- Dedicated Admin PIN field (Revealed during Admin Authentication) -->
+                <div id="login-admin-pin-group" class="hidden space-y-1.5 animate-fade-in p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
+                    <label class="block text-xs font-bold text-amber-900 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-amber-600"></i> Exclusive Admin PIN</span>
+                        <span class="text-[10px] text-amber-700 bg-amber-200/60 font-black px-2 py-0.5 rounded-full">2FA Required</span>
+                    </label>
+                    <div class="relative rounded-xl">
+                        <div class="absolute inset-y-0 left-0 ps-3.5 flex items-center pointer-events-none text-amber-600 text-xs">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <input type="password" id="login-admin-pin-input" placeholder="Enter exclusive Admin PIN" autocomplete="one-time-code" class="w-full ps-9 pe-4 py-2.5 bg-white border border-amber-300 rounded-xl text-xs font-mono tracking-widest text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <p class="text-[11px] text-amber-800/80 leading-tight">Admin accounts require exclusive PIN confirmation before portal access is granted.</p>
+                        <button type="button" id="cancel-admin-pin-btn" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer shrink-0 ms-2">Cancel</button>
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-between text-xs pt-1">
                     <label class="flex items-center gap-2 cursor-pointer text-slate-600">
                         <input type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-buksu-navy focus:ring-buksu-navy accent-buksu-navy">

@@ -95,3 +95,18 @@ export async function deleteAccount(userId) {
     }
 }
 
+export async function resetAdminPin(userId, newPin = null) {
+    try {
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}/reset-pin`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ new_pin: newPin }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Reset Admin PIN API Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}
+
