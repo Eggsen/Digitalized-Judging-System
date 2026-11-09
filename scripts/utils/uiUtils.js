@@ -47,7 +47,7 @@ export function hideNotice(noticeTarget) {
 }
 
 /**
- * Displays a sleek top-right toast notification.
+ * Displays a sleek top-right toast notification with duplicate prevention and non-stacking behavior.
  * @param {string} title - Title text of the notification
  * @param {string} message - Detailed message text
  * @param {'create'|'edit'|'archive'|'success'|'info'|'warning'|'error'} [type='success'] - Toast type
@@ -59,6 +59,8 @@ export function showToast(title, message = '', type = 'success', duration = 4000
         message = '';
     }
 
+    if (!title) return;
+
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -67,8 +69,39 @@ export function showToast(title, message = '', type = 'success', duration = 4000
         document.body.appendChild(container);
     }
 
+    const toastKey = `${String(title).trim()}:::${String(message).trim()}:::${type}`.toLowerCase();
+
+    // 1. DEDUPLICATION: If an identical notification is already active, do not stack a duplicate.
+    // Instead, refresh its dismiss timer and briefly pulse it to confirm repeat interaction.
+    const activeSameToast = container.querySelector(`.djs-toast[data-toast-key="${CSS.escape(toastKey)}"]:not(.toast-closing)`);
+    if (activeSameToast) {
+        if (activeSameToast._dismissTimer) {
+            clearTimeout(activeSameToast._dismissTimer);
+        }
+        if (duration > 0 && activeSameToast._closeToast) {
+            activeSameToast._dismissTimer = setTimeout(activeSameToast._closeToast, duration);
+        }
+
+        activeSameToast.classList.remove('scale-105');
+        void activeSameToast.offsetWidth; // force DOM reflow
+        activeSameToast.classList.add('scale-105');
+        setTimeout(() => activeSameToast.classList.remove('scale-105'), 200);
+        return;
+    }
+
+    // 2. NON-STACKING: Dismiss any existing active notifications so messages never stack up vertically.
+    const existingToasts = container.querySelectorAll('.djs-toast:not(.toast-closing)');
+    existingToasts.forEach(existing => {
+        existing.classList.add('toast-closing');
+        if (existing._dismissTimer) clearTimeout(existing._dismissTimer);
+        existing.classList.remove('translate-x-0', 'opacity-100');
+        existing.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => existing.remove(), 250);
+    });
+
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 backdrop-blur-md transition-all duration-300 transform translate-x-full opacity-0`;
+    toast.className = `djs-toast pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 backdrop-blur-md transition-all duration-300 transform translate-x-full opacity-0`;
+    toast.dataset.toastKey = toastKey;
 
     let icon = 'fa-circle-check';
     let iconBg = 'bg-emerald-600 text-white';
@@ -113,15 +146,18 @@ export function showToast(title, message = '', type = 'success', duration = 4000
     });
 
     const closeToast = () => {
+        toast.classList.add('toast-closing');
         toast.classList.remove('translate-x-0', 'opacity-100');
         toast.classList.add('translate-x-full', 'opacity-0');
         setTimeout(() => toast.remove(), 300);
     };
 
+    toast._closeToast = closeToast;
+
     toast.querySelector('.toast-close-btn')?.addEventListener('click', closeToast);
 
     if (duration > 0) {
-        setTimeout(closeToast, duration);
+        toast._dismissTimer = setTimeout(closeToast, duration);
     }
 }
 

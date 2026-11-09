@@ -98,6 +98,18 @@ export function initTabulatorUI() {
         }
     });
 
+    // Feedback when clicking unclickable Export PDF button (Never stacks)
+    document.getElementById('printTabulationWrapper')?.addEventListener('click', (e) => {
+        const printBtn = document.getElementById('printTabulationBtn');
+        if (printBtn && printBtn.disabled && !e.target.closest('#previewTabulationPdfBtn')) {
+            showToast(
+                "PDF Export Locked",
+                printBtn.title || "All final scores must be verified before exporting official PDF.",
+                "warning"
+            );
+        }
+    });
+
     document.getElementById('printTabulationBtn')?.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
