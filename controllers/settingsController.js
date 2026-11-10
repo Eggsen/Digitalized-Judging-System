@@ -140,8 +140,9 @@ async function saveSettings(req, res, next) {
             decimalPrecision: precision,
             tabulationMethod: ['standard_average', 'olympic_trimming', 'ordinal_ranking'].includes(judging.tabulationMethod)
                 ? judging.tabulationMethod : 'standard_average',
-            tieBreakerRule: ['highest_weight_criterion', 'judge_majority_vote', 'split_award'].includes(judging.tieBreakerRule)
-                ? judging.tieBreakerRule : 'highest_weight_criterion',
+            tieBreakerRule: ['highest_weight_criterion', 'judge_majority_vote', 'split_award', 'shared_rank'].includes(judging.tieBreakerRule)
+                ? (judging.tieBreakerRule === 'shared_rank' ? 'split_award' : judging.tieBreakerRule)
+                : 'highest_weight_criterion',
             unlockPolicy: ['admin_approval', 'judge_self_unlock'].includes(judging.unlockPolicy)
                 ? judging.unlockPolicy : 'admin_approval',
             blindJudging: Boolean(judging.blindJudging),

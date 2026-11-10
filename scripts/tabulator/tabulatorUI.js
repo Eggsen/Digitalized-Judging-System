@@ -224,6 +224,13 @@ async function loadTabulationData(isManual = false) {
     }
 }
 
+function formatTieBreakerName(rule) {
+    if (rule === 'highest_weight_criterion') return 'Highest-Weight Criterion Priority';
+    if (rule === 'judge_majority_vote') return 'Head-to-Head Judge Preference (Majority Decision)';
+    if (rule === 'split_award' || rule === 'shared_rank') return 'Standard Competition Shared Rank (Equal Co-Winners)';
+    return rule || 'Automated Tie-Breaker';
+}
+
 function renderTabulationBoard(data) {
     const { event, judges = [], matrix = [], stats = {}, settings = {}, role = '' } = data;
     const judgingSettings = settings.judging || {};
@@ -340,6 +347,29 @@ function renderTabulationBoard(data) {
         const pct = totalExpected > 0 ? Math.round((totalSubmitted / totalExpected) * 100) : 0;
         const verPct = totalExpected > 0 ? Math.round((totalVerified / totalExpected) * 100) : 0;
 
+        let tieAlertHtml = '';
+        if (stats.has_ties) {
+            const tiedRanksStr = stats.tied_ranks && stats.tied_ranks.length > 0 
+                ? stats.tied_ranks.map(r => `Rank #${r}`).join(', ') 
+                : 'Shared placements';
+            tieAlertHtml = `
+                <div class="mt-3 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-2xs">
+                    <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 border border-amber-300">
+                        <i class="fa-solid fa-scale-balanced text-sm"></i>
+                    </div>
+                    <div class="text-xs flex-1">
+                        <div class="font-black text-amber-950 flex items-center gap-2">
+                            <span>Tie Detected at ${tiedRanksStr}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300">Action: Board Deliberation</span>
+                        </div>
+                        <p class="text-[11px] text-amber-800 mt-0.5">
+                            Under <strong>${escapeHtml(formatTieBreakerName(tieBreakerRule))}</strong>, the tied contestants currently share placement. If a sole winner is required, the Board of Judges and Chief Tabulator may deliberate or break the tie.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
         statsContainer.innerHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 text-xs w-full">
                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
@@ -371,6 +401,7 @@ function renderTabulationBoard(data) {
                     </span>
                 </div>
             </div>
+            ${tieAlertHtml}
         `;
     }
 
@@ -473,10 +504,35 @@ function renderTabulationBoard(data) {
             rankBadge = `<span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs inline-flex items-center justify-center">${row.rank}</span>`;
         }
 
+        let tieIndicator = '';
+        if (row.is_tied) {
+            tieIndicator = `
+                <div class="mt-1 flex flex-col items-center">
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs" title="${escapeHtml(row.tie_break_detail || 'Tied Rank')}">
+                        <i class="fa-solid fa-scale-balanced text-[8px] text-amber-600"></i> Tied
+                    </span>
+                    <span class="hidden print-only text-[8px] font-bold text-slate-700">(Tied)</span>
+                </div>
+            `;
+            rowClass += ' border-l-4 border-l-amber-400 bg-amber-50/30';
+        } else if (row.tie_broken) {
+            tieIndicator = `
+                <div class="mt-1 flex flex-col items-center">
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="${escapeHtml(row.tie_break_detail || 'Tie broken by rule')}">
+                        <i class="fa-solid fa-bolt text-[8px] text-indigo-500"></i> Tie-Break
+                    </span>
+                </div>
+            `;
+        }
+
         tbodyHtml += `
             <tr class="${rowClass}">
                 <td class="py-3.5 px-4 text-center align-middle">
-                    ${rankBadge}
+                    <div class="flex flex-col items-center justify-center">
+                        ${rankBadge}
+                        <div class="hidden print-only text-xs font-bold text-slate-800">Rank ${row.rank}${row.is_tied ? ' (Tied)' : ''}</div>
+                        ${tieIndicator}
+                    </div>
                 </td>
                 <td class="py-3.5 px-4 align-middle">
                     <div class="flex items-center gap-3">

@@ -884,6 +884,229 @@ async function unverifyScore(req, res, next) {
 }
 
 /**
+ * Helper: Evaluate tie-break resolution between two contestants
+ * Supports:
+ *  - 'highest_weight_criterion': Compare criteria scores starting with highest weight descending
+ *  - 'judge_majority_vote': Head-to-head judge preference (majority decision)
+ *  - 'split_award' / 'shared_rank': Standard competition shared rank (equal co-winners)
+ */
+function evaluateContestantTie(a, b, tieBreakerRule, sortedCriteria, assignedJudges) {
+    if ((a.submitted_count || 0) === 0 && (b.submitted_count || 0) === 0) {
+        return { isEqualScore: true, winner: null, loser: null, method: null, reason: 'No submissions recorded' };
+    }
+    if ((a.submitted_count || 0) === 0) {
+        return { isEqualScore: false, winner: b, loser: a, method: null, reason: 'No submissions' };
+    }
+    if ((b.submitted_count || 0) === 0) {
+        return { isEqualScore: false, winner: a, loser: b, method: null, reason: 'No submissions' };
+    }
+
+    const scoreDiff = b.average_score - a.average_score;
+    if (Math.abs(scoreDiff) > 0.0001) {
+        return {
+            isEqualScore: false,
+            winner: scoreDiff > 0 ? b : a,
+            loser: scoreDiff > 0 ? a : b,
+            method: null,
+            reason: null
+        };
+    }
+
+    // Both contestants have submitted scores and have identical average score!
+    const rule = (tieBreakerRule === 'shared_rank' || tieBreakerRule === 'split_award') 
+        ? 'split_award' 
+        : (tieBreakerRule || 'highest_weight_criterion');
+
+    if (rule === 'highest_weight_criterion') {
+        for (const crit of sortedCriteria) {
+            const critId = String(crit._id);
+            const avgA = a.criteria_averages?.[critId] !== undefined ? a.criteria_averages[critId] : 0;
+            const avgB = b.criteria_averages?.[critId] !== undefined ? b.criteria_averages[critId] : 0;
+            const diff = avgB - avgA;
+            if (Math.abs(diff) > 0.0001) {
+                const critName = crit.name || crit.title || 'Primary Criterion';
+                const weight = crit.percentage !== undefined ? crit.percentage : (crit.weight || 0);
+                const winner = diff > 0 ? b : a;
+                const loser = diff > 0 ? a : b;
+                const winAvg = (winner === a ? avgA : avgB).toFixed(2);
+                const loseAvg = (loser === a ? avgA : avgB).toFixed(2);
+                return {
+                    isEqualScore: true,
+                    winner,
+                    loser,
+                    method: 'highest_weight_criterion',
+                    reason: `Decided by highest-weighted criterion "${critName}" (${weight}%): ${winAvg} vs ${loseAvg}`
+                };
+            }
+        }
+        return {
+            isEqualScore: true,
+            winner: null,
+            loser: null,
+            method: 'highest_weight_criterion',
+            reason: 'Identical average scores and equal on all criteria'
+        };
+    }
+
+    if (rule === 'judge_majority_vote') {
+        let votesA = 0;
+        let votesB = 0;
+        for (const judge of assignedJudges) {
+            const jId = String(judge.id);
+            const sA = a.judge_scores?.[jId];
+            const sB = b.judge_scores?.[jId];
+            if (sA && sB && sA.total_score !== null && sB.total_score !== null) {
+                const valA = parseFloat(sA.total_score) || 0;
+                const valB = parseFloat(sB.total_score) || 0;
+                if (valA > valB) votesA++;
+                else if (valB > valA) votesB++;
+            }
+        }
+        if (votesA !== votesB) {
+            const winner = votesA > votesB ? a : b;
+            const loser = votesA > votesB ? b : a;
+            const winVotes = Math.max(votesA, votesB);
+            const loseVotes = Math.min(votesA, votesB);
+            return {
+                isEqualScore: true,
+                winner,
+                loser,
+                method: 'judge_majority_vote',
+                reason: `Decided by head-to-head judge preference: ${winVotes} judge(s) vs ${loseVotes} judge(s)`
+            };
+        }
+        // Fallback to highest-weighted criterion if judge votes are split
+        for (const crit of sortedCriteria) {
+            const critId = String(crit._id);
+            const avgA = a.criteria_averages?.[critId] !== undefined ? a.criteria_averages[critId] : 0;
+            const avgB = b.criteria_averages?.[critId] !== undefined ? b.criteria_averages[critId] : 0;
+            const diff = avgB - avgA;
+            if (Math.abs(diff) > 0.0001) {
+                const critName = crit.name || crit.title || 'Primary Criterion';
+                const weight = crit.percentage !== undefined ? crit.percentage : (crit.weight || 0);
+                const winner = diff > 0 ? b : a;
+                const loser = diff > 0 ? a : b;
+                const winAvg = (winner === a ? avgA : avgB).toFixed(2);
+                const loseAvg = (loser === a ? avgA : avgB).toFixed(2);
+                return {
+                    isEqualScore: true,
+                    winner,
+                    loser,
+                    method: 'highest_weight_criterion_fallback',
+                    reason: `Judges split evenly (${votesA}-${votesB}); decided by highest-weighted criterion "${critName}" (${weight}%): ${winAvg} vs ${loseAvg}`
+                };
+            }
+        }
+        return {
+            isEqualScore: true,
+            winner: null,
+            loser: null,
+            method: 'judge_majority_vote',
+            reason: `Even judge vote split (${votesA}-${votesB}) and equal across all criteria`
+        };
+    }
+
+    // Default: 'split_award' / 'shared_rank'
+    return {
+        isEqualScore: true,
+        winner: null,
+        loser: null,
+        method: 'split_award',
+        reason: 'Standard Competition Shared Rank (Equal co-winners)'
+    };
+}
+
+/**
+ * Compute official rankings with automated tie-breaking and standard competition shared ranking (1, 1, 3, 4)
+ */
+function computeTabulationRanking(matrixData, tieBreakerRule, sortedCriteria, assignedJudges) {
+    const active = matrixData.filter(r => (r.submitted_count || 0) > 0);
+    const pending = matrixData.filter(r => (r.submitted_count || 0) === 0);
+
+    // 1. Sort active contestants according to score and tie-breaker rule
+    active.sort((a, b) => {
+        const evalRes = evaluateContestantTie(a, b, tieBreakerRule, sortedCriteria, assignedJudges);
+        if (!evalRes.isEqualScore) {
+            return b.average_score - a.average_score;
+        }
+        if (evalRes.winner) {
+            return evalRes.winner === a ? -1 : 1;
+        }
+        // Truly tied: deterministic secondary sort by contestant number
+        return (a.contestant_number || 0) - (b.contestant_number || 0);
+    });
+
+    // 2. Assign standard competition ranking (e.g. 1, 1, 3, 4)
+    let currentRank = 1;
+    let i = 0;
+    while (i < active.length) {
+        let j = i + 1;
+        while (j < active.length) {
+            const evalAdj = evaluateContestantTie(active[i], active[j], tieBreakerRule, sortedCriteria, assignedJudges);
+            if (evalAdj.isEqualScore && !evalAdj.winner) {
+                j++;
+            } else {
+                break;
+            }
+        }
+
+        const groupSize = j - i;
+        const isSharedTie = groupSize > 1;
+
+        for (let k = i; k < j; k++) {
+            active[k].rank = currentRank;
+            active[k].is_tied = isSharedTie;
+            if (isSharedTie) {
+                active[k].tie_broken = false;
+                active[k].tie_breaker_applied = null;
+                active[k].tie_break_detail = `Shared Rank ${currentRank} (${groupSize}-way tie)`;
+            }
+        }
+
+        currentRank += groupSize;
+        i = j;
+    }
+
+    // 3. Annotate tie-broken contestants who had identical average scores but were separated by rule
+    for (let k = 0; k < active.length; k++) {
+        const contestant = active[k];
+        if (contestant.is_tied) continue;
+
+        const sameScorePeers = active.filter((other, oIdx) =>
+            oIdx !== k && Math.abs(other.average_score - contestant.average_score) < 0.0001
+        );
+
+        if (sameScorePeers.length > 0) {
+            contestant.tie_broken = true;
+            const peer = sameScorePeers[0];
+            const res = evaluateContestantTie(contestant, peer, tieBreakerRule, sortedCriteria, assignedJudges);
+            contestant.tie_breaker_applied = res.method;
+            if (res.winner === contestant) {
+                contestant.tie_break_detail = `Won tie-breaker (Rank #${contestant.rank}): ${res.reason}`;
+            } else {
+                contestant.tie_break_detail = `Placed by tie-breaker (Rank #${contestant.rank}): ${res.reason}`;
+            }
+        } else {
+            contestant.tie_broken = false;
+            contestant.tie_breaker_applied = null;
+            contestant.tie_break_detail = null;
+        }
+    }
+
+    // 4. Pending contestants (no submissions yet)
+    pending.sort((a, b) => (a.contestant_number || 0) - (b.contestant_number || 0));
+    pending.forEach(c => {
+        c.rank = currentRank++;
+        c.is_tied = false;
+        c.tie_broken = false;
+        c.tie_breaker_applied = null;
+        c.tie_break_detail = null;
+    });
+
+    return [...active, ...pending];
+}
+
+/**
  * Get Tabulation Matrix & Live Rankings
  */
 async function getTabulationMatrix(req, res, next) {
@@ -910,6 +1133,19 @@ async function getTabulationMatrix(req, res, next) {
 
         const precision = parseInt(settingsDoc?.judging?.decimalPrecision ?? 2, 10);
         const tabMethod = settingsDoc?.judging?.tabulationMethod || 'standard_average';
+        const tieBreakerRule = settingsDoc?.judging?.tieBreakerRule || 'highest_weight_criterion';
+
+        // Pre-sort criteria descending by weight/percentage for highest-weight criterion tie breaking
+        const sortedCriteria = [...criteria].sort((a, b) => {
+            const wA = parseFloat(a.percentage !== undefined ? a.percentage : (a.weight || 0)) || 0;
+            const wB = parseFloat(b.percentage !== undefined ? b.percentage : (b.weight || 0)) || 0;
+            if (Math.abs(wB - wA) > 0.0001) {
+                return wB - wA; // Highest weight first
+            }
+            const orderA = parseInt(a.order ?? 0, 10);
+            const orderB = parseInt(b.order ?? 0, 10);
+            return orderA - orderB;
+        });
 
         const rawJudges = Array.isArray(event.assignedjudges) 
             ? event.assignedjudges 
@@ -1091,6 +1327,28 @@ async function getTabulationMatrix(req, res, next) {
 
             finalAverage = parseFloat(finalAverage.toFixed(precision));
 
+            // Calculate criteria averages across submitted judge scores for tie-breaking
+            const criteriaAverages = {};
+            for (const crit of criteria) {
+                const critId = String(crit._id);
+                let critSum = 0;
+                let critCount = 0;
+                for (const judge of assignedJudges) {
+                    const jId = String(judge.id);
+                    const scoreRecord = scoreLookup[`${cId}_${jId}`];
+                    if (scoreRecord && (scoreRecord.status === 'submitted' || scoreRecord.is_locked)) {
+                        if (Array.isArray(scoreRecord.criteria_scores)) {
+                            const cs = scoreRecord.criteria_scores.find(x => String(x.criteria_id) === critId);
+                            if (cs && cs.score !== undefined && !isNaN(parseFloat(cs.score))) {
+                                critSum += parseFloat(cs.score);
+                                critCount++;
+                            }
+                        }
+                    }
+                }
+                criteriaAverages[critId] = critCount > 0 ? (critSum / critCount) : 0;
+            }
+
             return {
                 contestant_id: cId,
                 id: cId,
@@ -1104,6 +1362,7 @@ async function getTabulationMatrix(req, res, next) {
                 team_members: contestant.team_members || [],
                 comments: contestant.comments || [],
                 judge_scores: judgeScores,
+                criteria_averages: criteriaAverages,
                 average_score: finalAverage,
                 final_score: finalAverage,
                 submitted_count: contestantSubmitted,
@@ -1112,13 +1371,12 @@ async function getTabulationMatrix(req, res, next) {
             };
         });
 
-        // Compute rankings
-        matrixData.sort((a, b) => b.average_score - a.average_score);
-        matrixData.forEach((row, idx) => {
-            row.rank = idx + 1;
-        });
+        // Compute official rankings with automated tie-breaking & standard competition shared ranks
+        const finalMatrixData = computeTabulationRanking(matrixData, tieBreakerRule, sortedCriteria, assignedJudges);
 
         const totalExpected = contestants.length * assignedJudges.length;
+        const hasTies = finalMatrixData.some(r => r.is_tied && (r.submitted_count || 0) > 0);
+        const tiedRanks = [...new Set(finalMatrixData.filter(r => r.is_tied && (r.submitted_count || 0) > 0).map(r => r.rank))];
         const stats = {
             total_contestants: contestants.length,
             total_judges: assignedJudges.length,
@@ -1126,7 +1384,10 @@ async function getTabulationMatrix(req, res, next) {
             total_verified: totalVerifiedCount,
             total_expected: totalExpected,
             is_completed: totalExpected > 0 && totalSubmittedCount >= totalExpected,
-            is_all_verified: totalExpected > 0 && totalVerifiedCount >= totalExpected
+            is_all_verified: totalExpected > 0 && totalVerifiedCount >= totalExpected,
+            has_ties: hasTies,
+            tied_ranks: tiedRanks,
+            tie_breaker_rule: tieBreakerRule
         };
 
         const evName = event.eventName || event.name || event.title || `Competition #${event._id}`;
@@ -1164,7 +1425,7 @@ async function getTabulationMatrix(req, res, next) {
                     max_score: maxVal
                 };
             }),
-            matrix: matrixData,
+            matrix: finalMatrixData,
             stats,
             settings: settingsDoc || {}
         });
@@ -1314,5 +1575,7 @@ module.exports = {
     unverifyScore,
     getTabulationMatrix,
     getScoreHistory,
-    getScoreVersionSnapshot
+    getScoreVersionSnapshot,
+    evaluateContestantTie,
+    computeTabulationRanking
 };
