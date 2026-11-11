@@ -701,7 +701,7 @@ async function exportBackup(req, res, next) {
             collections.criteria.find({}).toArray(),
             collections.scores.find({}).toArray(),
             collections.users.find({}, { projection: { password: 0, reset_token: 0, invite_token: 0 } }).toArray(),
-            collections.logs.find({}).sort({ timestamp: -1 }).limit(500).toArray()
+            collections.logs.find({}).sort({ timestamp: -1, _id: -1 }).limit(500).toArray()
         ]);
 
         const now = new Date().toISOString();

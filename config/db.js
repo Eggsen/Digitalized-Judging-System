@@ -56,6 +56,18 @@ async function connectDB() {
 
         console.log(`[Database] Connected successfully to MongoDB Atlas (${dbName})`);
 
+        // Ensure audit logs index on timestamp for fast and reliable descending/ascending queries
+        try {
+            await collections.logs.createIndex({ timestamp: -1 });
+            // Self-heal: normalize any legacy string timestamps into BSON Date objects
+            await collections.logs.updateMany(
+                { timestamp: { $type: 'string' } },
+                [{ $set: { timestamp: { $toDate: '$timestamp' } } }]
+            );
+        } catch (idxErr) {
+            console.warn('[Database] Log timestamp index/migration notice:', idxErr.message);
+        }
+
         // Overlay api_keys from system_settings into process.env to persist across cloud restarts
         try {
             const settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });

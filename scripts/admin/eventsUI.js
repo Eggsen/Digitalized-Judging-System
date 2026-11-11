@@ -806,7 +806,8 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
         search: state.search,
         role: state.role || 'all',
         date: state.date || '',
-        sort: state.sort || 'desc'
+        sort: state.sort || 'desc',
+        tz_offset: new Date().getTimezoneOffset()
     });
 
     if (currentReqId !== state.reqId) return;
