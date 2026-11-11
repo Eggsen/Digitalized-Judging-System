@@ -15,6 +15,7 @@ router.post('/self-unlock', requireRole(['judge', 'admin']), scoreController.sel
 // Tabulation & Unlock Approvals (Admin & Tabulator)
 router.post('/approve-unlock', requireRole(['admin', 'tabulator']), scoreController.approveUnlock);
 router.get('/matrix', requireRole(['admin', 'tabulator', 'judge']), scoreController.getTabulationMatrix);
+router.get('/versions', requireRole(['admin', 'tabulator', 'judge']), scoreController.getScoreVersions);
 
 // Official Tabulation PDF Export (Generated via pdfmake npm)
 router.get('/export-pdf', requireRole(['admin', 'tabulator', 'judge']), scoreController.exportTabulationPDF);

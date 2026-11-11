@@ -211,6 +211,22 @@ export async function getScores(eventId) {
     }
 }
 
+export async function getScoreVersions(eventId, contestantId, judgeId = null, scoreId = null) {
+    try {
+        const params = new URLSearchParams();
+        if (scoreId) params.append('score_id', scoreId);
+        if (eventId) params.append('event_id', eventId);
+        if (contestantId) params.append('contestant_id', contestantId);
+        if (judgeId) params.append('judge_id', judgeId);
+
+        const res = await fetch(`/api/scores/versions?${params.toString()}`, { credentials: "include" });
+        return await res.json();
+    } catch (e) {
+        console.error("getScoreVersions error: ", e);
+        return { success: false, message: "Network error retrieving score versions." };
+    }
+}
+
 export async function submitScore(data) {
     try {
         const res = await fetch("/api/scores/submit", {

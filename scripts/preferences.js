@@ -81,6 +81,16 @@ export function applyPreferences(prefs = getPreferences()) {
     // 3. Navigation Placement (Top Tabs / Sidebar)
     if (prefs.navPlacement === 'sidebar') {
         root.classList.add('layout-sidebar');
+        const settingsTab = document.getElementById('settings-tab');
+        if (settingsTab && !settingsTab.classList.contains('hidden')) {
+            const subNav = document.getElementById('sidebar-settings-subnav');
+            const chevron = document.getElementById('sidebar-settings-chevron');
+            if (subNav) subNav.classList.remove('hidden');
+            if (chevron) {
+                chevron.classList.add('rotate-180', 'text-buksu-gold');
+                chevron.classList.remove('text-slate-400');
+            }
+        }
     } else {
         root.classList.remove('layout-sidebar');
     }

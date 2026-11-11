@@ -42,11 +42,12 @@ export async function exportBackup() {
     }
 }
 
-export async function clearLogs() {
+export async function clearLogs(confirmation = "Confirm") {
     try {
         const response = await fetch("/api/settings/clear-logs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirmation }),
             credentials: "include"
         });
         return await response.json();
@@ -71,12 +72,17 @@ export async function resetSettingsDefaults() {
     }
 }
 
-export async function requestSecurityChange(securityData) {
+export async function requestSecurityChange(securityData, unlockToken = null) {
     try {
+        const headers = { "Content-Type": "application/json" };
+        if (unlockToken) {
+            headers["x-unlock-token"] = unlockToken;
+        }
+        const payload = unlockToken ? { ...securityData, unlock_token: unlockToken } : securityData;
         const response = await fetch("/api/settings/security-controls", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(securityData),
+            headers,
+            body: JSON.stringify(payload),
             credentials: "include"
         });
         return await response.json();

@@ -1376,24 +1376,54 @@ async function handleSaveScore(action) {
     const btn = document.getElementById('saveDraftScoreBtn');
     if (btn) btn.disabled = true;
 
+    const currentScoreObj = judgeScoresMap[selectedContestantId];
+    const currentVersion = currentScoreObj?.version || 1;
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'draft'
+        action: 'draft',
+        version: currentVersion
     });
 
     if (btn) btn.disabled = false;
 
+    if (res.conflict) {
+        showToast('Concurrency Conflict', res.message || 'Score was modified in another session. Updating with latest data...', 'error');
+        if (res.current_score) {
+            judgeScoresMap[selectedContestantId] = {
+                ...res.current_score,
+                id: String(res.current_score._id || res.current_score.id),
+                version: res.current_score.version || 1
+            };
+            if (Array.isArray(res.current_score.criteria_scores)) {
+                if (!contestantScoresState[selectedContestantId]) contestantScoresState[selectedContestantId] = {};
+                res.current_score.criteria_scores.forEach(cs => {
+                    contestantScoresState[selectedContestantId][cs.criteria_id] = {
+                        score: parseFloat(cs.score) || 0,
+                        rating_id: cs.rating_id || '',
+                        rating_name: cs.rating_name || '',
+                        sub_scores: cs.sub_scores || {}
+                    };
+                });
+            }
+            renderJudgeContestants();
+            renderScoringSheet();
+        }
+        return;
+    }
+
     if (res.success) {
         showToast('Draft Score Saved!', res.message || 'Your draft score has been saved.', 'success');
 
-        // Update local cache
+        // Update local cache with updated version
         judgeScoresMap[selectedContestantId] = {
             id: res.score_id,
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || res.score?.version || (currentVersion + 1),
             status: 'draft',
             submitted_at: new Date().toISOString()
         };
@@ -1595,14 +1625,47 @@ async function executeSubmitFinalScore() {
         };
     });
 
+    const currentScoreObj = judgeScoresMap[selectedContestantId];
+    const currentVersion = currentScoreObj?.version || 1;
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'submit'
+        action: 'submit',
+        version: currentVersion
     });
 
     if (confirmBtn) confirmBtn.disabled = false;
+
+    if (res.conflict) {
+        showToast('Concurrency Conflict', res.message || 'Score was modified elsewhere. Please review the updated score before finalizing.', 'error');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> Confirm &amp; Submit Score';
+        }
+        if (res.current_score) {
+            judgeScoresMap[selectedContestantId] = {
+                ...res.current_score,
+                id: String(res.current_score._id || res.current_score.id),
+                version: res.current_score.version || 1
+            };
+            if (Array.isArray(res.current_score.criteria_scores)) {
+                if (!contestantScoresState[selectedContestantId]) contestantScoresState[selectedContestantId] = {};
+                res.current_score.criteria_scores.forEach(cs => {
+                    contestantScoresState[selectedContestantId][cs.criteria_id] = {
+                        score: parseFloat(cs.score) || 0,
+                        rating_id: cs.rating_id || '',
+                        rating_name: cs.rating_name || '',
+                        sub_scores: cs.sub_scores || {}
+                    };
+                });
+            }
+            document.getElementById('judge-submission-summary-modal')?.classList.add('hidden');
+            renderJudgeContestants();
+            renderScoringSheet();
+        }
+        return;
+    }
 
     if (res.success) {
         // Close summary confirmation modal
@@ -1616,6 +1679,7 @@ async function executeSubmitFinalScore() {
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || res.score?.version || (currentVersion + 1),
             status: 'submitted',
             submitted_at: new Date().toISOString()
         };

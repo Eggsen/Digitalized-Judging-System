@@ -20,6 +20,7 @@ const collections = {
     contestants: null,
     criteria: null,
     scores: null,
+    score_versions: null,
     settings: null,
     logs: null,
     notifications: null,
@@ -47,6 +48,7 @@ async function connectDB() {
         collections.contestants = db.collection('contestants');
         collections.criteria = db.collection('criteria');
         collections.scores = db.collection('scores');
+        collections.score_versions = db.collection('score_versions');
         collections.settings = db.collection('settings');
         collections.logs = db.collection('logs');
         collections.notifications = db.collection('notifications');

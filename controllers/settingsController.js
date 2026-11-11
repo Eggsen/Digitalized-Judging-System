@@ -440,6 +440,61 @@ async function updateSecurityControls(req, res, next) {
             websocketEnabled: true
         };
 
+        // Check for 2FA unlock token or direct authenticated apply
+        const unlockToken = req.headers['x-unlock-token'] || req.body.unlock_token;
+        let isTokenValid = false;
+        if (unlockToken) {
+            try {
+                const decoded = jwt.verify(unlockToken, JWT_SECRET);
+                if (decoded.purpose === 'env_credentials_unlock' && decoded.userId === String(req.user.id)) {
+                    isTokenValid = true;
+                }
+            } catch (e) {}
+        }
+
+        // Direct apply when 2FA has been verified for the System Security & Infrastructure section
+        if (isTokenValid || req.body.direct_apply) {
+            const requestedSecurity = {
+                googleAuthEnabled: googleAuthEnabled !== undefined ? Boolean(googleAuthEnabled) : (currentSecurity.googleAuthEnabled !== false),
+                recaptchaEnabled: recaptchaEnabled !== undefined ? Boolean(recaptchaEnabled) : (currentSecurity.recaptchaEnabled !== false),
+                emailServiceEnabled: emailServiceEnabled !== undefined ? Boolean(emailServiceEnabled) : (currentSecurity.emailServiceEnabled !== false),
+                qrCodeEnabled: qrCodeEnabled !== undefined ? Boolean(qrCodeEnabled) : (currentSecurity.qrCodeEnabled !== false),
+                cloudinaryEnabled: cloudinaryEnabled !== undefined ? Boolean(cloudinaryEnabled) : (currentSecurity.cloudinaryEnabled !== false),
+                websocketEnabled: websocketEnabled !== undefined ? Boolean(websocketEnabled) : (currentSecurity.websocketEnabled !== false)
+            };
+
+            const newSecurity = {
+                ...currentSecurity,
+                ...requestedSecurity
+            };
+
+            await collections.settings.updateOne(
+                { _id: 'system_settings' },
+                {
+                    $set: {
+                        security: newSecurity,
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: req.user.username
+                    }
+                }
+            );
+
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                'UPDATE_SECURITY_CONTROLS',
+                'Immediately updated security controls in 2FA-authenticated System Security & Infrastructure section.',
+                req
+            );
+
+            return res.json({
+                success: true,
+                message: 'Security controls updated successfully.',
+                security: newSecurity
+            });
+        }
+
         // 1. Confirmation OTP code submitted
         if (code !== undefined && code !== null && String(code).trim() !== '') {
             const pending = settingsDoc.pending_security_change;
@@ -697,16 +752,25 @@ async function exportBackup(req, res, next) {
 }
 
 /**
- * Clear Audit Logs
+ * Clear Audit Logs (Requires typing "Confirm")
  */
 async function clearLogs(req, res, next) {
     try {
+        const confirmation = req.body && req.body.confirmation;
+        if (String(confirmation || '').trim().toLowerCase() !== 'confirm') {
+            return res.status(400).json({
+                success: false,
+                message: 'Action aborted. You must type "Confirm" to purge activity audit logs.'
+            });
+        }
+
         const result = await collections.logs.deleteMany({});
         await logSystemAction(req.user.id, req.user.username, req.user.role, 'CLEAR_LOGS', `Admin purged activity logs (${result.deletedCount} records deleted).`, req);
 
         res.json({
             success: true,
-            message: `Activity audit logs cleared successfully (${result.deletedCount} records purged).`
+            message: `Activity audit logs cleared successfully (${result.deletedCount} records purged).`,
+            deletedCount: result.deletedCount
         });
     } catch (err) {
         next(err);

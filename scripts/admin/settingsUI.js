@@ -13,6 +13,8 @@ import {
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
 let cachedSettings = null;
+let isSecurityUnlocked = false;
+let pendingSubtabTarget = null;
 let apiKeysUnlockToken = null;
 let cachedMaskedKeys = {};
 let unmaskedApiKeys = null;
@@ -207,8 +209,10 @@ export function initSettingsPanel() {
 }
 
 export function activateSettingsSubtab(target) {
-    if (target !== 'settings-content-apikeys' && apiKeysUnlockToken) {
-        lockApiKeysInputs();
+    if (target === 'settings-content-system-security' && (!isSecurityUnlocked || !apiKeysUnlockToken)) {
+        pendingSubtabTarget = target;
+        openAdminPinModal();
+        return;
     }
 
     const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
@@ -216,16 +220,28 @@ export function activateSettingsSubtab(target) {
 
     subTabBtns.forEach(b => {
         const isMatch = b.dataset.subtab === target;
-        const icon = b.querySelector('i');
-        if (isMatch) {
-            b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30';
-            if (icon) {
-                icon.classList.remove('text-slate-400', 'text-slate-500', 'text-emerald-500', 'text-amber-500');
-                icon.classList.add('text-buksu-gold');
+        const icon = b.querySelector('i:first-child');
+        const isSidebar = b.classList.contains('sidebar-settings-subtab-btn');
+
+        if (isSidebar) {
+            if (isMatch) {
+                b.className = 'sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer flex items-center gap-2.5 text-left border border-buksu-gold/30';
+            } else {
+                b.className = 'sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-2.5 text-left border border-transparent';
             }
         } else {
-            b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent';
-            if (icon) {
+            if (isMatch) {
+                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30';
+            } else {
+                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent';
+            }
+        }
+
+        if (icon) {
+            if (isMatch) {
+                icon.classList.remove('text-slate-400', 'text-slate-500', 'text-emerald-500', 'text-amber-500');
+                icon.classList.add('text-buksu-gold');
+            } else {
                 icon.classList.remove('text-buksu-gold', 'text-emerald-500', 'text-amber-500');
                 icon.classList.add('text-slate-400');
             }
@@ -240,13 +256,47 @@ export function activateSettingsSubtab(target) {
     }
 }
 
+function updateSecurityTabLockBadge(unlocked) {
+    const icons = [
+        document.getElementById('system-security-tab-lock-icon'),
+        document.getElementById('sidebar-system-security-tab-lock-icon')
+    ];
+    icons.forEach(icon => {
+        if (!icon) return;
+        if (unlocked) {
+            icon.className = 'text-[9px] text-emerald-400';
+            icon.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+        } else {
+            icon.className = 'text-[9px] text-amber-500';
+            icon.innerHTML = '<i class="fa-solid fa-lock"></i>';
+        }
+    });
+}
+
+export function lockSecuritySection() {
+    isSecurityUnlocked = false;
+    apiKeysUnlockToken = null;
+    lockApiKeysInputs();
+    updateSecurityTabLockBadge(false);
+    activateSettingsSubtab('settings-content-branding');
+    showToast("Vault Locked", "System Security & Infrastructure section is now locked.", "archive");
+}
+
+
 function initSubTabs() {
     const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
 
     subTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.dataset.subtab;
-            if (target) activateSettingsSubtab(target);
+            if (target) {
+                const settingsTab = document.getElementById('settings-tab');
+                if (settingsTab && settingsTab.classList.contains('hidden')) {
+                    const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
+                    if (settingsNavBtn) settingsNavBtn.click();
+                }
+                activateSettingsSubtab(target);
+            }
         });
     });
 }
@@ -729,28 +779,13 @@ function initBackupAndMaintenance() {
         }
     });
 
-    // Clear Logs Button
+    // Clear Logs Button (opens Confirmation Modal)
     const clearLogsBtn = document.getElementById('clearLogsBtn');
-    clearLogsBtn?.addEventListener('click', async () => {
-        if (!confirm("Are you sure you want to clear all system audit logs? This action will purge all historical activity records.")) {
-            return;
-        }
-
-        clearLogsBtn.disabled = true;
-        clearLogsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Purging...';
-
-        const res = await clearLogs();
-
-        clearLogsBtn.disabled = false;
-        clearLogsBtn.innerHTML = '<i class="fa-solid fa-trash-can me-1.5"></i> Purge Activity Logs';
-
-        if (res.success) {
-            showToast("Logs Purged", res.message || "Audit logs purged successfully.", "archive");
-            loadSystemSettings();
-        } else {
-            showToast("Action Failed", res.message || "Failed to purge logs.", "error");
-        }
+    clearLogsBtn?.addEventListener('click', () => {
+        openPurgeLogsModal();
     });
+
+    initPurgeLogsModal();
 
     // Reset Defaults Button
     const resetBtn = document.getElementById('resetSettingsBtn');
@@ -778,6 +813,98 @@ function initBackupAndMaintenance() {
     });
 }
 
+function openPurgeLogsModal() {
+    const modal = document.getElementById('purge-logs-modal');
+    const input = document.getElementById('purge-confirm-input');
+    const countEl = document.getElementById('purge-modal-count');
+    const confirmBtn = document.getElementById('confirmPurgeLogsBtn');
+    const diagLogs = document.getElementById('diag-logs-count');
+
+    if (countEl) {
+        const count = diagLogs ? diagLogs.textContent.trim() : '0';
+        countEl.textContent = `${count} entries`;
+    }
+    if (input) {
+        input.value = '';
+    }
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+    }
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => input?.focus(), 100);
+    }
+}
+
+function closePurgeLogsModal() {
+    const modal = document.getElementById('purge-logs-modal');
+    const input = document.getElementById('purge-confirm-input');
+    if (modal) modal.classList.add('hidden');
+    if (input) input.value = '';
+}
+
+function initPurgeLogsModal() {
+    const confirmInput = document.getElementById('purge-confirm-input');
+    const confirmBtn = document.getElementById('confirmPurgeLogsBtn');
+    const closeBtn = document.getElementById('closePurgeLogsModalBtn');
+    const cancelBtn = document.getElementById('cancelPurgeLogsModalBtn');
+    const modal = document.getElementById('purge-logs-modal');
+    const form = document.getElementById('purgeLogsForm');
+
+    confirmInput?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (confirmBtn) {
+            confirmBtn.disabled = (val.toLowerCase() !== 'confirm');
+        }
+    });
+
+    closeBtn?.addEventListener('click', closePurgeLogsModal);
+    cancelBtn?.addEventListener('click', closePurgeLogsModal);
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target.id === 'purge-logs-modal') {
+            closePurgeLogsModal();
+        }
+    });
+
+    const executePurge = async () => {
+        const val = (confirmInput?.value || '').trim();
+        if (val.toLowerCase() !== 'confirm') {
+            showToast("Confirmation Required", 'Please type "Confirm" to proceed.', "warning");
+            return;
+        }
+
+        const btnText = document.getElementById('confirm-purge-btn-text');
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Purging...';
+
+        const res = await clearLogs(val);
+
+        if (confirmBtn) confirmBtn.disabled = false;
+        if (btnText) btnText.textContent = 'Purge Activity Logs';
+
+        if (res.success) {
+            closePurgeLogsModal();
+            const diagLogs = document.getElementById('diag-logs-count');
+            if (diagLogs) diagLogs.textContent = '0';
+            showToast("Logs Purged", res.message || "Audit activity logs have been purged.", "archive");
+        } else {
+            showToast("Purge Failed", res.message || "Failed to purge audit logs.", "error");
+        }
+    };
+
+    form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        executePurge();
+    });
+
+    confirmBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        executePurge();
+    });
+}
+
+
 function updateSecurityToggleBadge(badgeId, isEnabled) {
     const badge = document.getElementById(badgeId);
     if (!badge) return;
@@ -791,55 +918,35 @@ function updateSecurityToggleBadge(badgeId, isEnabled) {
 }
 
 function initSecuritySettings() {
-    const googleAuthToggle = document.getElementById('setting-toggle-google-auth');
-    const recaptchaToggle = document.getElementById('setting-toggle-recaptcha');
-    const emailToggle = document.getElementById('setting-toggle-email');
-    const qrcodeToggle = document.getElementById('setting-toggle-qrcode');
-    const cloudinaryToggle = document.getElementById('setting-toggle-cloudinary');
+    const toggleConfigs = [
+        { id: 'setting-toggle-google-auth', key: 'googleAuthEnabled', badgeId: 'google-auth-status-badge', label: 'Google OAuth 2.0' },
+        { id: 'setting-toggle-recaptcha', key: 'recaptchaEnabled', badgeId: 'recaptcha-status-badge', label: 'Google reCAPTCHA v2' },
+        { id: 'setting-toggle-email', key: 'emailServiceEnabled', badgeId: 'email-status-badge', label: 'Gmail / Email Service' },
+        { id: 'setting-toggle-qrcode', key: 'qrCodeEnabled', badgeId: 'qrcode-status-badge', label: 'QR Code Generator API' },
+        { id: 'setting-toggle-cloudinary', key: 'cloudinaryEnabled', badgeId: 'cloudinary-status-badge', label: 'Cloudinary Media API' },
+        { id: 'setting-toggle-websocket', key: 'websocketEnabled', badgeId: 'websocket-status-badge', label: 'Real-Time WebSockets' }
+    ];
+
+    toggleConfigs.forEach(({ id, key, badgeId, label }) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', async () => {
+                await handleImmediateSecurityToggle(key, el.checked, el, badgeId, label);
+            });
+        }
+    });
+
     const applyBtn = document.getElementById('applySecurityTogglesBtn');
-
-    if (googleAuthToggle) {
-        googleAuthToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('google-auth-status-badge', googleAuthToggle.checked);
-        });
-    }
-
-    if (recaptchaToggle) {
-        recaptchaToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('recaptcha-status-badge', recaptchaToggle.checked);
-        });
-    }
-
-    if (emailToggle) {
-        emailToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('email-status-badge', emailToggle.checked);
-        });
-    }
-
-    if (qrcodeToggle) {
-        qrcodeToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('qrcode-status-badge', qrcodeToggle.checked);
-        });
-    }
-
-    if (cloudinaryToggle) {
-        cloudinaryToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('cloudinary-status-badge', cloudinaryToggle.checked);
-        });
-    }
-
-    const websocketToggle = document.getElementById('setting-toggle-websocket');
-    if (websocketToggle) {
-        websocketToggle.addEventListener('change', () => {
-            updateSecurityToggleBadge('websocket-status-badge', websocketToggle.checked);
-        });
-    }
-
     if (applyBtn) {
         applyBtn.addEventListener('click', handleApplySecurityChanges);
     }
 
-    // Modal controls
+    // Relock button in Vault header
+    document.getElementById('relockSecurityBtn')?.addEventListener('click', () => {
+        lockSecuritySection();
+    });
+
+    // Modal controls for fallback OTP flow
     const confirmForm = document.getElementById('securityConfirmForm');
     const resendBtn = document.getElementById('resendSecurityOtpBtn');
     const closeBtn = document.getElementById('closeSecurityModalBtn');
@@ -854,6 +961,45 @@ function initSecuritySettings() {
 
     if (closeBtn) {
         closeBtn.addEventListener('click', closeSecurityConfirmModal);
+    }
+}
+
+async function handleImmediateSecurityToggle(key, isChecked, checkboxEl, badgeId, label) {
+    if (!apiKeysUnlockToken || !isSecurityUnlocked) {
+        showToast("Authentication Required", "Please unlock System Security & Infrastructure first.", "warning");
+        checkboxEl.checked = !isChecked;
+        updateSecurityToggleBadge(badgeId, !isChecked);
+        openAdminPinModal();
+        return;
+    }
+
+    updateSecurityToggleBadge(badgeId, isChecked);
+
+    try {
+        const res = await requestSecurityChange({
+            [key]: isChecked,
+            direct_apply: true
+        }, apiKeysUnlockToken);
+
+        if (res.success && res.security) {
+            if (!cachedSettings) cachedSettings = {};
+            cachedSettings.security = res.security;
+            applySecurityToggleStates(res.security);
+            showToast("Setting Updated", `${label} is now ${isChecked ? "enabled" : "disabled"}.`, "create");
+        } else {
+            checkboxEl.checked = !isChecked;
+            updateSecurityToggleBadge(badgeId, !isChecked);
+            showToast("Update Failed", res.message || `Failed to update ${label}.`, "error");
+            if (res.message && (res.message.toLowerCase().includes('token') || res.message.toLowerCase().includes('pin') || res.message.toLowerCase().includes('unauthorized'))) {
+                lockSecuritySection();
+                openAdminPinModal();
+            }
+        }
+    } catch (err) {
+        console.error("Security toggle error:", err);
+        checkboxEl.checked = !isChecked;
+        updateSecurityToggleBadge(badgeId, !isChecked);
+        showToast("Error", "Could not apply security setting change.", "error");
     }
 }
 
@@ -1300,6 +1446,7 @@ function openAdminPinModal() {
 function closeAdminPinModal() {
     const modal = document.getElementById('admin-pin-modal');
     if (modal) modal.classList.add('hidden');
+    pendingSubtabTarget = null;
 }
 
 function initApiKeysSettings() {
@@ -1377,9 +1524,14 @@ function initApiKeysSettings() {
 
         if (res.success) {
             apiKeysUnlockToken = res.unlock_token;
+            isSecurityUnlocked = true;
             closeAdminPinModal();
             unlockApiKeysInputs(res.api_keys);
-            showToast("Access Granted", "Admin PIN verified. Credentials unlocked for editing.", "create");
+            updateSecurityTabLockBadge(true);
+            const target = pendingSubtabTarget || 'settings-content-system-security';
+            pendingSubtabTarget = null;
+            activateSettingsSubtab(target);
+            showToast("Access Granted", "Admin PIN verified. System Security & Infrastructure hub unlocked.", "create");
         } else {
             if (notice) {
                 let errorMsg = res.message || 'Incorrect Admin PIN.';
