@@ -854,7 +854,7 @@ async function loadCriteriaList() {
                             <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200/70 text-slate-700 shrink-0">Max: ${cr.max_points} pts</span>
                             ${isCategory
                                 ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1"><i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> Category-Based (${categories.length} Categories, ${cr.max_points} pts total)</span>`
-                                : `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shrink-0 flex items-center gap-1"><i class="fa-solid fa-list-check text-amber-600"></i> Criteria-Based (${rubricRatings.length} Ratings)</span>`}
+                                : `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1"><i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Criteria-Based (${rubricRatings.length} Ratings)</span>`}
                         </div>
                         ${cr.description ? `<p class="text-xs text-slate-500 font-normal leading-relaxed line-clamp-2">${escapeHtml(cr.description)}</p>` : ''}
                     </div>
@@ -900,14 +900,14 @@ async function loadCriteriaList() {
                 ` : `
                     <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
                         <span>Predefined Criteria Ratings (${rubricRatings.length} options)</span>
-                        <span class="text-amber-700 font-bold normal-case">Judge selects one predefined rating</span>
+                        <span class="text-slate-600 dark:text-slate-400 font-bold normal-case">Judge selects one predefined rating</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(rubricRatings.length, 4)} gap-2">
                         ${rubricRatings.map(r => `
                             <div class="p-3 rounded-xl bg-white border border-slate-200/80 space-y-1 shadow-2xs">
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="font-extrabold text-slate-800 text-xs truncate">${escapeHtml(r.name)}</span>
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
                                         ${r.score} pts
                                     </span>
                                 </div>
@@ -975,6 +975,9 @@ export function setModalScoringType(type) {
 
     const rubricSection = document.getElementById('modal-rubric-config-section');
     const categorySection = document.getElementById('modal-category-config-section');
+    const titleCol = document.getElementById('rubric-modal-title-col');
+    const pctCol = document.getElementById('rubric-modal-pct-col');
+    const maxCol = document.getElementById('rubric-modal-max-col');
 
     if (rubricRadio && categoryRadio) {
         rubricRadio.checked = !isCategory;
@@ -986,7 +989,14 @@ export function setModalScoringType(type) {
         rubricSection?.classList.remove('hidden');
         categorySection?.classList.add('hidden');
 
-        rubricCard?.classList.add('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
+        // Hide entering Max Points in criteria-based; automatically highest fixed score
+        maxCol?.classList.add('hidden');
+        titleCol?.classList.remove('sm:col-span-6');
+        titleCol?.classList.add('sm:col-span-8');
+        pctCol?.classList.remove('sm:col-span-3');
+        pctCol?.classList.add('sm:col-span-4');
+
+        rubricCard?.classList.add('border-buksu-navy', 'bg-slate-100/70', 'shadow-2xs');
         rubricCard?.classList.remove('border-slate-200', 'bg-white');
         categoryCard?.classList.remove('border-buksu-navy', 'bg-slate-100/70', 'shadow-2xs');
         categoryCard?.classList.add('border-slate-200', 'bg-white');
@@ -997,9 +1007,15 @@ export function setModalScoringType(type) {
         rubricSection?.classList.add('hidden');
         categorySection?.classList.remove('hidden');
 
+        maxCol?.classList.remove('hidden');
+        titleCol?.classList.remove('sm:col-span-8');
+        titleCol?.classList.add('sm:col-span-6');
+        pctCol?.classList.remove('sm:col-span-4');
+        pctCol?.classList.add('sm:col-span-3');
+
         categoryCard?.classList.add('border-buksu-navy', 'bg-slate-100/70', 'shadow-2xs');
         categoryCard?.classList.remove('border-slate-200', 'bg-white');
-        rubricCard?.classList.remove('border-amber-500', 'bg-amber-50/50', 'shadow-2xs');
+        rubricCard?.classList.remove('border-buksu-navy', 'bg-slate-100/70', 'shadow-2xs');
         rubricCard?.classList.add('border-slate-200', 'bg-white');
 
         updateCategorySum();
@@ -1008,6 +1024,8 @@ export function setModalScoringType(type) {
 
 export function updateRatingBadges() {
     const container = document.getElementById('rubric-ratings-container');
+    const badge = document.getElementById('rubric-max-points-badge');
+    const maxInput = document.getElementById('rubric-modal-max-input');
     if (!container) return;
 
     const rows = container.querySelectorAll('.rubric-rating-item');
@@ -1020,19 +1038,35 @@ export function updateRatingBadges() {
                 <div class="empty-rating-placeholder py-8 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
                     <i class="fa-solid fa-list-check text-slate-300 text-2xl mb-2 block"></i>
                     <p class="text-xs font-bold text-slate-600">No predefined ratings added yet</p>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Click <strong class="text-amber-600 font-bold">"+ Add Predefined Rating"</strong> above to add ratings. At least 2 ratings are required.</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Click <strong class="text-buksu-navy font-bold">"+ Add Predefined Rating"</strong> above to add ratings. At least 2 ratings are required.</p>
                 </div>
             `;
         }
+        if (badge) badge.textContent = 'Max Score: 0 pts (Highest Fixed Score)';
+        if (maxInput) maxInput.value = 0;
         return;
     } else if (emptyMsg) {
         emptyMsg.remove();
     }
 
+    let highestScore = 0;
     rows.forEach((row, idx) => {
         const badgeElem = row.querySelector('.rating-index-badge');
         if (badgeElem) badgeElem.textContent = `#${idx + 1}`;
+
+        const scoreInput = row.querySelector('.rate-score-input');
+        if (scoreInput) {
+            const sc = parseFloat(scoreInput.value) || 0;
+            if (sc > highestScore) highestScore = sc;
+        }
     });
+
+    if (badge) {
+        badge.textContent = `Max Score: ${highestScore} pts (Highest Fixed Score)`;
+    }
+    if (maxInput) {
+        maxInput.value = highestScore;
+    }
 }
 
 export function rebalanceRubricPoints() {
@@ -1198,17 +1232,17 @@ export function addRatingRow(rating = null, index = null) {
     row.innerHTML = `
         <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-2">
             <div class="flex items-center gap-2 flex-1 flex-wrap sm:flex-nowrap">
-                <span class="rating-index-badge w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                <span class="rating-index-badge w-6 h-6 rounded-lg bg-buksu-navy text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
                     #${nextIdx + 1}
                 </span>
                 <div class="flex-1 min-w-[160px]">
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Rating Label / Title</label>
-                    <input type="text" class="rate-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="e.g. Excellent, Very Good, Fair..." value="${escapeHtml(rName)}" required>
+                    <input type="text" class="rate-name-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-buksu-navy" placeholder="e.g. Excellent, Very Good, Fair..." value="${escapeHtml(rName)}" required>
                 </div>
                 <div class="shrink-0">
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-0.5">Fixed Score (pts)</label>
                     <div class="flex items-center gap-1.5">
-                        <input type="number" step="any" min="0" class="rate-score-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500" value="${rScore}" required>
+                        <input type="number" step="any" min="0" class="rate-score-input w-24 px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center font-black text-xs text-buksu-navy focus:outline-none focus:ring-2 focus:ring-buksu-navy" value="${rScore}" required>
                         <span class="text-xs font-bold text-slate-500">pts</span>
                     </div>
                 </div>
@@ -1220,9 +1254,13 @@ export function addRatingRow(rating = null, index = null) {
 
         <div>
             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider mb-0.5">Description &amp; Performance Standard</label>
-            <textarea class="rate-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 font-normal leading-relaxed" rows="2" placeholder="Specific observable characteristics and criteria required to earn this rating...">${escapeHtml(rDesc)}</textarea>
+            <textarea class="rate-desc-input w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-buksu-navy font-normal leading-relaxed" rows="2" placeholder="Specific observable characteristics and criteria required to earn this rating...">${escapeHtml(rDesc)}</textarea>
         </div>
     `;
+
+    row.querySelector('.rate-score-input')?.addEventListener('input', () => {
+        updateRatingBadges();
+    });
 
     row.querySelector('.remove-rating-btn')?.addEventListener('click', () => {
         row.remove();
@@ -1398,7 +1436,7 @@ async function handleSaveRubricCriterion(e) {
             return;
         }
 
-        maxPoints = parseFloat(document.getElementById('rubric-modal-max-input')?.value) || (highest > 0 ? highest : 100);
+        maxPoints = highest > 0 ? highest : 100;
         minPoints = 0;
     } else {
         // Category-Based Scoring

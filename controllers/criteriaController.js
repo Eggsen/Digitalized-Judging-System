@@ -116,6 +116,15 @@ async function createCriterion(req, res, next) {
             };
         }).filter(c => c.name.length > 0) : [];
 
+        let calculatedMax = maxScoreVal;
+        if (scoringTypeVal === 'rubric' && cleanRubricRatings.length > 0) {
+            const highestRating = Math.max(...cleanRubricRatings.map(r => r.score));
+            if (highestRating > 0) calculatedMax = highestRating;
+        } else if (scoringTypeVal === 'category' && cleanScoringCategories.length > 0) {
+            const sumCats = cleanScoringCategories.reduce((s, c) => s + (c.points || 0), 0);
+            if (sumCats > 0) calculatedMax = Math.round(sumCats * 100) / 100;
+        }
+
         const newCriterion = {
             event_id: storedEventId,
             name: criterionName,
@@ -124,8 +133,8 @@ async function createCriterion(req, res, next) {
             instructions: (instructions || description || '').trim(),
             weight: criterionWeight,
             percentage: criterionWeight,
-            max_score: maxScoreVal,
-            max_points: maxScoreVal,
+            max_score: calculatedMax,
+            max_points: calculatedMax,
             min_score: minScoreVal,
             min_points: minScoreVal,
             score_step: parseFloat(score_step) || 0.5,
@@ -242,6 +251,23 @@ async function updateCriterion(req, res, next) {
                     description: (c.description || '').trim()
                 };
             }).filter(c => c.name.length > 0);
+        }
+
+        // Automatic max points calculation
+        const effectiveScoringType = updateDoc.scoring_type;
+        if (effectiveScoringType === 'rubric' && Array.isArray(updateDoc.rubric_ratings) && updateDoc.rubric_ratings.length > 0) {
+            const highestRating = Math.max(...updateDoc.rubric_ratings.map(r => r.score));
+            if (highestRating > 0) {
+                updateDoc.max_score = highestRating;
+                updateDoc.max_points = highestRating;
+            }
+        } else if (effectiveScoringType === 'category' && Array.isArray(updateDoc.scoring_categories) && updateDoc.scoring_categories.length > 0) {
+            const sumCats = updateDoc.scoring_categories.reduce((s, c) => s + (c.points || 0), 0);
+            if (sumCats > 0) {
+                const rounded = Math.round(sumCats * 100) / 100;
+                updateDoc.max_score = rounded;
+                updateDoc.max_points = rounded;
+            }
         }
         if (category !== undefined) updateDoc.category = category.trim();
         if (order !== undefined) updateDoc.order = parseInt(order, 10);

@@ -851,9 +851,9 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
 
                 let typeBadge = '';
                 if (isCategory) {
-                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Category-Based</span>`;
+                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-800 border border-slate-300">Category-Based</span>`;
                 } else {
-                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Criteria-Based (Rubric)</span>`;
+                    typeBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-800 border border-slate-300">Criteria-Based</span>`;
                 }
 
                 // Render inner details (either Category sub-scores or Rubric rating)
@@ -915,13 +915,13 @@ export function openScoreBreakdownModal(contestantId, judgeId) {
                     if (ratingName) {
                         innerDetailsHtml = `
                             <div class="mt-3 pt-2.5 border-t border-slate-100">
-                                <div class="p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+                                <div class="p-2.5 bg-slate-50/80 border border-slate-200/70 rounded-xl flex items-center justify-between gap-3 flex-wrap">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-7 h-7 rounded-lg bg-amber-400 text-buksu-navy flex items-center justify-center text-xs font-black shadow-2xs">
+                                        <div class="w-7 h-7 rounded-lg bg-buksu-navy text-white flex items-center justify-center text-xs font-black shadow-2xs">
                                             <i class="fa-solid fa-star"></i>
                                         </div>
                                         <div>
-                                            <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block">Selected Rating Level</span>
+                                            <span class="text-[9px] uppercase font-bold text-slate-500 tracking-wider block">Selected Rating Level</span>
                                             <span class="font-extrabold text-slate-800 text-xs">${escapeHtml(ratingName)}</span>
                                             ${ratingDesc ? `<p class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(ratingDesc)}</p>` : ''}
                                         </div>

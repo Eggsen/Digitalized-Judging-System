@@ -535,8 +535,8 @@ function renderScoringSheet() {
                                                 <i class="fa-solid fa-layer-group text-[8px] text-slate-500"></i> Category
                                             </span>
                                         ` : `
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-0.5">
-                                                <i class="fa-solid fa-list-check text-[8px]"></i> Criteria-Based
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-0.5">
+                                                <i class="fa-solid fa-list-check text-[8px] text-slate-500"></i> Criteria-Based
                                             </span>
                                         `}
                                     </div>
@@ -556,8 +556,8 @@ function renderScoringSheet() {
                                         <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-category-count-text">${scoredCatsCount}/${categories.length} Categories Scored</span>
                                     </div>
                                 ` : `
-                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 text-[10px] font-bold border border-amber-200 dark:border-amber-800">
-                                        <i class="fa-solid fa-award text-amber-600 dark:text-amber-400"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
+                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+                                        <i class="fa-solid fa-award text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
                                     </div>
                                 `}
                                 <p class="text-[11px] truncate ${isActive ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-400'}">
@@ -872,8 +872,8 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                 <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> Category-Based Scoring (${maxPts} pts total)
                             </span>
                         ` : `
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                                <i class="fa-solid fa-list-check"></i> Criteria-Based Scoring
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                                <i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Criteria-Based Scoring
                             </span>
                         `}
                         <span id="gc-active-eval-status-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
@@ -1005,7 +1005,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h5 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-list-check text-amber-600 dark:text-amber-400"></i> Predefined Ratings (${ratings.length} Rating Levels)
+                            <i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Predefined Ratings (${ratings.length} Rating Levels)
                         </h5>
                         <p class="text-[11px] text-slate-500 dark:text-slate-400">Select one predefined rating below. The fixed score is awarded automatically.</p>
                     </div>
