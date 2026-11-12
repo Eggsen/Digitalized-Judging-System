@@ -869,7 +869,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
 /* -------------------------------------------------------------
  * JUDGE / TABULATOR ASSIGNED EVENTS VIEW
  * ------------------------------------------------------------- */
-async function loadUserAssignedEvents() {
+export async function loadUserAssignedEvents() {
     const grid = document.getElementById('user-assigned-events-grid');
     if (!grid) return;
 

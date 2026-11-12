@@ -1,6 +1,6 @@
 import { fetchNotifications, respondToInvitation, markNotificationsRead, updateNotificationRead } from "./notificationAPI.js";
 import { showToast, formatDateTime } from "../utils/uiUtils.js";
-import { loadAdminEvents } from "../admin/eventsUI.js";
+import { loadAdminEvents, loadUserAssignedEvents } from "../admin/eventsUI.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     initNotificationUI();
@@ -97,7 +97,7 @@ export async function loadNotifications() {
                     <p class="text-[11px] leading-snug font-normal ${isUnread ? 'text-slate-800 font-medium' : 'text-slate-600'}">${escapeHtml(n.message)}</p>
 
                     ${isInvitation ? `
-                        <div class="mt-2.5 flex items-center gap-2">
+                        <div class="notif-invitation-actions mt-2.5 flex items-center gap-2">
                             <button type="button" class="accept-inv-btn px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1" data-id="${n.id}">
                                 <i class="fa-solid fa-check"></i> Accept
                             </button>
@@ -176,7 +176,7 @@ export async function loadNotifications() {
                     dot?.classList.add('bg-transparent');
                     item.classList.remove('bg-slate-50/90', 'font-medium');
                     item.classList.add('bg-white', 'text-slate-600');
-                    const actionsDiv = btn.closest('.mt-2.5');
+                    const actionsDiv = btn.closest('.notif-invitation-actions') || btn.parentElement;
                     if (actionsDiv) {
                         actionsDiv.innerHTML = '<span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1"><i class="fa-solid fa-check text-emerald-600"></i> Accepted</span>';
                     }
@@ -192,7 +192,14 @@ export async function loadNotifications() {
                 }
 
                 showToast("Invitation Accepted!", res.message, "create");
-                setTimeout(() => window.location.reload(), 900);
+
+                // Directly reload events view so the event displays immediately without a full page refresh
+                const role = document.body.dataset.role;
+                if (role === 'admin') {
+                    if (typeof loadAdminEvents === 'function') await loadAdminEvents();
+                } else if (role === 'judge' || role === 'tabulator') {
+                    if (typeof loadUserAssignedEvents === 'function') await loadUserAssignedEvents();
+                }
             } else {
                 showToast("Action Failed", res.message, "error");
                 btn.disabled = false;
@@ -220,7 +227,7 @@ export async function loadNotifications() {
                     dot?.classList.add('bg-transparent');
                     item.classList.remove('bg-slate-50/90', 'font-medium');
                     item.classList.add('bg-white', 'text-slate-600');
-                    const actionsDiv = btn.closest('.mt-2.5');
+                    const actionsDiv = btn.closest('.notif-invitation-actions') || btn.parentElement;
                     if (actionsDiv) {
                         actionsDiv.innerHTML = '<span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1"><i class="fa-solid fa-xmark text-rose-600"></i> Declined</span>';
                     }
@@ -236,7 +243,14 @@ export async function loadNotifications() {
                 }
 
                 showToast("Invitation Declined", res.message, "archive");
-                setTimeout(() => window.location.reload(), 900);
+
+                // Directly reload events view
+                const role = document.body.dataset.role;
+                if (role === 'admin') {
+                    if (typeof loadAdminEvents === 'function') await loadAdminEvents();
+                } else if (role === 'judge' || role === 'tabulator') {
+                    if (typeof loadUserAssignedEvents === 'function') await loadUserAssignedEvents();
+                }
             } else {
                 showToast("Action Failed", res.message, "error");
                 btn.disabled = false;
