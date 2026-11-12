@@ -229,7 +229,9 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
             let rankText = `${row.rank}`;
             let rankBg = defaultRowBg;
             let rankColor = '#1E293B';
-            if (row.rank === 1) {
+            if (row.is_tie) {
+                rankText = `${row.rank} (Tie)`;
+            } else if (row.rank === 1) {
                 rankText = '1st';
                 rankBg = '#FEF3C7';
                 rankColor = '#B45309';
@@ -303,17 +305,23 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
 
                 const scoreVal = parseFloat(entry.total_score || 0).toFixed(precision);
                 const isVerified = Boolean(entry.is_verified);
+                const stackItems = [
+                    { text: `${scoreVal}%`, bold: true, fontSize: 8, color: '#0F172A' }
+                ];
+
+                if (tabMethod === 'ordinal_ranking' && entry.rank !== undefined && entry.rank !== null) {
+                    stackItems.push({ text: `Rk: ${entry.rank}`, fontSize: 6.5, color: '#1E293B', bold: true });
+                }
+
+                stackItems.push({
+                    text: isVerified ? 'Verified' : 'Final',
+                    fontSize: 6,
+                    color: isVerified ? '#059669' : '#D97706',
+                    bold: isVerified
+                });
 
                 return {
-                    stack: [
-                        { text: `${scoreVal}%`, bold: true, fontSize: 8, color: '#0F172A' },
-                        {
-                            text: isVerified ? 'Verified' : 'Final',
-                            fontSize: 6,
-                            color: isVerified ? '#059669' : '#D97706',
-                            bold: isVerified
-                        }
-                    ],
+                    stack: stackItems,
                     alignment: 'center',
                     fillColor: defaultRowBg
                 };
@@ -321,14 +329,28 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
 
             // Final Average Score Cell
             const avgVal = parseFloat(row.average_score || 0).toFixed(precision);
-            const finalScoreStack = [
-                { text: `${avgVal}%`, bold: true, fontSize: 8.5, color: '#0F2C59' }
-            ];
-            if (row.is_olympic_trimmed) {
+            const finalScoreStack = [];
+
+            if (tabMethod === 'ordinal_ranking' && row.rank_sum !== undefined && row.rank_sum !== null) {
+                finalScoreStack.push({ text: `Rank Sum: ${row.rank_sum}`, bold: true, fontSize: 8.5, color: '#0F2C59' });
+                finalScoreStack.push({ text: `(Avg: ${avgVal}%)`, fontSize: 6.5, color: '#64748B' });
+            } else {
+                finalScoreStack.push({ text: `${avgVal}%`, bold: true, fontSize: 8.5, color: '#0F2C59' });
+                if (row.is_olympic_trimmed) {
+                    finalScoreStack.push({
+                        text: 'Trimmed',
+                        fontSize: 6,
+                        color: '#64748B',
+                        italics: true
+                    });
+                }
+            }
+
+            if (row.tie_broken_by) {
                 finalScoreStack.push({
-                    text: 'Trimmed',
-                    fontSize: 6,
-                    color: '#64748B',
+                    text: `*Tie break: ${row.tie_broken_by}`,
+                    fontSize: 5.5,
+                    color: '#1E40AF',
                     italics: true
                 });
             }
@@ -341,7 +363,7 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
 
             // Final Rank Cell
             const finalRankCell = {
-                text: `#${row.rank}`,
+                text: row.is_tie ? `#${row.rank} (Tie)` : `#${row.rank}`,
                 bold: true,
                 alignment: 'center',
                 fillColor: rankBg,

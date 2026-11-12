@@ -151,7 +151,7 @@
                 <!-- Navigation Links for Admin -->
                 <nav class="space-y-1.5" id="sidebar-admin-links">
                     <button type="button" data-tab="events-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30">
-                        <i class="fa-solid fa-trophy text-buksu-gold w-4 text-center"></i>
+                        <i class="fa-solid fa-trophy w-4 text-center"></i>
                         <span>Events &amp; Competitions</span>
                     </button>
                     <button type="button" data-tab="assignments-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
@@ -177,7 +177,7 @@
                         <!-- Sub-section for System Settings in Sidebar Mode -->
                         <div id="sidebar-settings-subnav" class="hidden ml-3 pl-3 border-l-2 border-slate-200 dark:border-slate-700/60 space-y-1 py-1">
                             <button type="button" data-subtab="settings-content-branding" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer flex items-center gap-2.5 text-left border border-buksu-gold/30">
-                                <i class="fa-solid fa-building-columns text-buksu-gold w-3.5 text-center text-[10px]"></i>
+                                <i class="fa-solid fa-building-columns w-3.5 text-center text-[10px]"></i>
                                 <span class="truncate">Institution &amp; Branding</span>
                             </button>
                             <button type="button" data-subtab="settings-content-judging" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-2.5 text-left border border-transparent">
@@ -266,7 +266,7 @@
                         <div class="top-nav-bar bg-slate-50/90 px-3 sm:px-8 py-2.5 sm:py-3.5 border-t border-slate-200/80 w-full max-w-full overflow-hidden">
                             <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scroll-smooth w-full min-w-0" id="admin-tabs">
                                 <button data-tab="events-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap">
-                                    <i class="fa-solid fa-trophy me-1.5 text-buksu-gold"></i> Events &amp; Competitions
+                                    <i class="fa-solid fa-trophy me-1.5"></i> Events &amp; Competitions
                                 </button>
                                 <button data-tab="assignments-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
                                     <i class="fa-solid fa-user-check me-1.5 text-slate-400"></i> Judge Assignments
@@ -623,7 +623,7 @@
                 <!-- Sub-tabs Navigation -->
                 <div class="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="settings-subtabs">
                     <button type="button" data-subtab="settings-content-branding" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30">
-                        <i class="fa-solid fa-building-columns me-1.5 text-buksu-gold"></i> Institution &amp; Branding
+                        <i class="fa-solid fa-building-columns me-1.5"></i> Institution &amp; Branding
                     </button>
                     <button type="button" data-subtab="settings-content-judging" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
                         <i class="fa-solid fa-scale-balanced me-1.5 text-slate-400"></i> Judging &amp; Tabulation Rules
@@ -2563,14 +2563,20 @@
                         <i class="fa-solid fa-gavel text-lg"></i>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Official Judge Scoring</span>
                             <span id="judge-event-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">Not Yet Started</span>
+                            <span id="judge-blind-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold hidden"></span>
                         </div>
                         <h3 id="judge-modal-title" class="font-extrabold text-slate-800 text-lg sm:text-xl leading-tight">Competition Scoring Portal</h3>
                     </div>
                 </div>
-                <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+                <div class="flex items-center gap-2.5">
+                    <button type="button" id="judgeViewLiveStandingsBtn" class="hidden px-3.5 py-1.5 rounded-xl text-xs font-bold bg-buksu-navy text-buksu-gold border border-buksu-gold/30 hover:bg-slate-800 transition-colors items-center gap-1.5 cursor-pointer shadow-xs">
+                        <i class="fa-solid fa-chart-line"></i> View Live Standings
+                    </button>
+                    <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+                </div>
             </div>
 
             <!-- Body Grid: Left Contestants list (3 cols), Right Scoring Form (9 cols) -->
@@ -2793,7 +2799,7 @@
             <!-- Footer -->
             <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                 <span id="tab-live-sync-indicator" class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live auto-syncing every 3 seconds
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live
                 </span>
                 <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl transition-all cursor-pointer">
                     Close Board

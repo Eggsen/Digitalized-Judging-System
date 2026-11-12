@@ -685,6 +685,10 @@ async function updateJudgingPeriod(req, res, next) {
  */
 async function getEventQR(req, res, next) {
     try {
+        if (req.user && req.user.role === 'judge') {
+            return res.status(403).json({ success: false, message: 'QR code sharing is restricted to Administrators and Tabulators.' });
+        }
+
         const { id } = req.params;
         const query = getIdFilter(id);
 

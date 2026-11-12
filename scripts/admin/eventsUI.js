@@ -1566,6 +1566,11 @@ let currentQrData = null;
 let activeParentModal = null;
 
 export async function openEventQrModal(eventId, eventName, parentModal = null) {
+    if (document.body.dataset.role === 'judge') {
+        showToast('Access Restricted', 'QR code generation and sharing is restricted to Administrators and Tabulators.', 'warning');
+        return;
+    }
+
     currentQrEventId = eventId;
     currentQrType = 'judge';
 

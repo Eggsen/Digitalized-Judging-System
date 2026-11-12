@@ -1,4 +1,5 @@
 import { getScores, submitScore, selfUnlockJudgeScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
+import { openTabulationBoardModal } from "/scripts/tabulator/tabulatorUI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel } from "/scripts/utils/websocket.js";
 
@@ -231,6 +232,37 @@ async function loadJudgeEventData() {
             judgingStatusBadge.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700';
         } else {
             judgingStatusBadge.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
+        }
+    }
+
+    // Update Blind Judging state badge and Live Standings button in modal header
+    const isBlindJudging = res.is_blind_judging !== false;
+    const blindStatusBadge = document.getElementById('judge-blind-status-badge');
+    if (blindStatusBadge) {
+        blindStatusBadge.classList.remove('hidden');
+        if (isBlindJudging) {
+            blindStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs';
+            blindStatusBadge.innerHTML = '<i class="fa-solid fa-eye-slash text-slate-500"></i> Blind Judging Active';
+            blindStatusBadge.title = 'Blind judging mode is active. Evaluations are confidential and scores from other judges are hidden.';
+        } else {
+            blindStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800 flex items-center gap-1.5 shadow-2xs';
+            blindStatusBadge.innerHTML = '<i class="fa-solid fa-eye text-blue-600"></i> Open Standings Mode';
+            blindStatusBadge.title = 'Blind judging is disabled. Real-time standings and peer scores are accessible.';
+        }
+    }
+
+    const liveStandingsBtn = document.getElementById('judgeViewLiveStandingsBtn');
+    if (liveStandingsBtn) {
+        if (!isBlindJudging) {
+            liveStandingsBtn.classList.remove('hidden');
+            liveStandingsBtn.classList.add('flex');
+            liveStandingsBtn.onclick = () => {
+                openTabulationBoardModal(currentEventId, currentEventData.eventName || `Competition #${currentEventId}`);
+            };
+        } else {
+            liveStandingsBtn.classList.add('hidden');
+            liveStandingsBtn.classList.remove('flex');
+            liveStandingsBtn.onclick = null;
         }
     }
 

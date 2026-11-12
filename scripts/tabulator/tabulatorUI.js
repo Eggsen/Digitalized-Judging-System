@@ -17,19 +17,17 @@ function updateSyncIndicator(status) {
     if (status === 'connected') {
         indicator.innerHTML = `
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="text-emerald-700 font-bold flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt text-amber-500"></i> Real-Time WebSocket Live
-            </span>
+            <span class="text-emerald-700 font-bold">Live</span>
         `;
     } else if (status === 'connecting') {
         indicator.innerHTML = `
             <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-            <span class="text-slate-500">Connecting real-time stream...</span>
+            <span class="text-slate-500">Connecting...</span>
         `;
     } else {
         indicator.innerHTML = `
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span class="text-slate-400">Live auto-syncing every 3s (Polling fallback)</span>
+            <span class="text-slate-400">Live</span>
         `;
     }
 }
@@ -128,8 +126,12 @@ export function initTabulatorUI() {
         }
     });
 
-    // QR Access button
+    // QR Access button (restricted from judges)
     document.getElementById('openTabulationQrBtn')?.addEventListener('click', () => {
+        if (document.body.dataset.role === 'judge') {
+            showToast('Access Restricted', 'QR code generation and sharing is restricted to Administrators and Tabulators.', 'warning');
+            return;
+        }
         const eventName = document.getElementById('tabulation-event-title')?.textContent || `Competition #${currentEventId}`;
         if (currentEventId) {
             openEventQrModal(currentEventId, eventName, 'tabulation-board-modal');
@@ -451,6 +453,28 @@ function renderTabulationBoard(data) {
         }
     }
 
+    const isJudgeRole = (role === 'judge' || document.body.dataset.role === 'judge');
+
+    // Restrict PDF export controls: Judges cannot export results
+    const printWrapper = document.getElementById('printTabulationWrapper');
+    if (printWrapper) {
+        if (isJudgeRole) {
+            printWrapper.classList.add('hidden');
+        } else {
+            printWrapper.classList.remove('hidden');
+        }
+    }
+
+    // Restrict QR code sharing: Judges cannot view/share event QR code
+    const qrBtn = document.getElementById('openTabulationQrBtn');
+    if (qrBtn) {
+        if (isJudgeRole) {
+            qrBtn.classList.add('hidden');
+        } else {
+            qrBtn.classList.remove('hidden');
+        }
+    }
+
     // Render Table Matrix
     const tableHead = document.getElementById('tab-table-head');
     const tableBody = document.getElementById('tab-table-body');
@@ -495,22 +519,31 @@ function renderTabulationBoard(data) {
     matrix.forEach(row => {
         let rankBadge = '';
         let rowClass = 'hover:bg-slate-50/80 transition-colors border-b border-slate-100';
+        const tieText = row.is_tie ? ' (Tie)' : '';
 
         if (row.rank === 1) {
-            rankBadge = '<span class="w-8 h-8 rounded-full bg-amber-400 text-buksu-navy font-black text-xs inline-flex items-center justify-center shadow-sm border border-amber-300"><i class="fa-solid fa-trophy"></i></span>';
+            rankBadge = `<span class="w-8 h-8 rounded-full bg-amber-400 text-buksu-navy font-black text-xs inline-flex items-center justify-center shadow-sm border border-amber-300" title="Rank 1${tieText}"><i class="fa-solid fa-trophy"></i></span>`;
             rowClass += ' bg-amber-50/20';
         } else if (row.rank === 2) {
-            rankBadge = '<span class="w-8 h-8 rounded-full bg-slate-300 text-slate-800 font-black text-xs inline-flex items-center justify-center shadow-sm border border-slate-400"><i class="fa-solid fa-medal"></i></span>';
+            rankBadge = `<span class="w-8 h-8 rounded-full bg-slate-300 text-slate-800 font-black text-xs inline-flex items-center justify-center shadow-sm border border-slate-400" title="Rank 2${tieText}"><i class="fa-solid fa-medal"></i></span>`;
         } else if (row.rank === 3) {
-            rankBadge = '<span class="w-8 h-8 rounded-full bg-amber-700/80 text-white font-black text-xs inline-flex items-center justify-center shadow-sm border border-amber-800"><i class="fa-solid fa-award"></i></span>';
+            rankBadge = `<span class="w-8 h-8 rounded-full bg-amber-700/80 text-white font-black text-xs inline-flex items-center justify-center shadow-sm border border-amber-800" title="Rank 3${tieText}"><i class="fa-solid fa-award"></i></span>`;
         } else {
             rankBadge = `<span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs inline-flex items-center justify-center">${row.rank}</span>`;
+        }
+
+        let tieIndicatorHtml = '';
+        if (row.is_tie) {
+            tieIndicatorHtml = `<div class="mt-1"><span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider inline-flex items-center gap-0.5"><i class="fa-solid fa-equals text-[7px]"></i> Tie</span></div>`;
+        } else if (row.tie_broken_by) {
+            tieIndicatorHtml = `<div class="mt-1"><span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-0.5" title="Tie broken by: ${escapeHtml(row.tie_broken_by)}"><i class="fa-solid fa-scale-balanced text-[7px]"></i> ${escapeHtml(row.tie_broken_by)}</span></div>`;
         }
 
         tbodyHtml += `
             <tr class="${rowClass}">
                 <td class="py-3.5 px-4 text-center align-middle">
                     ${rankBadge}
+                    ${tieIndicatorHtml}
                 </td>
                 <td class="py-3.5 px-4 align-middle">
                     <div class="flex items-center gap-3">
@@ -562,16 +595,25 @@ function renderTabulationBoard(data) {
                         `;
                     }
 
+                    const rankBadgeHtml = (tabulationMethod === 'ordinal_ranking' && entry.rank !== undefined && entry.rank !== null)
+                        ? `<span class="text-[9px] font-black text-slate-700 bg-slate-200/90 px-1.5 py-0.2 rounded mt-0.5 border border-slate-300/80 shadow-2xs">Rank #${entry.rank}</span>`
+                        : '';
+                    const printRankHtml = (tabulationMethod === 'ordinal_ranking' && entry.rank !== undefined && entry.rank !== null)
+                        ? `<div class="text-[7.5px] font-bold text-slate-600">Rank #${entry.rank}</div>`
+                        : '';
+
                     scoreCell = `
                         <div class="inline-flex flex-col items-center">
                             <button type="button" class="view-score-breakdown-btn group flex flex-col items-center p-1.5 rounded-xl hover:bg-slate-100/80 transition-all cursor-pointer border border-transparent hover:border-slate-300 no-print" data-contestant-id="${row.contestant_id}" data-judge-id="${j.id}" title="Click to inspect itemized criteria breakdown and verify score">
                                 <span class="text-xs font-black ${isVerified ? 'text-emerald-800 bg-emerald-50 border-emerald-300' : 'text-slate-800 bg-slate-50 border-slate-300'} px-2.5 py-0.5 rounded-md border group-hover:scale-105 transition-transform shadow-2xs">
                                     ${parseFloat(entry.total_score || 0).toFixed(precision)}%
                                 </span>
+                                ${rankBadgeHtml}
                                 ${verifyBadgeHtml}
                             </button>
                             <div class="hidden print-only text-center">
                                 <div class="text-xs font-black text-slate-800 font-mono">${parseFloat(entry.total_score || 0).toFixed(precision)}%</div>
+                                ${printRankHtml}
                                 <div class="text-[8px] text-slate-500 uppercase">${isVerified ? 'Verified' : 'Final'}</div>
                             </div>
                             ${unlockBtnHtml}
@@ -614,8 +656,8 @@ function renderTabulationBoard(data) {
         if (row.is_olympic_trimmed) {
             methodBadges += `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 inline-block mb-1" title="Olympic Trimming Applied (Highest & Lowest judge score excluded)">Olympic Trimmed</span>`;
         }
-        if (tabulationMethod === 'ordinal_ranking' && row.rank_sum !== undefined) {
-            methodBadges += `<div class="text-[10px] font-extrabold text-buksu-navy mb-0.5">Rank Sum: ${row.rank_sum}</div>`;
+        if (tabulationMethod === 'ordinal_ranking' && row.rank_sum !== undefined && row.rank_sum !== null) {
+            methodBadges += `<div class="text-[11px] font-black text-buksu-navy bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md mb-1 inline-block shadow-2xs">Rank Sum: ${row.rank_sum}</div>`;
         }
 
         tbodyHtml += `
@@ -1263,7 +1305,9 @@ function buildClientPdfMakeDocDefinition(data, logoDataUrl = null, qrCodeDataUrl
             let rankText = `${row.rank}`;
             let rankBg = defaultRowBg;
             let rankColor = '#1E293B';
-            if (row.rank === 1) {
+            if (row.is_tie) {
+                rankText = `${row.rank} (Tie)`;
+            } else if (row.rank === 1) {
                 rankText = '1st';
                 rankBg = '#FEF3C7';
                 rankColor = '#B45309';
@@ -1335,31 +1379,51 @@ function buildClientPdfMakeDocDefinition(data, logoDataUrl = null, qrCodeDataUrl
 
                 const scoreVal = parseFloat(entry.total_score || 0).toFixed(precision);
                 const isVerified = Boolean(entry.is_verified);
+                const stackItems = [
+                    { text: `${scoreVal}%`, bold: true, fontSize: 8, color: '#0F172A' }
+                ];
+
+                if (tabMethod === 'ordinal_ranking' && entry.rank !== undefined && entry.rank !== null) {
+                    stackItems.push({ text: `Rk: ${entry.rank}`, fontSize: 6.5, color: '#1E293B', bold: true });
+                }
+
+                stackItems.push({
+                    text: isVerified ? 'Verified' : 'Final',
+                    fontSize: 6,
+                    color: isVerified ? '#059669' : '#D97706',
+                    bold: isVerified
+                });
 
                 return {
-                    stack: [
-                        { text: `${scoreVal}%`, bold: true, fontSize: 8, color: '#0F172A' },
-                        {
-                            text: isVerified ? 'Verified' : 'Final',
-                            fontSize: 6,
-                            color: isVerified ? '#059669' : '#D97706',
-                            bold: isVerified
-                        }
-                    ],
+                    stack: stackItems,
                     alignment: 'center',
                     fillColor: defaultRowBg
                 };
             });
 
             const avgVal = parseFloat(row.average_score || 0).toFixed(precision);
-            const finalScoreStack = [
-                { text: `${avgVal}%`, bold: true, fontSize: 8.5, color: '#0F2C59' }
-            ];
-            if (row.is_olympic_trimmed) {
+            const finalScoreStack = [];
+
+            if (tabMethod === 'ordinal_ranking' && row.rank_sum !== undefined && row.rank_sum !== null) {
+                finalScoreStack.push({ text: `Rank Sum: ${row.rank_sum}`, bold: true, fontSize: 8.5, color: '#0F2C59' });
+                finalScoreStack.push({ text: `(Avg: ${avgVal}%)`, fontSize: 6.5, color: '#64748B' });
+            } else {
+                finalScoreStack.push({ text: `${avgVal}%`, bold: true, fontSize: 8.5, color: '#0F2C59' });
+                if (row.is_olympic_trimmed) {
+                    finalScoreStack.push({
+                        text: 'Trimmed',
+                        fontSize: 6,
+                        color: '#64748B',
+                        italics: true
+                    });
+                }
+            }
+
+            if (row.tie_broken_by) {
                 finalScoreStack.push({
-                    text: 'Trimmed',
-                    fontSize: 6,
-                    color: '#64748B',
+                    text: `*Tie break: ${row.tie_broken_by}`,
+                    fontSize: 5.5,
+                    color: '#1E40AF',
                     italics: true
                 });
             }
@@ -1371,7 +1435,7 @@ function buildClientPdfMakeDocDefinition(data, logoDataUrl = null, qrCodeDataUrl
             };
 
             const finalRankCell = {
-                text: `#${row.rank}`,
+                text: row.is_tie ? `#${row.rank} (Tie)` : `#${row.rank}`,
                 bold: true,
                 alignment: 'center',
                 fillColor: rankBg,
@@ -1581,6 +1645,11 @@ function buildClientPdfMakeDocDefinition(data, logoDataUrl = null, qrCodeDataUrl
  */
 async function downloadOrPreviewTabulationPDF(action = 'download') {
     if (!currentEventId) return;
+
+    if (document.body.dataset.role === 'judge') {
+        showToast("Access Restricted", "Tabulation results export is restricted to Administrators and Tabulators.", "warning");
+        return;
+    }
 
     const printBtn = document.getElementById('printTabulationBtn');
     const previewBtn = document.getElementById('previewTabulationPdfBtn');
