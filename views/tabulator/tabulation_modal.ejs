@@ -1,0 +1,203 @@
+    <!-- MODAL: LIVE TABULATION BOARD (ACCESSIBLE TO TABULATOR & ADMIN) -->
+    <div id="tabulation-board-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+        <!-- Print Watermark (controlled via Settings -> Branding) -->
+        <div id="tab-print-watermark" class="hidden pointer-events-none fixed inset-0 z-0 flex items-center justify-center opacity-[0.06] select-none">
+            <span id="tab-print-watermark-text" class="text-7xl font-black uppercase text-slate-800 -rotate-45 tracking-widest text-center">OFFICIAL TABULATION SHEET</span>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full p-6 sm:p-8 space-y-5 max-h-[94vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col relative z-10">
+            <!-- Print Header (Official Institution Banner for window.print) -->
+            <div id="tab-print-header" class="hidden print-only mb-6 border-b-2 border-slate-900 pb-4">
+                <div class="flex items-center justify-between gap-4">
+                    <img id="tab-print-logo" crossorigin="anonymous" src="/assets/logo/DJS Logo.png" alt="Logo" class="w-16 h-16 object-contain shrink-0" onerror="this.style.display='none'">
+                    <div class="text-center flex-1">
+                        <h2 id="tab-print-institution" class="text-lg font-black uppercase tracking-wider text-slate-900">Bukidnon State University</h2>
+                        <p id="tab-print-campus-unit" class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Office of Student Affairs & Services &bull; Tabulation Committee</p>
+                        <h1 id="tab-print-event-title" class="text-base font-extrabold text-slate-900 mt-1">Official Event Scoring Sheet</h1>
+                        <p class="text-[10px] text-slate-500 font-medium">Certified Tabulation Report &bull; Printed: <span id="tab-print-date"></span></p>
+                    </div>
+                    <div class="w-16 h-16 shrink-0 flex items-center justify-center">
+                        <span class="text-xs font-black px-2.5 py-1 rounded bg-slate-100 text-slate-800 border border-slate-300 uppercase">Official</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header (Screen view) -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3 no-print">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md">
+                        <i class="fa-solid fa-calculator text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Live Tabulation Board</span>
+                            <span id="tab-event-judging-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">Not Yet Started</span>
+                        </div>
+                        <h3 id="tabulation-event-title" class="font-extrabold text-slate-800 text-lg sm:text-xl leading-tight">Official Scoring Matrix</h3>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" id="tabVerifyAllBtn" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 hidden shadow-xs">
+                        <i class="fa-solid fa-shield-check"></i> Verify All Scores
+                    </button>
+                    <button type="button" id="openTabulationQrBtn" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-purple-200">
+                        <i class="fa-solid fa-qrcode"></i> QR Access
+                    </button>
+                    <button type="button" id="refreshTabulationBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh
+                    </button>
+                    <div id="printTabulationWrapper" class="relative inline-flex items-center gap-1.5">
+                        <button type="button" id="printTabulationBtn" class="px-3.5 py-1.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl transition-all cursor-not-allowed flex items-center gap-1.5 disabled:pointer-events-none" disabled title="All scores must be verified before exporting PDF">
+                            <i class="fa-solid fa-lock"></i> Export PDF
+                        </button>
+                        <button type="button" id="previewTabulationPdfBtn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all hidden items-center gap-1 cursor-pointer" title="Preview PDF in a new tab">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Preview
+                        </button>
+                    </div>
+                    <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div id="tab-stats-container" class="w-full"></div>
+
+            <!-- Real-time Scoring Matrix Table -->
+            <div class="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-xs flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead id="tab-table-head"></thead>
+                    <tbody id="tab-table-body" class="divide-y divide-slate-100 text-xs">
+                        <tr>
+                            <td class="py-12 text-center text-slate-400 text-xs">
+                                <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading live matrix...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Print Signatories Section (Certified Signatures for window.print) -->
+            <div id="tab-print-signatories" class="hidden print-only mt-8 pt-4">
+                <p class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-8 text-center">Certified Correct and Approved by the Board of Judges & Tabulation Committee:</p>
+                <div class="grid grid-cols-3 gap-8 text-center" id="tab-signatories-grid">
+                    <!-- Dynamic Signatories populated from settings.branding.signatories -->
+                </div>
+                <!-- Official Verification Seal -->
+                <div class="mt-8 pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+                    <div class="flex items-center gap-3">
+                        <img id="tab-print-qr-seal" src="" alt="Verification QR" class="w-14 h-14 object-contain border border-slate-300 p-0.5 rounded" onerror="this.style.display='none'">
+                        <div class="text-left">
+                            <span class="font-bold text-slate-800 uppercase block tracking-wider">Digital Verification Seal</span>
+                            <span>Scan with any mobile device to verify certified results online.</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="block font-mono text-slate-400">Security: QR Authenticated</span>
+                        <span class="block text-slate-600 font-semibold">Digitalized Judging System &bull; Tabulation Verified</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span id="tab-live-sync-indicator" class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live
+                </span>
+                <button type="button" class="close-modal-btn px-5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold text-xs rounded-xl transition-all cursor-pointer">
+                    Close Board
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SCORE BREAKDOWN & VERIFICATION (FOR TABULATOR & ADMIN) -->
+    <div id="score-breakdown-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-[60] hidden no-print">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-4 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100 animate-fade-in flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3.5 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-black shadow-xs border border-buksu-gold/30 shrink-0">
+                        <i class="fa-solid fa-list-check text-base"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Score Audit &amp; Verification</span>
+                            <span id="breakdown-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">Submitted</span>
+                        </div>
+                        <h3 id="breakdown-modal-title" class="font-extrabold text-slate-800 text-base leading-tight truncate">Judge Score Breakdown</h3>
+                    </div>
+                </div>
+                <button type="button" class="close-breakdown-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 leading-none transition-colors shrink-0 ms-2">&times;</button>
+            </div>
+
+            <!-- Contestant & Judge Banner Strip -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="breakdown-contestant-num" class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold font-black text-xs flex items-center justify-center shrink-0 border border-buksu-gold/30">
+                        #1
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h4 id="breakdown-contestant-name" class="font-extrabold text-slate-800 text-xs truncate">Contestant Name</h4>
+                            <span id="breakdown-contestant-type" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-buksu-navy border border-slate-200 hidden shrink-0">Team</span>
+                        </div>
+                        <p id="breakdown-contestant-dept" class="text-[11px] text-slate-500 font-normal truncate">Department / Organization</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3 w-full sm:w-auto justify-between sm:justify-start shrink-0">
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Evaluating Judge</span>
+                        <span id="breakdown-judge-name" class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-gavel text-buksu-navy text-[10px]"></i> Judge Name
+                        </span>
+                    </div>
+                    <div class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-right shrink-0">
+                        <span class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Total Score</span>
+                        <span id="breakdown-total-score" class="text-base font-black text-buksu-navy font-mono">0.00%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Action & Status Banner -->
+            <div id="breakdown-verification-banner" class="w-full shrink-0"></div>
+
+            <!-- Timestamp & Unlock info if available -->
+            <div id="breakdown-audit-meta" class="flex items-center justify-between text-[11px] text-slate-500 px-1 flex-wrap gap-2 shrink-0">
+                <span id="breakdown-submitted-time"><i class="fa-regular fa-clock me-1 text-slate-400"></i>Submitted: N/A</span>
+                <span id="breakdown-criteria-count" class="font-semibold text-slate-600">0 of 0 Criteria Evaluated</span>
+            </div>
+
+            <!-- Detailed Criteria Breakdown List -->
+            <div class="space-y-3 flex-1 min-h-[140px] flex flex-col overflow-hidden">
+                <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-layer-group text-buksu-navy"></i> Itemized Scoring Criteria &amp; Sub-Scores
+                </h4>
+                <div id="breakdown-criteria-list" class="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+                    <!-- Populated dynamically via tabulatorUI.js -->
+                </div>
+            </div>
+
+            <!-- Special Citations / Awards given by this judge (if any) -->
+            <div id="breakdown-citations-section" class="hidden space-y-1.5 border-t border-slate-100 pt-3 shrink-0">
+                <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-award text-amber-600"></i> Special Citations / Awards Assigned
+                </h5>
+                <div id="breakdown-citations-list" class="flex items-center gap-1.5 flex-wrap"></div>
+            </div>
+
+            <!-- Modal Footer with Verify, Unlock & Close actions -->
+            <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 mt-auto">
+                <button type="button" class="close-breakdown-modal-btn w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center">
+                    Close Audit
+                </button>
+                <div id="breakdown-actions-container" class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-start sm:justify-end">
+                    <div id="breakdown-verify-container" class="flex flex-wrap items-center gap-2">
+                        <!-- Dynamic Verify / Verified Button -->
+                    </div>
+                    <div id="breakdown-unlock-container" class="flex flex-wrap items-center gap-2">
+                        <!-- Dynamic Unlock Button if applicable -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>

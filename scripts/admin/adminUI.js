@@ -1,11 +1,8 @@
-import { createAccount, listAccounts, updatePermissions } from "/scripts/admin/adminAPI.js";
-import { showNotice } from "/scripts/utils/index.js";
+import { createAccount, listAccounts, updatePermissions, updateRole, revokeInvitation, revokeUserSessions, deleteAccount, resetAdminPin } from "/scripts/admin/adminAPI.js";
+import { showNotice, formatDateTime } from "/scripts/utils/index.js";
+import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
-
-const userRole = document.body.dataset.role;
-if (userRole === 'admin') {
-    initAdminPanel();
-}
+import { loadAdminEvents } from "/scripts/admin/eventsUI.js";
 
 async function loadAccounts() {
     const tbody = document.getElementById('accounts-tbody');
@@ -26,24 +23,52 @@ async function loadAccounts() {
     }
 
     tbody.innerHTML = res.accounts.map(account => `
-        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="px-4 py-3 font-semibold text-slate-800 align-middle">
-                <i class="fa-solid fa-user text-slate-400 me-1.5"></i>${account.username}
-                ${account.email ? `<div class="text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
-                ${account.created_at ? `<div class="text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${account.created_at}</div>` : ''}
-                ${account.activated_at ? `<div class="text-emerald-600 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${account.activated_at}</div>` : ''}
+        <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
+            <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
+                <i class="fa-solid fa-user text-slate-400 dark:text-slate-500 me-1.5"></i>${account.first_name ? `${account.first_name} ${account.last_name}` : (account.username || account.name || 'Pending Activation')}
+                ${account.email ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[11px] mt-0.5"><i class="fa-solid fa-envelope text-[10px] me-1"></i>${account.email}</div>` : ''}
+                ${account.created_at ? `<div class="text-slate-400 dark:text-slate-400 font-normal text-[10px] mt-0.5"><i class="fa-regular fa-clock me-1"></i>Invited: ${formatDateTime(account.created_at)}</div>` : ''}
+                ${account.activated_at ? `<div class="text-emerald-600 dark:text-emerald-400 font-medium text-[10px] mt-0.5"><i class="fa-solid fa-check me-1"></i>Activated: ${formatDateTime(account.activated_at)}</div>` : ''}
             </td>
-            <td class="px-4 py-3 text-center align-middle">${getRoleBadge(account.role)}</td>
+            <td class="px-4 py-3 text-center align-middle">
+                ${account.role === 'admin' 
+                    ? getRoleBadge('admin')
+                    : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <i class="fa-solid ${account.role === 'judge' ? 'fa-gavel' : 'fa-calculator'} text-buksu-navy dark:text-buksu-gold text-xs"></i>
+                        <select class="role-select bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer" data-id="${account.id}" data-current="${account.role}">
+                            <option value="judge" ${account.role === 'judge' ? 'selected' : ''}>Judge</option>
+                            <option value="tabulator" ${account.role === 'tabulator' ? 'selected' : ''}>Tabulator</option>
+                        </select>
+                       </div>`
+                }
+            </td>
             <td class="px-4 py-3 text-center align-middle">${getStatusBadge(account.is_active, account.status)}</td>
             <td class="px-4 py-3 text-center align-middle">
-                <div class="flex items-center justify-center gap-1.5">
-                    ${account.status === 'pending' && account.invite_link
-                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold transition-colors cursor-pointer border border-indigo-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1"></i>Copy Link</button>`
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    ${(account.status === 'pending' || account.status === 'expired') && account.invite_link
+                        ? `<button class="copy-invite-btn px-2.5 py-1 rounded-xl bg-slate-100 text-buksu-navy hover:bg-slate-200 font-bold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-link="${account.invite_link}"><i class="fa-solid fa-copy me-1 text-buksu-navy"></i>Copy</button>`
                         : ''
                     }
-                    ${account.is_active
-                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>`
-                        : `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                    ${(account.status === 'pending' || account.status === 'expired')
+                        ? `<button class="revoke-invite-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Cancel and invalidate this invitation link"><i class="fa-solid fa-ban me-1"></i>Revoke</button>`
+                        : ''
+                    }
+                    ${account.status === 'active' && account.is_active && account.role === 'admin'
+                        ? `<button class="reset-admin-pin-btn px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold transition-colors cursor-pointer border border-amber-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Reset exclusive Admin PIN"><i class="fa-solid fa-key me-1 text-amber-600"></i>Reset PIN</button>`
+                        : ''
+                    }
+                    ${account.status === 'active' && account.is_active
+                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>
+                           <button class="revoke-session-btn px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Terminate active logins and force re-login"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out</button>`
+                        : ''
+                    }
+                    ${account.status === 'active' && !account.is_active
+                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                        : ''
+                    }
+                    ${account.status === 'revoked'
+                        ? `<button class="delete-account-btn px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 font-bold transition-colors cursor-pointer border border-rose-200 dark:border-rose-800 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Permanently delete this revoked account"><i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove</button>`
+                        : ''
                     }
                 </div>
             </td>
@@ -59,6 +84,29 @@ async function loadAccounts() {
                 setTimeout(() => {
                     btn.innerHTML = '<i class="fa-solid fa-copy me-1"></i>Copy Link';
                 }, 2000);
+            }
+        });
+    });
+
+    document.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', async () => {
+            const userId = select.dataset.id;
+            const newRole = select.value;
+            const currentRole = select.dataset.current;
+
+            if (newRole === currentRole) return;
+
+            select.disabled = true;
+            const res = await updateRole(userId, newRole);
+
+            if (res.success) {
+                showToast("Role Configured!", res.message, "edit");
+                await loadAccounts();
+                await loadAdminEvents();
+            } else {
+                showToast("Update Failed", res.message, "error");
+                select.value = currentRole;
+                select.disabled = false;
             }
         });
     });
@@ -88,22 +136,130 @@ async function loadAccounts() {
             }
         });
     });
+
+    document.querySelectorAll('.revoke-invite-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this invitation';
+            if (!confirm(`Are you sure you want to revoke the invitation link for ${targetName}? The link will become immediately invalid.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await revokeInvitation(userId);
+            if (res.success) {
+                showToast("Invitation Revoked", res.message, "archive");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-ban me-1"></i>Revoke';
+            }
+        });
+    });
+
+    document.querySelectorAll('.revoke-session-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this user';
+            if (!confirm(`Force sign out ${targetName} from all active devices? They will be prompted to log in again immediately.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await revokeUserSessions(userId);
+            if (res.success) {
+                showToast("Sessions Terminated", res.message, "success");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out';
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-account-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this account';
+            if (!confirm(`Are you sure you want to permanently remove the revoked account for "${targetName}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await deleteAccount(userId);
+            if (res.success) {
+                showToast("Account Removed", res.message, "archive");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove';
+            }
+        });
+    });
+
+    document.querySelectorAll('.reset-admin-pin-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            const targetName = btn.dataset.name || 'this administrator';
+            if (!confirm(`Reset the exclusive Admin PIN for ${targetName}? A new 6-digit PIN will be generated immediately.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const res = await resetAdminPin(userId);
+            if (res.success && res.admin_pin) {
+                alert(`New Exclusive Admin PIN for ${targetName}:\n\n${res.admin_pin}\n\nPlease copy and give this PIN exclusively to the administrator.`);
+                showToast("Admin PIN Reset", `New PIN generated for ${targetName}.`, "create");
+                await loadAccounts();
+            } else {
+                showToast("Action Failed", res.message || "Failed to reset Admin PIN.", "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-key me-1 text-amber-600"></i>Reset PIN';
+            }
+        });
+    });
 }
 
 function initAdminPanel() {
+    const roleSelect = document.getElementById('create-role');
+    const pinGroup = document.getElementById('create-admin-pin-group');
+    const updatePinGroupVisibility = () => {
+        if (pinGroup && roleSelect) {
+            if (roleSelect.value === 'admin') {
+                pinGroup.classList.remove('hidden');
+            } else {
+                pinGroup.classList.add('hidden');
+            }
+        }
+    };
+    roleSelect?.addEventListener('change', updatePinGroupVisibility);
+    updatePinGroupVisibility();
+
     const createForm = document.getElementById('createAccountForm');
     createForm?.addEventListener('submit', async () => {
         const role = document.getElementById('create-role').value;
-        const username = document.getElementById('create-username').value.trim();
         const email = document.getElementById('create-email').value.trim();
+        const pinInput = document.getElementById('create-admin-pin');
+        const adminPin = (role === 'admin' && pinInput) ? pinInput.value.trim() : undefined;
 
         const noticeWrap = document.getElementById('admin-create-notice-wrap');
         const notice = document.getElementById('admin-create-notice');
 
-        if (!username || !email) {
+        if (!email) {
             if (noticeWrap && notice) {
                 noticeWrap.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200';
-                notice.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1.5"></i>Both Username and Email are required.';
+                notice.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1.5"></i>Please enter a valid email address.';
                 noticeWrap.classList.remove('hidden');
             }
             return;
@@ -114,24 +270,58 @@ function initAdminPanel() {
         btn.disabled = true;
         btnText.textContent = 'Generating Invitation...';
 
-        const res = await createAccount({ role, username, email });
+        const payload = { role, email };
+        if (adminPin) payload.admin_pin = adminPin;
+
+        const res = await createAccount(payload);
 
         btn.disabled = false;
         btnText.textContent = 'Send Invitation';
 
         if (noticeWrap && notice) {
-            noticeWrap.className = `mb-3 p-3 rounded-xl text-xs font-semibold ${res.success ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-rose-600 bg-rose-50 border border-rose-200'}`;
+            const isEmailOk = res.email_sent !== false;
+            const bannerColor = res.success 
+                ? (isEmailOk ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-amber-800 bg-amber-50 border border-amber-300')
+                : 'text-rose-600 bg-rose-50 border border-rose-200';
+            noticeWrap.className = `mb-3 p-3 rounded-xl text-xs font-semibold ${bannerColor}`;
 
-            if (res.success && res.invite_link) {
+            if (res.success) {
+                const icon = isEmailOk ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-amber-600';
+                let inviteHtml = '';
+                if (res.invite_link) {
+                    inviteHtml = `
+                        <div class="text-[11px] font-normal mb-2 text-slate-600">You can also copy and send this invitation link directly to the user:</div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="text" readonly value="${res.invite_link}" id="new-invite-link-input" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono text-slate-800 focus:outline-none" />
+                            <button type="button" id="copy-new-invite-btn" class="px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0">
+                                <i class="fa-solid fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    `;
+                }
+
+                let adminPinHtml = '';
+                if (res.user && res.user.admin_pin) {
+                    adminPinHtml = `
+                        <div class="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-left">
+                            <div class="font-extrabold flex items-center gap-1.5 text-xs text-amber-800">
+                                <i class="fa-solid fa-key text-amber-600"></i> Exclusive Admin PIN Assigned:
+                            </div>
+                            <div class="flex items-center gap-2 mt-1.5">
+                                <input type="text" readonly value="${res.user.admin_pin}" id="new-admin-pin-input" class="w-40 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-black tracking-widest text-buksu-navy focus:outline-none" />
+                                <button type="button" id="copy-new-pin-btn" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-[11px] font-black rounded-lg transition-colors cursor-pointer shrink-0">
+                                    <i class="fa-solid fa-copy"></i> Copy PIN
+                                </button>
+                            </div>
+                            <div class="text-[10px] text-slate-500 mt-1">Provide this PIN exclusively to this administrator. It is required to unlock elevated environment settings (.env).</div>
+                        </div>
+                    `;
+                }
+
                 notice.innerHTML = `
-                    <div class="mb-1.5 font-bold"><i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> ${res.message}</div>
-                    <div class="text-[11px] font-normal mb-2 text-slate-600">Send this invitation link to the user so they can set their password:</div>
-                    <div class="flex items-center gap-1.5">
-                        <input type="text" readonly value="${res.invite_link}" id="new-invite-link-input" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono text-slate-800 focus:outline-none" />
-                        <button type="button" id="copy-new-invite-btn" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
+                    <div class="mb-1.5 font-bold"><i class="fa-solid ${icon} me-1"></i> ${res.message}</div>
+                    ${inviteHtml}
+                    ${adminPinHtml}
                 `;
                 noticeWrap.classList.remove('hidden');
 
@@ -143,6 +333,15 @@ function initAdminPanel() {
                         if (copyBtn) copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
                     }
                 });
+
+                document.getElementById('copy-new-pin-btn')?.addEventListener('click', () => {
+                    const pinInput = document.getElementById('new-admin-pin-input');
+                    if (pinInput && navigator.clipboard) {
+                        navigator.clipboard.writeText(pinInput.value);
+                        const copyBtn = document.getElementById('copy-new-pin-btn');
+                        if (copyBtn) copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+                    }
+                });
             } else {
                 notice.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1.5"></i>${res.message}`;
                 noticeWrap.classList.remove('hidden');
@@ -150,8 +349,8 @@ function initAdminPanel() {
         }
 
         if (res.success) {
-            document.getElementById('create-username').value = '';
             document.getElementById('create-email').value = '';
+            if (pinInput) pinInput.value = '';
             await loadAccounts();
         }
     });
@@ -159,4 +358,13 @@ function initAdminPanel() {
     document.getElementById('refreshAccountsBtn')?.addEventListener('click', loadAccounts);
 
     loadAccounts();
+}
+
+const userRole = document.body.dataset.role;
+if (userRole === 'admin') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAdminPanel);
+    } else {
+        initAdminPanel();
+    }
 }

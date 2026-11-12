@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BukSU JudgeTab - Redirecting...</title>
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
+    <link rel="stylesheet" href="/frontend/css/output.css">
+    <script>
+        (async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
+            const resetToken = urlParams.get('reset_token');
+
+            if (inviteToken) {
+                window.location.replace('/auth/accept-invitation?token=' + encodeURIComponent(inviteToken));
+                return;
+            }
+
+            if (resetToken) {
+                window.location.replace('/auth/reset-password?token=' + encodeURIComponent(resetToken));
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
+                const data = await res.json();
+                if (data.success && data.user) {
+                    window.location.replace('/dashboard');
+                    return;
+                }
+            } catch (e) {}
+
+            window.location.replace('/auth/login');
+        })();
+    </script>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen">
+    <div class="text-center text-white space-y-3">
+        <div class="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs font-bold text-slate-300">Loading BukSU JudgeTab...</p>
+    </div>
+</body>
+</html>
+

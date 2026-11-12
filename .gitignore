@@ -16,3 +16,10 @@ backend/logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Uploaded User Media
+assets/uploads/logos/*
+!assets/uploads/logos/.gitkeep
+
+# Scratch test files
+scratch/

@@ -1,4 +1,4 @@
-import { clearLoginForm, togglePasswordVisibility, showNotice } from "../utils/index.js";
+import { clearLoginForm, togglePasswordVisibility, showNotice, renderRecaptchaWidget } from "../utils/index.js";
 import { verifyInviteToken, acceptInvitation, resetPassword } from "../auth/authAPI.js";
 
 // Module scripts are deferred — DOM is ready by the time this runs
@@ -8,21 +8,15 @@ function initLandingPage() {
     const loginCard = document.getElementById('login-card');
     const acceptInviteCard = document.getElementById('accept-invitation-card');
     const resetTokenCard = document.getElementById('reset-token-card');
-    const registerCard = document.getElementById('register-admin-card');
 
     const togglePasswordBtn = document.getElementById('toggle-password-btn');
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', () => togglePasswordVisibility('password-input', 'toggle-password-icon'));
     }
 
-    const openRegisterBtn = document.getElementById('open-register-admin-btn');
-    if (openRegisterBtn) {
-        openRegisterBtn.addEventListener('click', showRegisterAdminCard);
-    }
-
-    const backFromRegisterBtn = document.getElementById('back-from-register-btn');
-    if (backFromRegisterBtn) {
-        backFromRegisterBtn.addEventListener('click', hideRegisterAdminCard);
+    // Ensure login recaptcha is initialized if enabled
+    if (window.RECAPTCHA_ENABLED === true) {
+        renderRecaptchaWidget('login-recaptcha');
     }
 
     // Password visibility toggles for invite & reset forms
@@ -33,6 +27,22 @@ function initLandingPage() {
         togglePasswordVisibility('invite-confirm-password-input', 'toggle-invite-confirm-pw-icon');
     });
 
+    // Real-time password requirement indicator on account setup
+    const invitePasswordInput = document.getElementById('invite-password-input');
+    if (invitePasswordInput) {
+        invitePasswordInput.addEventListener('input', () => {
+            checkPasswordRequirements(invitePasswordInput.value);
+        });
+    }
+
+    // Real-time password requirement indicator on password reset
+    const resetTokenPasswordInput = document.getElementById('reset-token-password-input');
+    if (resetTokenPasswordInput) {
+        resetTokenPasswordInput.addEventListener('input', () => {
+            checkPasswordRequirements(resetTokenPasswordInput.value, 'reset-req-');
+        });
+    }
+
     document.getElementById('toggle-reset-token-pw-btn')?.addEventListener('click', () => {
         togglePasswordVisibility('reset-token-password-input', 'toggle-reset-token-pw-icon');
     });
@@ -40,27 +50,116 @@ function initLandingPage() {
         togglePasswordVisibility('reset-token-confirm-pw-input', 'toggle-reset-token-confirm-pw-icon');
     });
 
-    // Check URL query parameters for tokens
+    // Check URL query parameters or hidden inputs for tokens or OAuth errors
     const urlParams = new URLSearchParams(window.location.search);
-    const inviteToken = urlParams.get('invite_token') || urlParams.get('token');
-    const resetToken = urlParams.get('reset_token');
+    const tokenFromInput = document.getElementById('invite-token-input')?.value?.trim();
+    const tokenFromResetInput = document.getElementById('reset-token-input')?.value?.trim();
+    const inviteToken = urlParams.get('invite_token') || (acceptInviteCard ? urlParams.get('token') : null) || tokenFromInput;
+    const resetToken = urlParams.get('token') || urlParams.get('reset_token') || tokenFromResetInput;
+    const oauthError = urlParams.get('error');
+    const oauthEmail = urlParams.get('email');
 
-    if (inviteToken && acceptInviteCard && loginCard) {
-        loginCard.classList.add('hidden');
-        if (registerCard) registerCard.classList.add('hidden');
+    if (oauthError) {
+        const noticeText = document.getElementById('notice-text');
+        let errorMsg = 'Google authentication failed. Please try again.';
+
+        switch (oauthError) {
+            case 'no_account':
+                errorMsg = oauthEmail 
+                    ? `No account found for "${oauthEmail}". Please contact an administrator to register your account.`
+                    : 'No registered account found matching your Google email. Please contact an administrator.';
+                break;
+            case 'account_disabled':
+                errorMsg = 'Your account has been disabled. Please contact the administrator.';
+                break;
+            case 'account_locked':
+                errorMsg = 'This admin account has been temporarily locked due to too many failed PIN attempts. Please wait 15 minutes before trying again.';
+                break;
+            case 'session_expired':
+                errorMsg = 'Your session has expired after 7 days for security. Please sign in again.';
+                break;
+            case 'session_revoked':
+                errorMsg = 'Your session was ended or revoked by an administrator. Please sign in again.';
+                break;
+            case 'oauth_disabled':
+                errorMsg = 'Google Sign-In is currently disabled by the system administrator.';
+                break;
+            case 'oauth_denied':
+                errorMsg = 'Google sign-in was cancelled or access was denied.';
+                break;
+            case 'invalid_state':
+                errorMsg = 'Session security check failed. Please try signing in again.';
+                break;
+            case 'unverified_email':
+                errorMsg = 'Your Google email is unverified. Please verify your email with Google first.';
+                break;
+            case 'oauth_config_missing':
+                errorMsg = 'Google OAuth credentials are not properly configured on the server.';
+                break;
+            case 'token_exchange_failed':
+            case 'userinfo_failed':
+                const oauthDetails = urlParams.get('details');
+                errorMsg = oauthDetails 
+                    ? `Unable to complete verification with Google: ${oauthDetails}`
+                    : 'Unable to complete verification with Google. Please try again.';
+                break;
+            default:
+                errorMsg = 'An error occurred during Google sign-in. Please try again.';
+        }
+
+        if (noticeText) {
+            showNotice(noticeText, errorMsg, 'error');
+        }
+
+        // Clean query parameters from URL history without page reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (acceptInviteCard) {
+        if (loginCard) loginCard.classList.add('hidden');
         acceptInviteCard.classList.remove('hidden');
-        acceptInviteCard.classList.add('animate-fade-in');
 
-        document.getElementById('invite-token-input').value = inviteToken;
-        checkInviteToken(inviteToken);
-    } else if (resetToken && resetTokenCard && loginCard) {
-        loginCard.classList.add('hidden');
-        if (registerCard) registerCard.classList.add('hidden');
+        if (inviteToken) {
+            const tokenInput = document.getElementById('invite-token-input');
+            if (tokenInput && !tokenInput.value) tokenInput.value = inviteToken;
+            checkInviteToken(inviteToken);
+        } else {
+            const usernameDisplay = document.getElementById('invite-username-display');
+            const roleDisplay = document.getElementById('invite-role-display');
+            const btn = document.getElementById('acceptInviteBtn');
+            if (usernameDisplay) {
+                usernameDisplay.innerHTML = '<span class="text-amber-600 font-bold"><i class="fa-solid fa-triangle-exclamation me-1.5"></i>Missing Invitation Token</span>';
+            }
+            if (roleDisplay) {
+                roleDisplay.textContent = 'Please open the invitation link provided in your email or by your administrator.';
+            }
+            if (btn) btn.disabled = true;
+        }
+    } else if (resetTokenCard) {
+        if (loginCard) loginCard.classList.add('hidden');
         resetTokenCard.classList.remove('hidden');
         resetTokenCard.classList.add('animate-fade-in');
 
-        document.getElementById('reset-token-input').value = resetToken;
-        checkResetToken(resetToken);
+        const tokenInput = document.getElementById('reset-token-input');
+        if (tokenInput && resetToken) tokenInput.value = resetToken;
+
+        if (resetToken) {
+            checkResetToken(resetToken);
+        } else {
+            const usernameDisplay = document.getElementById('reset-token-username-display');
+            const noticeWrap = document.getElementById('reset-token-notice-wrap');
+            const notice = document.getElementById('reset-token-notice');
+            const btn = document.getElementById('completeResetBtn');
+            if (usernameDisplay) {
+                usernameDisplay.innerHTML = '<span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation me-1.5"></i>Missing Reset Token</span>';
+            }
+            if (noticeWrap && notice) {
+                noticeWrap.className = 'my-4 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200';
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1.5"></i>No password reset token was provided in the link. Please request a new password reset.';
+                noticeWrap.classList.remove('hidden');
+            }
+            if (btn) btn.disabled = true;
+        }
     }
 
     // Accept invitation form submit
@@ -88,10 +187,15 @@ async function checkInviteToken(token) {
     const res = await verifyInviteToken(token);
 
     if (res.success) {
-        if (usernameDisplay) usernameDisplay.textContent = `Account: ${res.username}`;
-        if (roleDisplay) roleDisplay.textContent = `Role: Official ${res.role.charAt(0).toUpperCase() + res.role.slice(1)}`;
+        if (usernameDisplay) usernameDisplay.innerHTML = `<i class="fa-solid fa-envelope me-1.5 text-buksu-navy"></i>Invitation for: ${res.email || res.username || 'User'}`;
+        if (roleDisplay) roleDisplay.textContent = `Role: Official ${res.role ? res.role.charAt(0).toUpperCase() + res.role.slice(1) : ''}`;
         if (noticeWrap) noticeWrap.classList.add('hidden');
         if (btn) btn.disabled = false;
+
+        const fnInput = document.getElementById('invite-firstname-input');
+        const lnInput = document.getElementById('invite-lastname-input');
+        if (fnInput && !fnInput.value && res.first_name) fnInput.value = res.first_name;
+        if (lnInput && !lnInput.value && res.last_name) lnInput.value = res.last_name;
     } else {
         if (usernameDisplay) usernameDisplay.textContent = "Invalid Invitation";
         if (roleDisplay) roleDisplay.textContent = "This link may be invalid, used, or expired.";
@@ -105,12 +209,46 @@ async function checkInviteToken(token) {
     }
 }
 
+function updateRequirementBadge(elementId, isValid) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const icon = el.querySelector('i');
+    if (isValid) {
+        el.className = 'flex items-center gap-1.5 transition-colors text-emerald-600 font-bold';
+        if (icon) icon.className = 'fa-solid fa-circle-check text-[10px] text-emerald-500';
+    } else {
+        el.className = 'flex items-center gap-1.5 transition-colors text-slate-500 font-medium';
+        if (icon) icon.className = 'fa-regular fa-circle text-[10px] text-slate-400';
+    }
+}
+
+export function checkPasswordRequirements(password, prefix = 'req-') {
+    const hasLength = password.length >= 8;
+    const hasCapital = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    updateRequirementBadge(prefix + 'length', hasLength);
+    updateRequirementBadge(prefix + 'capital', hasCapital);
+    updateRequirementBadge(prefix + 'number', hasNumber);
+    updateRequirementBadge(prefix + 'special', hasSpecial);
+
+    return hasLength && hasCapital && hasNumber && hasSpecial;
+}
+
 async function handleAcceptInvite() {
     const token = document.getElementById('invite-token-input')?.value || '';
+    const firstName = document.getElementById('invite-firstname-input')?.value.trim() || '';
+    const lastName = document.getElementById('invite-lastname-input')?.value.trim() || '';
     const password = document.getElementById('invite-password-input')?.value || '';
     const confirmPassword = document.getElementById('invite-confirm-password-input')?.value || '';
     const btn = document.getElementById('acceptInviteBtn');
     const btnText = document.getElementById('invite-btn-text');
+
+    if (!firstName || !lastName) {
+        showInviteNotice('warning', 'Please enter both your first and last name.');
+        return;
+    }
 
     if (!password || !confirmPassword) {
         showInviteNotice('warning', 'Please fill in both password fields.');
@@ -122,29 +260,48 @@ async function handleAcceptInvite() {
         return;
     }
 
-    if (password.length < 6) {
-        showInviteNotice('warning', 'Password must be at least 6 characters long.');
+    if (password.length < 8) {
+        showInviteNotice('warning', 'Password must be at least 8 characters long.');
+        return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one capital letter (A-Z).');
+        return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one number (0-9).');
+        return;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        showInviteNotice('warning', 'Password must contain at least one special character (e.g. !@#$%^&*).');
         return;
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = "Saving Password...";
+    if (btnText) btnText.textContent = "Saving Account...";
 
     const res = await acceptInvitation({
         token,
+        first_name: firstName,
+        last_name: lastName,
         password,
         confirm_password: confirmPassword
     });
 
     if (btn) btn.disabled = false;
-    if (btnText) btnText.textContent = "Save Password & Activate";
+    if (btnText) btnText.textContent = "Save Profile & Activate Account";
 
     if (res.success) {
-        showInviteNotice('success', res.message || "Password updated successfully!");
+        showInviteNotice('success', res.message || "Account activated successfully!");
 
         setTimeout(() => {
             const usernameInput = document.getElementById('username-input');
-            if (usernameInput && res.username) usernameInput.value = res.username;
+            if (usernameInput && (res.email || res.username)) {
+                usernameInput.value = res.email || res.username;
+            }
 
             window.history.replaceState({}, document.title, window.location.pathname);
 
@@ -154,10 +311,15 @@ async function handleAcceptInvite() {
                 acceptInviteCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                if (window.RECAPTCHA_ENABLED === true) {
+                    renderRecaptchaWidget('login-recaptcha');
+                }
+            } else {
+                window.location.href = '/auth/login';
             }
         }, 1500);
     } else {
-        showInviteNotice('error', res.message || "Failed to save password.");
+        showInviteNotice('error', res.message || "Failed to save account details.");
     }
 }
 
@@ -170,7 +332,7 @@ async function checkResetToken(token) {
     if (usernameDisplay) usernameDisplay.textContent = "Verifying reset link...";
 
     try {
-        const response = await fetch(`/backend/auth/reset_password.php?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`);
         const res = await response.json();
 
         if (res.success) {
@@ -189,6 +351,12 @@ async function checkResetToken(token) {
         }
     } catch (e) {
         if (usernameDisplay) usernameDisplay.textContent = "Error verifying link.";
+        if (btn) btn.disabled = true;
+        if (noticeWrap && notice) {
+            noticeWrap.className = 'my-4 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200';
+            notice.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1.5"></i>Network error occurred while verifying the reset token.`;
+            noticeWrap.classList.remove('hidden');
+        }
     }
 }
 
@@ -209,8 +377,23 @@ async function handleCompleteReset() {
         return;
     }
 
-    if (newPassword.length < 6) {
-        showResetTokenNotice('warning', 'Password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+        showResetTokenNotice('warning', 'Password must be at least 8 characters long.');
+        return;
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one capital letter (A-Z).');
+        return;
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one number (0-9).');
+        return;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+        showResetTokenNotice('warning', 'Password must contain at least one special character (e.g. !@#$%^&*).');
         return;
     }
 
@@ -242,6 +425,11 @@ async function handleCompleteReset() {
                 resetTokenCard.classList.add('hidden');
                 loginCard.classList.remove('hidden');
                 loginCard.classList.add('animate-fade-in');
+                if (window.RECAPTCHA_ENABLED === true) {
+                    renderRecaptchaWidget('login-recaptcha');
+                }
+            } else {
+                window.location.href = '/auth/login';
             }
         }, 1500);
     } else {
@@ -289,24 +477,4 @@ function showResetTokenNotice(type, message) {
     noticeWrap.className = `my-4 px-3 py-2 rounded-xl text-xs font-semibold ${styles[type] || styles.error}`;
     notice.innerHTML = `<i class="fa-solid ${icons[type] || icons.error} me-1.5"></i>${message}`;
     noticeWrap.classList.remove('hidden');
-}
-
-function showRegisterAdminCard() {
-    const loginCard = document.getElementById('login-card');
-    const registerCard = document.getElementById('register-admin-card');
-    if (loginCard && registerCard) {
-        loginCard.classList.add('hidden');
-        registerCard.classList.remove('hidden');
-        registerCard.classList.add('animate-fade-in');
-    }
-}
-
-function hideRegisterAdminCard() {
-    const loginCard = document.getElementById('login-card');
-    const registerCard = document.getElementById('register-admin-card');
-    if (loginCard && registerCard) {
-        registerCard.classList.add('hidden');
-        loginCard.classList.remove('hidden');
-        loginCard.classList.add('animate-fade-in');
-    }
 }

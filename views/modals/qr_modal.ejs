@@ -1,0 +1,55 @@
+    <!-- MODAL: EVENT QR CODE GENERATOR & SHARING (ACCESSIBLE TO ADMIN & TABULATOR) -->
+    <div id="event-qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[80] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-slate-100 animate-fade-in text-center relative">
+            <button type="button" id="closeEventQrModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl cursor-pointer transition-colors leading-none">&times;</button>
+            
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto text-xl shadow-xs border border-purple-200">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            
+            <div>
+                <h3 id="event-qr-modal-title" class="text-base font-black text-buksu-navy tracking-tight">Event Access QR Code</h3>
+                <p id="event-qr-modal-desc" class="text-xs text-slate-500 mt-0.5">Scan using any phone camera for instant direct access</p>
+            </div>
+
+            <!-- Mode Selector: Judge Scoring Direct vs Public Live Standings -->
+            <div class="flex items-center justify-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+                <button type="button" id="event-qr-type-judge" class="flex-1 py-1.5 px-2 rounded-lg bg-white text-buksu-navy shadow-xs transition-all cursor-pointer">
+                    <i class="fa-solid fa-gavel me-1 text-buksu-gold"></i> Judge Sheet
+                </button>
+                <button type="button" id="event-qr-type-public" class="flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-buksu-navy transition-all cursor-pointer">
+                    <i class="fa-solid fa-trophy me-1 text-amber-500"></i> Public Board
+                </button>
+            </div>
+
+            <!-- QR Display Container -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center min-h-[260px] relative">
+                <div id="event-qr-loading" class="text-slate-400 text-xs flex flex-col items-center gap-2">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-purple-600"></i>
+                    <span>Generating secure QR code...</span>
+                </div>
+                <img id="event-qr-img" src="" alt="Event QR Code" class="w-52 h-52 object-contain hidden bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                <div id="event-qr-disabled-notice" class="hidden text-xs text-rose-600 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                    <i class="fa-solid fa-triangle-exclamation mb-1 text-base block"></i>
+                    <span>QR Code Generator API is disabled in Admin Settings.</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-100 text-slate-700 font-mono text-[11px] truncate">
+                    <span id="event-qr-url-text" class="truncate me-2 text-left">Loading URL...</span>
+                    <button type="button" id="copyEventQrUrlBtn" class="shrink-0 text-buksu-navy hover:text-buksu-navy-light font-bold cursor-pointer" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="printQrPlacardBtn" class="flex-1 py-2 px-3 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-buksu-gold/30">
+                        <i class="fa-solid fa-print text-buksu-gold"></i> Print Placard
+                    </button>
+                    <button type="button" id="downloadQrImgBtn" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-download"></i> Save PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
