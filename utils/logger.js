@@ -166,7 +166,7 @@ async function logSystemAction(userId, username, role, action, details, req = nu
             details: details || '',
             ip_address: ipAddress,
             user_agent: userAgent,
-            timestamp: new Date().toISOString()
+            timestamp: new Date()
         };
 
         await collections.logs.insertOne(logEntry);

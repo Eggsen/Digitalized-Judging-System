@@ -180,22 +180,120 @@ async function submitScore(req, res, next) {
         };
 
         let scoreId;
+        let finalVersion = 1;
+
         if (!existingScore) {
+            scoreDoc.version = 1;
             scoreDoc.created_at = now;
             const insertRes = await collections.scores.insertOne(scoreDoc);
             scoreId = String(insertRes.insertedId);
+            finalVersion = 1;
+
+            if (collections.score_versions) {
+                await collections.score_versions.insertOne({
+                    score_id: scoreId,
+                    version: 1,
+                    event_id: String(event_id),
+                    contestant_id: String(contestant_id),
+                    judge_id: judgeId,
+                    judge_name: judgeName,
+                    criteria_scores: normalizedScoresArray,
+                    total_score: totalScore,
+                    comments: scoreDoc.comments,
+                    status: scoreDoc.status,
+                    is_locked: scoreDoc.is_locked,
+                    is_verified: scoreDoc.is_verified,
+                    action: isSubmit ? 'submit' : 'draft_create',
+                    modified_by: {
+                        id: String(req.user.id),
+                        username: req.user.username,
+                        role: req.user.role
+                    },
+                    created_at: now
+                });
+            }
         } else {
-            await collections.scores.updateOne({ _id: existingScore._id }, { $set: scoreDoc });
+            // MVCC: Concurrency Conflict Detection
+            const currentVersion = Number(existingScore.version || 1);
+            const clientVersion = req.body.version !== undefined ? Number(req.body.version) : (req.body.expected_version !== undefined ? Number(req.body.expected_version) : null);
+
+            if (clientVersion !== null && !isNaN(clientVersion) && clientVersion !== currentVersion) {
+                return res.status(409).json({
+                    success: false,
+                    conflict: true,
+                    code: 'CONCURRENCY_CONFLICT',
+                    message: `Concurrency Conflict: This score was updated in another session (current version: v${currentVersion}, submitted: v${clientVersion}). Please reload the latest score before submitting.`,
+                    current_version: currentVersion,
+                    submitted_version: clientVersion,
+                    current_score: {
+                        ...existingScore,
+                        id: String(existingScore._id),
+                        version: currentVersion
+                    }
+                });
+            }
+
+            finalVersion = currentVersion + 1;
+            scoreDoc.version = finalVersion;
+
+            // Atomic conditional update ensuring no concurrent write modified this score in parallel
+            const updateFilter = {
+                _id: existingScore._id,
+                $or: [
+                    { version: currentVersion },
+                    { version: { $exists: false } }
+                ]
+            };
+
+            const updateRes = await collections.scores.updateOne(updateFilter, { $set: scoreDoc });
+            if (updateRes.matchedCount === 0) {
+                // Another concurrent write updated this score between find and update!
+                const latestScore = await collections.scores.findOne(scoreQuery);
+                return res.status(409).json({
+                    success: false,
+                    conflict: true,
+                    code: 'CONCURRENCY_CONFLICT',
+                    message: `Concurrency Conflict: Score was concurrently modified by another transaction. Current version is v${latestScore?.version || 'unknown'}. Please reload.`,
+                    current_version: latestScore?.version || finalVersion,
+                    current_score: latestScore ? { ...latestScore, id: String(latestScore._id) } : null
+                });
+            }
+
             scoreId = String(existingScore._id);
+
+            if (collections.score_versions) {
+                await collections.score_versions.insertOne({
+                    score_id: scoreId,
+                    version: finalVersion,
+                    event_id: String(event_id),
+                    contestant_id: String(contestant_id),
+                    judge_id: judgeId,
+                    judge_name: judgeName,
+                    criteria_scores: normalizedScoresArray,
+                    total_score: totalScore,
+                    comments: scoreDoc.comments,
+                    status: scoreDoc.status,
+                    is_locked: scoreDoc.is_locked,
+                    is_verified: scoreDoc.is_verified,
+                    action: isSubmit ? 'submit' : 'draft_update',
+                    modified_by: {
+                        id: String(req.user.id),
+                        username: req.user.username,
+                        role: req.user.role
+                    },
+                    created_at: now
+                });
+            }
         }
 
-        // Broadcast update via Pusher
+        // Broadcast update via Pusher with version info
         await triggerPusherEvent(`event-${event_id}`, 'score-updated', {
             event_id,
             contestant_id,
             judge_id: judgeId,
             judge_name: judgeName,
             total_score: totalScore,
+            version: finalVersion,
             status: scoreDoc.status,
             is_locked: scoreDoc.is_locked,
             is_verified: scoreDoc.is_verified,
@@ -206,8 +304,9 @@ async function submitScore(req, res, next) {
             success: true,
             message: isSubmit ? 'Score successfully submitted and finalized!' : 'Score saved as in-progress draft.',
             score_id: scoreId,
+            version: finalVersion,
             total_score: totalScore,
-            score: { ...scoreDoc, id: scoreId }
+            score: { ...scoreDoc, id: scoreId, version: finalVersion }
         });
     } catch (err) {
         next(err);
@@ -223,11 +322,35 @@ async function lockScore(req, res, next) {
         const judgeId = String(req.user.id);
 
         const scoreQuery = getScoreQuery(event_id, contestant_id, judgeId);
+        const existing = await collections.scores.findOne(scoreQuery);
         const now = new Date().toISOString();
 
-        await collections.scores.updateOne(scoreQuery, {
-            $set: { is_locked: true, status: 'submitted', locked_at: now, updated_at: now }
-        });
+        if (existing) {
+            const nextVersion = (existing.version || 1) + 1;
+            await collections.scores.updateOne(scoreQuery, {
+                $set: { is_locked: true, status: 'submitted', locked_at: now, updated_at: now, version: nextVersion }
+            });
+
+            if (collections.score_versions) {
+                await collections.score_versions.insertOne({
+                    score_id: String(existing._id),
+                    version: nextVersion,
+                    event_id: String(existing.event_id),
+                    contestant_id: String(existing.contestant_id),
+                    judge_id: String(existing.judge_id),
+                    judge_name: existing.judge_name,
+                    criteria_scores: existing.criteria_scores,
+                    total_score: existing.total_score,
+                    comments: existing.comments,
+                    status: 'submitted',
+                    is_locked: true,
+                    is_verified: Boolean(existing.is_verified),
+                    action: 'lock',
+                    modified_by: { id: String(req.user.id), username: req.user.username, role: req.user.role },
+                    created_at: now
+                });
+            }
+        }
 
         res.json({ success: true, message: 'Score locked successfully.' });
     } catch (err) {
@@ -265,8 +388,15 @@ async function approveUnlock(req, res, next) {
         const { event_id, contestant_id, judge_id, approve } = req.body;
 
         const scoreQuery = getScoreQuery(event_id, contestant_id, judge_id);
+        const existing = await collections.scores.findOne(scoreQuery);
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        }
 
         const isApprove = approve !== false;
+        const nextVersion = (existing.version || 1) + 1;
+        const now = new Date().toISOString();
+
         const updateFields = isApprove ? {
             is_locked: false,
             status: 'draft',
@@ -274,21 +404,41 @@ async function approveUnlock(req, res, next) {
             is_verified: false,
             verified_by: null,
             verified_at: null,
-            updated_at: new Date().toISOString()
+            version: nextVersion,
+            updated_at: now
         } : {
             unlock_requested: false,
-            updated_at: new Date().toISOString()
+            version: nextVersion,
+            updated_at: now
         };
 
-        const result = await collections.scores.updateOne(scoreQuery, { $set: updateFields });
-        if (result.matchedCount === 0) {
-            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        await collections.scores.updateOne({ _id: existing._id }, { $set: updateFields });
+
+        if (collections.score_versions) {
+            await collections.score_versions.insertOne({
+                score_id: String(existing._id),
+                version: nextVersion,
+                event_id: String(existing.event_id),
+                contestant_id: String(existing.contestant_id),
+                judge_id: String(existing.judge_id),
+                judge_name: existing.judge_name,
+                criteria_scores: existing.criteria_scores,
+                total_score: existing.total_score,
+                comments: existing.comments,
+                status: isApprove ? 'draft' : existing.status,
+                is_locked: isApprove ? false : existing.is_locked,
+                is_verified: false,
+                action: isApprove ? 'unlock' : 'reject_unlock',
+                modified_by: { id: String(req.user.id), username: req.user.username, role: req.user.role },
+                created_at: now
+            });
         }
 
         await triggerPusherEvent(`event-${event_id}`, 'score-unlocked', {
             event_id,
             contestant_id,
             judge_id,
+            version: nextVersion,
             is_locked: !isApprove,
             status: isApprove ? 'draft' : 'submitted'
         });
@@ -304,7 +454,8 @@ async function approveUnlock(req, res, next) {
 
         res.json({
             success: true,
-            message: isApprove ? 'Score unlocked. Judge may now revise entries.' : 'Unlock request rejected.'
+            message: isApprove ? 'Score unlocked. Judge may now revise entries.' : 'Unlock request rejected.',
+            version: nextVersion
         });
     } catch (err) {
         next(err);
@@ -339,6 +490,8 @@ async function selfUnlock(req, res, next) {
         }
 
         const now = new Date().toISOString();
+        const nextVersion = (existingScore.version || 1) + 1;
+
         await collections.scores.updateOne(scoreQuery, {
             $set: {
                 is_locked: false,
@@ -347,14 +500,36 @@ async function selfUnlock(req, res, next) {
                 is_verified: false,
                 verified_by: null,
                 verified_at: null,
+                version: nextVersion,
                 updated_at: now
             }
         });
+
+        if (collections.score_versions) {
+            await collections.score_versions.insertOne({
+                score_id: String(existingScore._id),
+                version: nextVersion,
+                event_id: String(existingScore.event_id),
+                contestant_id: String(existingScore.contestant_id),
+                judge_id: String(existingScore.judge_id),
+                judge_name: existingScore.judge_name,
+                criteria_scores: existingScore.criteria_scores,
+                total_score: existingScore.total_score,
+                comments: existingScore.comments,
+                status: 'draft',
+                is_locked: false,
+                is_verified: false,
+                action: 'self_unlock',
+                modified_by: { id: String(req.user.id), username: req.user.username, role: req.user.role },
+                created_at: now
+            });
+        }
 
         await triggerPusherEvent(`event-${event_id}`, 'score-unlocked', {
             event_id,
             contestant_id,
             judge_id: judgeId,
+            version: nextVersion,
             is_locked: false,
             status: 'draft'
         });
@@ -368,7 +543,7 @@ async function selfUnlock(req, res, next) {
             req
         );
 
-        res.json({ success: true, message: 'Score unlocked for revision.' });
+        res.json({ success: true, message: 'Score unlocked for revision.', version: nextVersion });
     } catch (err) {
         next(err);
     }
@@ -396,7 +571,8 @@ async function verifyScore(req, res, next) {
                     verified_by: tabulatorName,
                     verified_at: now,
                     updated_at: now
-                }
+                },
+                $inc: { version: 1 }
             });
 
             await logSystemAction(req.user.id, tabulatorName, req.user.role, 'VERIFY_ALL_SCORES', `Tabulator verified all submitted final scores for event #${event_id}.`, req);
@@ -416,17 +592,40 @@ async function verifyScore(req, res, next) {
         }
 
         const scoreQuery = getScoreQuery(event_id, contestant_id, judge_id);
-        const result = await collections.scores.updateOne(scoreQuery, {
+        const existing = await collections.scores.findOne(scoreQuery);
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        }
+
+        const nextVersion = (existing.version || 1) + 1;
+        await collections.scores.updateOne({ _id: existing._id }, {
             $set: {
                 is_verified: true,
                 verified_by: tabulatorName,
                 verified_at: now,
+                version: nextVersion,
                 updated_at: now
             }
         });
 
-        if (result.matchedCount === 0) {
-            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        if (collections.score_versions) {
+            await collections.score_versions.insertOne({
+                score_id: String(existing._id),
+                version: nextVersion,
+                event_id: String(existing.event_id),
+                contestant_id: String(existing.contestant_id),
+                judge_id: String(existing.judge_id),
+                judge_name: existing.judge_name,
+                criteria_scores: existing.criteria_scores,
+                total_score: existing.total_score,
+                comments: existing.comments,
+                status: existing.status,
+                is_locked: existing.is_locked,
+                is_verified: true,
+                action: 'verify',
+                modified_by: { id: String(req.user.id), username: req.user.username, role: req.user.role },
+                created_at: now
+            });
         }
 
         await logSystemAction(req.user.id, tabulatorName, req.user.role, 'VERIFY_SCORE', `Tabulator verified score for contestant ${contestant_id} by judge ${judge_id}.`, req);
@@ -435,6 +634,7 @@ async function verifyScore(req, res, next) {
             event_id,
             contestant_id,
             judge_id,
+            version: nextVersion,
             is_verified: true,
             verified_by: tabulatorName,
             verified_at: now
@@ -443,6 +643,7 @@ async function verifyScore(req, res, next) {
         res.json({
             success: true,
             message: 'Score successfully verified.',
+            version: nextVersion,
             verified_by: tabulatorName,
             verified_at: now
         });
@@ -458,27 +659,95 @@ async function unverifyScore(req, res, next) {
     try {
         const { event_id, contestant_id, judge_id } = req.body;
         const scoreQuery = getScoreQuery(event_id, contestant_id, judge_id);
+        const existing = await collections.scores.findOne(scoreQuery);
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Score record not found.' });
+        }
 
         const now = new Date().toISOString();
-        await collections.scores.updateOne(scoreQuery, {
+        const nextVersion = (existing.version || 1) + 1;
+
+        await collections.scores.updateOne({ _id: existing._id }, {
             $set: {
                 is_verified: false,
                 verified_by: null,
                 verified_at: null,
+                version: nextVersion,
                 updated_at: now
             }
         });
+
+        if (collections.score_versions) {
+            await collections.score_versions.insertOne({
+                score_id: String(existing._id),
+                version: nextVersion,
+                event_id: String(existing.event_id),
+                contestant_id: String(existing.contestant_id),
+                judge_id: String(existing.judge_id),
+                judge_name: existing.judge_name,
+                criteria_scores: existing.criteria_scores,
+                total_score: existing.total_score,
+                comments: existing.comments,
+                status: existing.status,
+                is_locked: existing.is_locked,
+                is_verified: false,
+                action: 'unverify',
+                modified_by: { id: String(req.user.id), username: req.user.username, role: req.user.role },
+                created_at: now
+            });
+        }
 
         await triggerPusherEvent(`event-${event_id}`, 'score-verified', {
             event_id,
             contestant_id,
             judge_id,
+            version: nextVersion,
             is_verified: false,
             verified_by: null,
             verified_at: null
         });
 
-        res.json({ success: true, message: 'Score verification status reverted.' });
+        res.json({ success: true, message: 'Score verification status reverted.', version: nextVersion });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Get MVCC Version History of Scores
+ */
+async function getScoreVersions(req, res, next) {
+    try {
+        const { event_id, contestant_id, judge_id, score_id } = req.query;
+        let filter = {};
+        if (score_id) {
+            filter = { score_id: String(score_id) };
+        } else if (event_id && contestant_id) {
+            filter = { event_id: String(event_id), contestant_id: String(contestant_id) };
+            if (judge_id) filter.judge_id = String(judge_id);
+        } else {
+            return res.status(400).json({ success: false, message: 'Event ID and contestant ID (or score ID) are required.' });
+        }
+
+        const versions = await collections.score_versions
+            ? await collections.score_versions.find(filter).sort({ version: -1, created_at: -1 }).toArray()
+            : [];
+
+        // Also fetch current score
+        let currentScore = null;
+        if (score_id) {
+            currentScore = await collections.scores.findOne(getIdFilter(score_id));
+        } else if (event_id && contestant_id) {
+            const jId = judge_id || req.user.id;
+            currentScore = await collections.scores.findOne(getScoreQuery(event_id, contestant_id, jId));
+        }
+
+        res.json({
+            success: true,
+            current_version: currentScore?.version || (versions[0]?.version || 1),
+            total_versions: versions.length,
+            versions
+        });
     } catch (err) {
         next(err);
     }
@@ -506,6 +775,7 @@ async function fetchAndComputeTabulationData(eventId) {
 
     const precision = parseInt(settingsDoc?.judging?.decimalPrecision ?? 2, 10);
     const tabMethod = settingsDoc?.judging?.tabulationMethod || 'standard_average';
+    const tieBreakerRule = settingsDoc?.judging?.tieBreakerRule || 'highest_weight_criterion';
 
     const rawJudges = Array.isArray(event.assignedjudges) 
         ? event.assignedjudges 
@@ -590,6 +860,7 @@ async function fetchAndComputeTabulationData(eventId) {
                 judgeScores[jId] = {
                     status: isSubmitted ? 'submitted' : 'draft',
                     total_score: totalScore,
+                    version: scoreRecord.version || 1,
                     is_locked: isSubmitted,
                     is_verified: isVerified,
                     verified_by: scoreRecord.verified_by || null,
@@ -649,10 +920,188 @@ async function fetchAndComputeTabulationData(eventId) {
         };
     });
 
-    // Compute rankings
-    matrixData.sort((a, b) => b.average_score - a.average_score);
-    matrixData.forEach((row, idx) => {
-        row.rank = idx + 1;
+    // 1. Ordinal Ranking computation across judges (if enabled)
+    if (tabMethod === 'ordinal_ranking') {
+        for (const judge of assignedJudges) {
+            const jId = String(judge.id);
+            const evaluatedRows = [];
+            for (const row of matrixData) {
+                const entry = row.judge_scores[jId];
+                if (entry && (entry.status === 'submitted' || entry.is_locked) && entry.total_score !== null) {
+                    evaluatedRows.push({ row, score: entry.total_score });
+                }
+            }
+            evaluatedRows.sort((a, b) => b.score - a.score);
+
+            let i = 0;
+            while (i < evaluatedRows.length) {
+                let j = i;
+                while (j < evaluatedRows.length && Math.abs(evaluatedRows[j].score - evaluatedRows[i].score) < 0.00001) {
+                    j++;
+                }
+                const avgRank = ((i + 1) + j) / 2;
+                for (let k = i; k < j; k++) {
+                    evaluatedRows[k].row.judge_scores[jId].rank = avgRank;
+                }
+                i = j;
+            }
+        }
+
+        for (const row of matrixData) {
+            let sum = 0;
+            let count = 0;
+            for (const judge of assignedJudges) {
+                const jId = String(judge.id);
+                const entry = row.judge_scores[jId];
+                if (entry && typeof entry.rank === 'number') {
+                    sum += entry.rank;
+                    count++;
+                }
+            }
+            row.rank_sum = count > 0 ? parseFloat(sum.toFixed(precision)) : null;
+        }
+    }
+
+    // 2. Precompute criteria score averages per contestant for tie-breaking
+    const sortedCriteriaForTieBreaker = [...criteria].sort((a, b) => {
+        const weightA = parseFloat(a.percentage !== undefined ? a.percentage : (a.weight || 0)) || 0;
+        const weightB = parseFloat(b.percentage !== undefined ? b.percentage : (b.weight || 0)) || 0;
+        if (Math.abs(weightB - weightA) > 0.00001) return weightB - weightA;
+        const orderA = parseInt(a.order ?? 0, 10);
+        const orderB = parseInt(b.order ?? 0, 10);
+        return orderA - orderB;
+    });
+
+    for (const row of matrixData) {
+        row.criterion_averages = {};
+        const cId = String(row.contestant_id);
+        for (const cr of sortedCriteriaForTieBreaker) {
+            const critId = String(cr._id);
+            let sumCrit = 0;
+            let countCrit = 0;
+            for (const judge of assignedJudges) {
+                const jId = String(judge.id);
+                const scoreRec = scoreLookup[`${cId}_${jId}`];
+                if (scoreRec && (scoreRec.status === 'submitted' || scoreRec.is_locked) && Array.isArray(scoreRec.criteria_scores)) {
+                    const cs = scoreRec.criteria_scores.find(x => String(x.criteria_id) === critId);
+                    if (cs && cs.score !== undefined && cs.score !== null && cs.score !== '') {
+                        sumCrit += parseFloat(cs.score) || 0;
+                        countCrit++;
+                    }
+                }
+            }
+            row.criterion_averages[critId] = countCrit > 0 ? (sumCrit / countCrit) : 0;
+        }
+    }
+
+    // 3. Contestant comparator with tie-breaker resolutions
+    function compareContestants(a, b) {
+        if (a.submitted_count > 0 && b.submitted_count === 0) return -1;
+        if (b.submitted_count > 0 && a.submitted_count === 0) return 1;
+        if (a.submitted_count === 0 && b.submitted_count === 0) {
+            return a.contestant_number - b.contestant_number;
+        }
+
+        if (tabMethod === 'ordinal_ranking') {
+            const rankSumA = a.rank_sum !== null ? a.rank_sum : 999999;
+            const rankSumB = b.rank_sum !== null ? b.rank_sum : 999999;
+            if (Math.abs(rankSumA - rankSumB) > 0.00001) {
+                return rankSumA - rankSumB; // Lower rank sum is better
+            }
+            if (Math.abs(b.average_score - a.average_score) > 0.00001) {
+                return b.average_score - a.average_score;
+            }
+        } else {
+            if (Math.abs(b.average_score - a.average_score) > 0.00001) {
+                return b.average_score - a.average_score;
+            }
+        }
+
+        // Exact tie on primary evaluation metrics
+        if (tieBreakerRule === 'split_award') {
+            return 0;
+        }
+
+        if (tieBreakerRule === 'judge_majority_vote') {
+            let votesA = 0;
+            let votesB = 0;
+            for (const judge of assignedJudges) {
+                const jId = String(judge.id);
+                const scoreA = (a.judge_scores[jId]?.status === 'submitted' || a.judge_scores[jId]?.is_locked)
+                    ? a.judge_scores[jId].total_score : null;
+                const scoreB = (b.judge_scores[jId]?.status === 'submitted' || b.judge_scores[jId]?.is_locked)
+                    ? b.judge_scores[jId].total_score : null;
+                if (scoreA !== null && scoreB !== null) {
+                    if (scoreA > scoreB) votesA++;
+                    else if (scoreB > scoreA) votesB++;
+                }
+            }
+            if (votesA > votesB) {
+                a._tieBreakerReason = 'Judge Majority Vote';
+                return -1;
+            } else if (votesB > votesA) {
+                b._tieBreakerReason = 'Judge Majority Vote';
+                return 1;
+            }
+        }
+
+        // Highest weight criterion (default or fallback if majority vote is split)
+        for (const cr of sortedCriteriaForTieBreaker) {
+            const critId = String(cr._id);
+            const avgA = a.criterion_averages[critId] || 0;
+            const avgB = b.criterion_averages[critId] || 0;
+            if (Math.abs(avgA - avgB) > 0.00001) {
+                if (avgA > avgB) {
+                    a._tieBreakerReason = 'Highest Weight Criterion';
+                    return -1;
+                } else {
+                    b._tieBreakerReason = 'Highest Weight Criterion';
+                    return 1;
+                }
+            }
+        }
+
+        return 0; // Truly tied
+    }
+
+    matrixData.sort(compareContestants);
+
+    let currentRank = 1;
+    let rankIdx = 0;
+    while (rankIdx < matrixData.length) {
+        if (matrixData[rankIdx].submitted_count === 0) {
+            matrixData[rankIdx].rank = matrixData.length;
+            matrixData[rankIdx].is_tie = false;
+            matrixData[rankIdx].tie_broken_by = null;
+            rankIdx++;
+            continue;
+        }
+
+        let nextIdx = rankIdx;
+        while (nextIdx < matrixData.length && matrixData[nextIdx].submitted_count > 0 && compareContestants(matrixData[rankIdx], matrixData[nextIdx]) === 0) {
+            nextIdx++;
+        }
+
+        const countInTie = nextIdx - rankIdx;
+        const isTie = countInTie > 1;
+
+        for (let k = rankIdx; k < nextIdx; k++) {
+            matrixData[k].rank = currentRank;
+            matrixData[k].is_tie = isTie;
+            if (matrixData[k]._tieBreakerReason) {
+                matrixData[k].tie_broken_by = matrixData[k]._tieBreakerReason;
+                delete matrixData[k]._tieBreakerReason;
+            } else {
+                matrixData[k].tie_broken_by = null;
+            }
+        }
+
+        currentRank += countInTie;
+        rankIdx = nextIdx;
+    }
+
+    matrixData.forEach(row => {
+        delete row._tieBreakerReason;
     });
 
     const totalExpected = contestants.length * assignedJudges.length;
@@ -715,7 +1164,7 @@ async function getTabulationMatrix(req, res, next) {
             return res.status(400).json({ success: false, message: 'Event ID is required.' });
         }
 
-        // If the requesting user is a JUDGE, provide the Judge Scoring Sheet payload
+        // If the requesting user is a JUDGE, check Blind Judging mode enforcement
         if (req.user && req.user.role === 'judge') {
             const evQuery = getIdFilter(event_id);
             const event = await collections.events.findOne(evQuery);
@@ -723,23 +1172,68 @@ async function getTabulationMatrix(req, res, next) {
                 return res.status(404).json({ success: false, message: 'Event not found.' });
             }
 
-            const idMatch = getEventIdQuery(event._id);
-            const [contestants, criteria, scores, settingsDoc] = await Promise.all([
-                collections.contestants.find(idMatch).sort({ number: 1, contestant_number: 1 }).toArray(),
-                collections.criteria.find(idMatch).sort({ order: 1, created_at: 1 }).toArray(),
-                collections.scores.find(idMatch).toArray(),
-                collections.settings.findOne({ _id: 'system_settings' })
-            ]);
+            const settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+            const isBlindJudging = event.blindJudging !== undefined
+                ? Boolean(event.blindJudging)
+                : (settingsDoc?.judging?.blindJudging !== false);
 
             const judgeId = String(req.user.id);
-            const judgeScoresMap = {};
 
+            // If Blind Judging is disabled (false), the judge is permitted to view the live standings and full tabulation matrix
+            if (!isBlindJudging) {
+                const tabData = await fetchAndComputeTabulationData(event_id);
+                if (!tabData) {
+                    return res.status(404).json({ success: false, message: 'Event not found.' });
+                }
+
+                const judgeScoresMap = {};
+                for (const s of (await collections.scores.find(getEventIdQuery(event._id)).toArray())) {
+                    if (String(s.judge_id) === judgeId) {
+                        const cId = String(s.contestant_id);
+                        judgeScoresMap[cId] = {
+                            ...s,
+                            id: String(s._id),
+                            version: s.version || 1,
+                            status: s.status || (s.is_locked ? 'submitted' : 'draft'),
+                            criteria_scores: Array.isArray(s.criteria_scores) ? s.criteria_scores : []
+                        };
+                    }
+                }
+
+                return res.json({
+                    success: true,
+                    role: 'judge',
+                    is_blind_judging: false,
+                    judge_id: judgeId,
+                    judge_username: req.user.username,
+                    event: tabData.event,
+                    contestants: tabData.contestants,
+                    criteria: tabData.criteria,
+                    scores: judgeScoresMap,
+                    matrix: tabData.matrix,
+                    judges: tabData.judges,
+                    stats: tabData.stats,
+                    settings: settingsDoc || {}
+                });
+            }
+
+            // Otherwise, Blind Judging is active (true):
+            // Strictly isolate evaluations; hide other judges' ratings and live standings
+            const idMatch = getEventIdQuery(event._id);
+            const [contestants, criteria, scores] = await Promise.all([
+                collections.contestants.find(idMatch).sort({ number: 1, contestant_number: 1 }).toArray(),
+                collections.criteria.find(idMatch).sort({ order: 1, created_at: 1 }).toArray(),
+                collections.scores.find(idMatch).toArray()
+            ]);
+
+            const judgeScoresMap = {};
             for (const s of scores) {
                 if (String(s.judge_id) === judgeId) {
                     const cId = String(s.contestant_id);
                     judgeScoresMap[cId] = {
                         ...s,
                         id: String(s._id),
+                        version: s.version || 1,
                         status: s.status || (s.is_locked ? 'submitted' : 'draft'),
                         criteria_scores: Array.isArray(s.criteria_scores) ? s.criteria_scores : []
                     };
@@ -749,6 +1243,7 @@ async function getTabulationMatrix(req, res, next) {
             return res.json({
                 success: true,
                 role: 'judge',
+                is_blind_judging: true,
                 judge_id: judgeId,
                 judge_username: req.user.username,
                 event: {
@@ -817,6 +1312,17 @@ async function exportTabulationPDF(req, res, next) {
         const userRole = req.user ? req.user.role : '';
         const isAllVerified = Boolean(tabData.stats.is_all_verified);
 
+        const isBlindJudging = tabData.event.blindJudging !== undefined
+            ? Boolean(tabData.event.blindJudging)
+            : (tabData.settings?.judging?.blindJudging !== false);
+
+        if (userRole === 'judge') {
+            return res.status(403).json({
+                success: false,
+                message: 'Official tabulation results export is restricted to Administrators and Tabulators.'
+            });
+        }
+
         // Security check: Only allow unverified export if admin/tabulator
         if (!isAllVerified && userRole !== 'admin' && userRole !== 'tabulator') {
             return res.status(403).json({
@@ -864,5 +1370,6 @@ module.exports = {
     verifyScore,
     unverifyScore,
     getTabulationMatrix,
-    exportTabulationPDF
+    exportTabulationPDF,
+    getScoreVersions
 };

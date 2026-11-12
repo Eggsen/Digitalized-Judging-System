@@ -1,0 +1,69 @@
+                <!-- Welcome Card -->
+                <div class="rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden bg-white">
+                    <!-- Top Section: BukSU Dark Blue Header -->
+                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-5 sm:p-8 text-white relative">
+                        <!-- Decorative ambient background glow & watermark -->
+                        <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
+                            <i class="fa-solid fa-scale-balanced text-9xl"></i>
+                        </div>
+
+                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4 min-w-0 max-w-full">
+                            <div class="min-w-0 max-w-full">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
+                                    <i class="fa-solid <%= badgeInfo.icon %>"></i> <%= user.role.toUpperCase() %> PORTAL
+                                </span>
+                                <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight break-words">Welcome back, <%= user.full_name || user.username %>!</h1>
+                                <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2 min-w-0">
+                                    <i class="fa-solid fa-circle-check text-emerald-400 text-[10px] shrink-0"></i>
+                                    <span class="truncate"><%= user.email ? user.email : 'Authenticated user session active.' %></span>
+                                </p>
+                            </div>
+
+                            <% if (user.role === 'admin') { %>
+                                <button id="open-create-event-modal-btn"
+                                    class="px-4 sm:px-5 py-2.5 sm:py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300 shrink-0">
+                                    <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
+                                </button>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <% if (user.role === 'admin') { %>
+                        <!-- Bottom Section: Admin Navigation Tabs -->
+                        <div class="top-nav-bar bg-slate-50/90 px-3 sm:px-8 py-2.5 sm:py-3.5 border-t border-slate-200/80 w-full max-w-full overflow-hidden">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scroll-smooth w-full min-w-0" id="admin-tabs">
+                                <button data-tab="events-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-trophy me-1.5"></i> Events &amp; Competitions
+                                </button>
+                                <button data-tab="assignments-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-user-check me-1.5 text-slate-400"></i> Judge Assignments
+                                </button>
+                                <button data-tab="users-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-users-gear me-1.5 text-slate-400"></i> User Invitations
+                                </button>
+                                <button data-tab="logs-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> Audit Logs
+                                </button>
+                                <button data-tab="settings-tab" class="admin-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> System Settings
+                                </button>
+                            </div>
+                        </div>
+                    <% } else { %>
+                        <!-- Bottom Section: Judge / Tabulator Navigation Tabs -->
+                        <div class="top-nav-bar bg-slate-50/90 px-3 sm:px-8 py-2.5 sm:py-3.5 border-t border-slate-200/80 w-full max-w-full overflow-hidden">
+                            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scroll-smooth w-full min-w-0" id="user-tabs">
+                                <button data-tab="user-events-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-clipboard-list me-1.5 text-buksu-gold"></i> Assigned Competitions
+                                </button>
+                                <button data-tab="user-logs-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-clock-rotate-left me-1.5 text-slate-400"></i> My Activity Logs
+                                </button>
+                                <button data-tab="user-preferences-tab" class="user-tab-btn px-3 sm:px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-white hover:text-buksu-navy transition-all cursor-pointer shrink-0 whitespace-nowrap">
+                                    <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences
+                                </button>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>

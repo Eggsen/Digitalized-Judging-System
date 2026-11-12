@@ -90,12 +90,14 @@ export function switchAdminTab(targetTab) {
 
     tabBtns.forEach(b => {
         const isMatch = b.dataset.tab === targetTab;
-        const icon = b.querySelector('i');
+        const icon = b.querySelector('i:not(#sidebar-settings-chevron)');
         if (b.classList.contains('sidebar-nav-btn')) {
+            const hasChevron = !!b.querySelector('#sidebar-settings-chevron');
+            const layoutClass = hasChevron ? 'flex items-center justify-between' : 'flex items-center gap-3';
             if (isMatch) {
-                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30';
+                b.className = `sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer ${layoutClass} border border-buksu-gold/30`;
             } else {
-                b.className = 'sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent';
+                b.className = `sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer ${layoutClass} border border-transparent`;
             }
         } else {
             if (isMatch) {
@@ -114,6 +116,22 @@ export function switchAdminTab(targetTab) {
             }
         }
     });
+
+    const subNav = document.getElementById('sidebar-settings-subnav');
+    const chevron = document.getElementById('sidebar-settings-chevron');
+    if (targetTab === 'settings-tab') {
+        if (subNav) subNav.classList.remove('hidden');
+        if (chevron) {
+            chevron.classList.add('rotate-180', 'text-buksu-gold');
+            chevron.classList.remove('text-slate-400');
+        }
+    } else {
+        if (subNav) subNav.classList.add('hidden');
+        if (chevron) {
+            chevron.classList.remove('rotate-180', 'text-buksu-gold');
+            chevron.classList.add('text-slate-400');
+        }
+    }
 
     tabContents.forEach(c => c.classList.add('hidden'));
     const activeContent = document.getElementById(targetTab);
@@ -136,6 +154,16 @@ function initAdminTabs() {
             const targetTab = btn.dataset.tab;
             if (targetTab) switchAdminTab(targetTab);
         });
+    });
+
+    const chevron = document.getElementById('sidebar-settings-chevron');
+    chevron?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const subNav = document.getElementById('sidebar-settings-subnav');
+        if (subNav) {
+            const isHidden = subNav.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180', !isHidden);
+        }
     });
 
     document.getElementById('event-status-filter')?.addEventListener('change', loadAdminEvents);
@@ -778,7 +806,8 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
         search: state.search,
         role: state.role || 'all',
         date: state.date || '',
-        sort: state.sort || 'desc'
+        sort: state.sort || 'desc',
+        tz_offset: new Date().getTimezoneOffset()
     });
 
     if (currentReqId !== state.reqId) return;
@@ -840,7 +869,7 @@ export async function loadAuditLogs(tbodyId = 'logs-tbody', targetPage = null) {
 /* -------------------------------------------------------------
  * JUDGE / TABULATOR ASSIGNED EVENTS VIEW
  * ------------------------------------------------------------- */
-async function loadUserAssignedEvents() {
+export async function loadUserAssignedEvents() {
     const grid = document.getElementById('user-assigned-events-grid');
     if (!grid) return;
 
@@ -1537,6 +1566,11 @@ let currentQrData = null;
 let activeParentModal = null;
 
 export async function openEventQrModal(eventId, eventName, parentModal = null) {
+    if (document.body.dataset.role === 'judge') {
+        showToast('Access Restricted', 'QR code generation and sharing is restricted to Administrators and Tabulators.', 'warning');
+        return;
+    }
+
     currentQrEventId = eventId;
     currentQrType = 'judge';
 

@@ -1,4 +1,5 @@
 import { getScores, submitScore, selfUnlockJudgeScore, addContestantComment, deleteContestantComment } from "/scripts/admin/judgingAPI.js";
+import { openTabulationBoardModal } from "/scripts/tabulator/tabulatorUI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 import { subscribeToEventChannel, unsubscribeFromEventChannel } from "/scripts/utils/websocket.js";
 
@@ -231,6 +232,37 @@ async function loadJudgeEventData() {
             judgingStatusBadge.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700';
         } else {
             judgingStatusBadge.className = 'px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
+        }
+    }
+
+    // Update Blind Judging state badge and Live Standings button in modal header
+    const isBlindJudging = res.is_blind_judging !== false;
+    const blindStatusBadge = document.getElementById('judge-blind-status-badge');
+    if (blindStatusBadge) {
+        blindStatusBadge.classList.remove('hidden');
+        if (isBlindJudging) {
+            blindStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs';
+            blindStatusBadge.innerHTML = '<i class="fa-solid fa-eye-slash text-slate-500"></i> Blind Judging Active';
+            blindStatusBadge.title = 'Blind judging mode is active. Evaluations are confidential and scores from other judges are hidden.';
+        } else {
+            blindStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800 flex items-center gap-1.5 shadow-2xs';
+            blindStatusBadge.innerHTML = '<i class="fa-solid fa-eye text-blue-600"></i> Open Standings Mode';
+            blindStatusBadge.title = 'Blind judging is disabled. Real-time standings and peer scores are accessible.';
+        }
+    }
+
+    const liveStandingsBtn = document.getElementById('judgeViewLiveStandingsBtn');
+    if (liveStandingsBtn) {
+        if (!isBlindJudging) {
+            liveStandingsBtn.classList.remove('hidden');
+            liveStandingsBtn.classList.add('flex');
+            liveStandingsBtn.onclick = () => {
+                openTabulationBoardModal(currentEventId, currentEventData.eventName || `Competition #${currentEventId}`);
+            };
+        } else {
+            liveStandingsBtn.classList.add('hidden');
+            liveStandingsBtn.classList.remove('flex');
+            liveStandingsBtn.onclick = null;
         }
     }
 
@@ -535,8 +567,8 @@ function renderScoringSheet() {
                                                 <i class="fa-solid fa-layer-group text-[8px] text-slate-500"></i> Category
                                             </span>
                                         ` : `
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-0.5">
-                                                <i class="fa-solid fa-list-check text-[8px]"></i> Criteria-Based
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-0.5">
+                                                <i class="fa-solid fa-list-check text-[8px] text-slate-500"></i> Criteria-Based
                                             </span>
                                         `}
                                     </div>
@@ -556,8 +588,8 @@ function renderScoringSheet() {
                                         <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-category-count-text">${scoredCatsCount}/${categories.length} Categories Scored</span>
                                     </div>
                                 ` : `
-                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 text-[10px] font-bold border border-amber-200 dark:border-amber-800">
-                                        <i class="fa-solid fa-award text-amber-600 dark:text-amber-400"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
+                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
+                                        <i class="fa-solid fa-award text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
                                     </div>
                                 `}
                                 <p class="text-[11px] truncate ${isActive ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-400'}">
@@ -872,8 +904,8 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                 <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> Category-Based Scoring (${maxPts} pts total)
                             </span>
                         ` : `
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                                <i class="fa-solid fa-list-check"></i> Criteria-Based Scoring
+                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                                <i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Criteria-Based Scoring
                             </span>
                         `}
                         <span id="gc-active-eval-status-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
@@ -1005,7 +1037,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h5 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-list-check text-amber-600 dark:text-amber-400"></i> Predefined Ratings (${ratings.length} Rating Levels)
+                            <i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Predefined Ratings (${ratings.length} Rating Levels)
                         </h5>
                         <p class="text-[11px] text-slate-500 dark:text-slate-400">Select one predefined rating below. The fixed score is awarded automatically.</p>
                     </div>
@@ -1376,24 +1408,54 @@ async function handleSaveScore(action) {
     const btn = document.getElementById('saveDraftScoreBtn');
     if (btn) btn.disabled = true;
 
+    const currentScoreObj = judgeScoresMap[selectedContestantId];
+    const currentVersion = currentScoreObj?.version || 1;
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'draft'
+        action: 'draft',
+        version: currentVersion
     });
 
     if (btn) btn.disabled = false;
 
+    if (res.conflict) {
+        showToast('Concurrency Conflict', res.message || 'Score was modified in another session. Updating with latest data...', 'error');
+        if (res.current_score) {
+            judgeScoresMap[selectedContestantId] = {
+                ...res.current_score,
+                id: String(res.current_score._id || res.current_score.id),
+                version: res.current_score.version || 1
+            };
+            if (Array.isArray(res.current_score.criteria_scores)) {
+                if (!contestantScoresState[selectedContestantId]) contestantScoresState[selectedContestantId] = {};
+                res.current_score.criteria_scores.forEach(cs => {
+                    contestantScoresState[selectedContestantId][cs.criteria_id] = {
+                        score: parseFloat(cs.score) || 0,
+                        rating_id: cs.rating_id || '',
+                        rating_name: cs.rating_name || '',
+                        sub_scores: cs.sub_scores || {}
+                    };
+                });
+            }
+            renderJudgeContestants();
+            renderScoringSheet();
+        }
+        return;
+    }
+
     if (res.success) {
         showToast('Draft Score Saved!', res.message || 'Your draft score has been saved.', 'success');
 
-        // Update local cache
+        // Update local cache with updated version
         judgeScoresMap[selectedContestantId] = {
             id: res.score_id,
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || res.score?.version || (currentVersion + 1),
             status: 'draft',
             submitted_at: new Date().toISOString()
         };
@@ -1595,14 +1657,47 @@ async function executeSubmitFinalScore() {
         };
     });
 
+    const currentScoreObj = judgeScoresMap[selectedContestantId];
+    const currentVersion = currentScoreObj?.version || 1;
+
     const res = await submitScore({
         event_id: currentEventId,
         contestant_id: selectedContestantId,
         criteria_scores: criteriaScoresPayload,
-        action: 'submit'
+        action: 'submit',
+        version: currentVersion
     });
 
     if (confirmBtn) confirmBtn.disabled = false;
+
+    if (res.conflict) {
+        showToast('Concurrency Conflict', res.message || 'Score was modified elsewhere. Please review the updated score before finalizing.', 'error');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> Confirm &amp; Submit Score';
+        }
+        if (res.current_score) {
+            judgeScoresMap[selectedContestantId] = {
+                ...res.current_score,
+                id: String(res.current_score._id || res.current_score.id),
+                version: res.current_score.version || 1
+            };
+            if (Array.isArray(res.current_score.criteria_scores)) {
+                if (!contestantScoresState[selectedContestantId]) contestantScoresState[selectedContestantId] = {};
+                res.current_score.criteria_scores.forEach(cs => {
+                    contestantScoresState[selectedContestantId][cs.criteria_id] = {
+                        score: parseFloat(cs.score) || 0,
+                        rating_id: cs.rating_id || '',
+                        rating_name: cs.rating_name || '',
+                        sub_scores: cs.sub_scores || {}
+                    };
+                });
+            }
+            document.getElementById('judge-submission-summary-modal')?.classList.add('hidden');
+            renderJudgeContestants();
+            renderScoringSheet();
+        }
+        return;
+    }
 
     if (res.success) {
         // Close summary confirmation modal
@@ -1616,6 +1711,7 @@ async function executeSubmitFinalScore() {
             contestant_id: selectedContestantId,
             criteria_scores: criteriaScoresPayload,
             total_score: res.total_score,
+            version: res.version || res.score?.version || (currentVersion + 1),
             status: 'submitted',
             submitted_at: new Date().toISOString()
         };

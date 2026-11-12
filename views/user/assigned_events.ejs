@@ -1,0 +1,21 @@
+            <!-- JUDGE / TABULATOR VIEW: ASSIGNED COMPETITIONS -->
+            <div id="user-events-tab" class="user-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
+                <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-buksu-navy flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-list text-buksu-navy"></i> Your Assigned Competitions
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Competitions and events where you are designated as an official <%= user.role.charAt(0).toUpperCase() + user.role.slice(1) %>.</p>
+                    </div>
+                    <button id="refreshUserEventsBtn" class="text-xs text-slate-500 hover:text-buksu-navy font-semibold flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-rotate-right"></i> Refresh List
+                    </button>
+                </div>
+
+                <div id="user-assigned-events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i>
+                        <p class="text-xs">Loading assigned competitions...</p>
+                    </div>
+                </div>
+            </div>

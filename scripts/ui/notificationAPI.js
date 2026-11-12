@@ -40,3 +40,18 @@ export async function markNotificationsRead() {
         return { success: false, message: "Unable to connect to server." };
     }
 }
+
+export async function updateNotificationRead(notificationId, isRead = true) {
+    try {
+        const response = await fetch(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_read: isRead }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Update notification read Error: ", error);
+        return { success: false, message: "Unable to connect to server." };
+    }
+}

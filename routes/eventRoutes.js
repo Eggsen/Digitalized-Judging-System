@@ -7,12 +7,12 @@ router.use(authenticateToken);
 
 // Read
 router.get('/', eventController.listEvents);
-router.get('/qr', (req, res, next) => {
+router.get('/qr', requireRole(['admin', 'tabulator']), (req, res, next) => {
     req.params.id = req.query.event_id;
     return eventController.getEventQR(req, res, next);
 });
 router.get('/:id', eventController.getEvent);
-router.get('/:id/qr', eventController.getEventQR);
+router.get('/:id/qr', requireRole(['admin', 'tabulator']), eventController.getEventQR);
 
 // Admin Management
 router.post('/', requireRole(['admin']), eventController.createEvent);

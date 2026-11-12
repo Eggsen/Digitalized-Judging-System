@@ -151,6 +151,7 @@ async function respondToInvitation(req, res, next) {
                     $set: {
                         status: 'accepted',
                         is_read: true,
+                        read_at: new Date(),
                         updated_at: new Date()
                     }
                 }
@@ -202,6 +203,7 @@ async function respondToInvitation(req, res, next) {
                     $set: {
                         status: 'declined',
                         is_read: true,
+                        read_at: new Date(),
                         updated_at: new Date()
                     }
                 }
@@ -275,14 +277,33 @@ async function respondToInvitation(req, res, next) {
 async function markRead(req, res, next) {
     try {
         const { id } = req.params;
-        let query;
-        try { query = { _id: new ObjectId(id) }; } catch (e) { query = { _id: id }; }
+        let notifObjId = null;
+        try { notifObjId = new ObjectId(id); } catch (e) {}
+
+        const query = {
+            $or: [
+                { _id: id },
+                ...(notifObjId ? [{ _id: notifObjId }] : [])
+            ]
+        };
+
+        let targetRead = true;
+        if (req.body && req.body.is_read !== undefined) {
+            targetRead = Boolean(req.body.is_read);
+        } else if (req.body && req.body.toggle) {
+            const existing = await collections.notifications.findOne(query);
+            targetRead = existing ? !existing.is_read : true;
+        }
 
         await collections.notifications.updateOne(query, {
-            $set: { is_read: true, read_at: new Date() }
+            $set: { is_read: targetRead, read_at: targetRead ? new Date() : null, updated_at: new Date() }
         });
 
-        res.json({ success: true, message: 'Notification marked as read.' });
+        res.json({
+            success: true,
+            is_read: targetRead,
+            message: targetRead ? 'Notification marked as read.' : 'Notification marked as unread.'
+        });
     } catch (err) {
         next(err);
     }

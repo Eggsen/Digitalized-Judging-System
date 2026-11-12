@@ -18,18 +18,44 @@ async function listLogs(req, res, next) {
         const sortOrder = (req.query.sort || req.query.sort_order || req.query.order || 'desc').toLowerCase();
         const sortDir = sortOrder === 'asc' ? 1 : -1;
 
+        if (!collections.logs) {
+            return res.json({
+                success: true,
+                logs: [],
+                total: 0,
+                unfilteredTotal: 0,
+                page,
+                limit,
+                totalPages: 1,
+                start: 0,
+                end: 0,
+                sort: sortOrder,
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    pages: 1
+                }
+            });
+        }
+
         const baseConditions = [];
         const andConditions = [];
 
         // Non-admin users are strictly constrained to their own audit logs
         if (user && user.role !== 'admin') {
-            baseConditions.push({
-                $or: [
-                    { username: user.username },
-                    { userId: String(user.id) },
-                    { user_id: String(user.id) }
-                ]
-            });
+            const userIdentifierConditions = [];
+            if (user.username) {
+                userIdentifierConditions.push({ username: user.username });
+                userIdentifierConditions.push({ username: new RegExp(`^${user.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
+            }
+            if (user.id) {
+                userIdentifierConditions.push({ user_id: String(user.id) });
+                userIdentifierConditions.push({ userId: String(user.id) });
+            }
+            if (userIdentifierConditions.length > 0) {
+                baseConditions.push({ $or: userIdentifierConditions });
+            }
         }
 
         const baseQuery = baseConditions.length > 0 ? { $and: baseConditions } : {};
@@ -57,7 +83,7 @@ async function listLogs(req, res, next) {
             });
         }
 
-        // Exact Date filter (matches YYYY-MM-DD)
+        // Exact Date filter (matches YYYY-MM-DD in both local timezone and UTC)
         if (date && date.trim()) {
             const trimmedDate = date.trim();
             const dateRegex = new RegExp(`^${trimmedDate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
@@ -69,12 +95,25 @@ async function listLogs(req, res, next) {
 
             const parsedDate = new Date(trimmedDate);
             if (!isNaN(parsedDate.getTime())) {
-                const startOfDay = new Date(`${trimmedDate}T00:00:00.000Z`);
-                const endOfDay = new Date(`${trimmedDate}T23:59:59.999Z`);
+                const utcStart = new Date(`${trimmedDate}T00:00:00.000Z`);
+                const utcEnd = new Date(`${trimmedDate}T23:59:59.999Z`);
+
+                // Always match UTC date window
                 dateConditions.push(
-                    { timestamp: { $gte: startOfDay, $lte: endOfDay } },
-                    { created_at: { $gte: startOfDay, $lte: endOfDay } }
+                    { timestamp: { $gte: utcStart, $lte: utcEnd } },
+                    { created_at: { $gte: utcStart, $lte: utcEnd } }
                 );
+
+                // If client supplied browser timezone offset (in minutes), match local date window
+                const tzOffsetMin = parseInt(req.query.tz_offset || req.query.timezone_offset, 10);
+                if (!isNaN(tzOffsetMin) && tzOffsetMin >= -840 && tzOffsetMin <= 840) {
+                    const localStart = new Date(utcStart.getTime() + (tzOffsetMin * 60 * 1000));
+                    const localEnd = new Date(utcEnd.getTime() + (tzOffsetMin * 60 * 1000));
+                    dateConditions.push(
+                        { timestamp: { $gte: localStart, $lte: localEnd } },
+                        { created_at: { $gte: localStart, $lte: localEnd } }
+                    );
+                }
             }
 
             andConditions.push({ $or: dateConditions });
@@ -121,7 +160,7 @@ async function listLogs(req, res, next) {
             collections.logs.countDocuments(query),
             collections.logs
                 .find(query)
-                .sort({ timestamp: sortDir, created_at: sortDir, _id: sortDir })
+                .sort({ timestamp: sortDir, _id: sortDir })
                 .skip(skip)
                 .limit(limit)
                 .toArray()
@@ -136,10 +175,16 @@ async function listLogs(req, res, next) {
             logs: logs.map(l => {
                 const rawAction = l.raw_action || l.action || 'ACTIVITY';
                 const readableAction = formatActionTerm(l.action || rawAction);
+                const isoTimestamp = l.timestamp instanceof Date
+                    ? l.timestamp.toISOString()
+                    : (typeof l.timestamp === 'string' && l.timestamp
+                        ? l.timestamp
+                        : (l.created_at ? (l.created_at instanceof Date ? l.created_at.toISOString() : String(l.created_at)) : (l._id && typeof l._id.getTimestamp === 'function' ? l._id.getTimestamp().toISOString() : new Date().toISOString())));
+
                 return {
                     ...l,
                     id: String(l._id),
-                    timestamp: l.timestamp || l.created_at || new Date().toISOString(),
+                    timestamp: isoTimestamp,
                     username: l.username || 'System',
                     role: l.role || 'user',
                     rawAction: rawAction,
