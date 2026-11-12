@@ -1,0 +1,91 @@
+            <!-- Sidebar Navigation (Active in Sidebar Mode) -->
+            <aside id="dashboard-sidebar-nav" class="dashboard-sidebar w-full lg:w-72 shrink-0 bg-white rounded-3xl shadow-xl border border-slate-200/80 p-5 space-y-4 lg:sticky lg:top-20">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center font-bold shadow-xs border border-buksu-gold/30">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-sm text-buksu-navy">Navigation Hub</h3>
+                        <p class="text-[10px] text-slate-400 font-medium"><%= badgeInfo.title %></p>
+                    </div>
+                </div>
+
+                <% if (user.role === 'admin') { %>
+                <!-- Navigation Links for Admin -->
+                <nav class="space-y-1.5" id="sidebar-admin-links">
+                    <button type="button" data-tab="events-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30">
+                        <i class="fa-solid fa-trophy w-4 text-center"></i>
+                        <span>Events &amp; Competitions</span>
+                    </button>
+                    <button type="button" data-tab="assignments-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-user-check text-slate-400 w-4 text-center"></i>
+                        <span>Judge Assignments</span>
+                    </button>
+                    <button type="button" data-tab="users-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-users-gear text-slate-400 w-4 text-center"></i>
+                        <span>User Invitations</span>
+                    </button>
+                    <button type="button" data-tab="logs-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400 w-4 text-center"></i>
+                        <span>Audit Logs</span>
+                    </button>
+                    <div id="sidebar-settings-group" class="space-y-1">
+                        <button type="button" data-tab="settings-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-between border border-transparent">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-sliders text-slate-400 w-4 text-center"></i>
+                                <span>System Settings</span>
+                            </div>
+                            <i id="sidebar-settings-chevron" class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"></i>
+                        </button>
+                        <!-- Sub-section for System Settings in Sidebar Mode -->
+                        <div id="sidebar-settings-subnav" class="hidden ml-3 pl-3 border-l-2 border-slate-200 dark:border-slate-700/60 space-y-1 py-1">
+                            <button type="button" data-subtab="settings-content-branding" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer flex items-center gap-2.5 text-left border border-buksu-gold/30">
+                                <i class="fa-solid fa-building-columns w-3.5 text-center text-[10px]"></i>
+                                <span class="truncate">Institution &amp; Branding</span>
+                            </button>
+                            <button type="button" data-subtab="settings-content-judging" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-2.5 text-left border border-transparent">
+                                <i class="fa-solid fa-scale-balanced text-slate-400 w-3.5 text-center text-[10px]"></i>
+                                <span class="truncate">Judging Rules</span>
+                            </button>
+                            <button type="button" data-subtab="settings-content-system-security" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-2.5 text-left border border-transparent">
+                                <i class="fa-solid fa-shield-halved text-slate-400 w-3.5 text-center text-[10px]"></i>
+                                <span class="truncate">Security &amp; Infra</span>
+                                <span id="sidebar-system-security-tab-lock-icon" class="text-[9px] text-amber-500 ml-auto shrink-0"><i class="fa-solid fa-lock"></i></span>
+                            </button>
+                            <button type="button" data-subtab="settings-content-preferences" class="sidebar-settings-subtab-btn settings-subtab-btn w-full px-3 py-2 text-[11px] font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition-all cursor-pointer flex items-center gap-2.5 text-left border border-transparent">
+                                <i class="fa-solid fa-sliders text-slate-400 w-3.5 text-center text-[10px]"></i>
+                                <span class="truncate">Preferences &amp; UI</span>
+                            </button>
+                        </div>
+                    </div>
+                </nav>
+                <% } else { %>
+                <!-- Navigation Links for Judge / Tabulator -->
+                <nav class="space-y-1.5" id="sidebar-user-links">
+                    <button type="button" data-tab="user-events-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl bg-buksu-navy text-white shadow-md transition-all cursor-pointer flex items-center gap-3 border border-buksu-gold/30">
+                        <i class="fa-solid fa-clipboard-list text-buksu-gold w-4 text-center"></i>
+                        <span>Assigned Competitions</span>
+                    </button>
+                    <button type="button" data-tab="user-logs-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400 w-4 text-center"></i>
+                        <span>My Activity Logs</span>
+                    </button>
+                    <button type="button" data-tab="user-preferences-tab" class="sidebar-nav-btn w-full px-4 py-3 text-xs font-bold rounded-2xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-3 border border-transparent">
+                        <i class="fa-solid fa-sliders text-slate-400 w-4 text-center"></i>
+                        <span>Preferences</span>
+                    </button>
+                </nav>
+                <% } %>
+
+                <!-- Sidebar Footer Status Card -->
+                <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-600">Active Role</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-700"><%= user.role %></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-400">Layout</span>
+                        <span class="text-[10px] font-bold text-buksu-navy">Sidebar Mode</span>
+                    </div>
+                </div>
+            </aside>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/12ec0fec7b.js" crossorigin="anonymous"></script>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="/assets/vendor/pdfmake/pdfmake.min.js"></script>
+    <script src="/assets/vendor/pdfmake/vfs_fonts.js"></script>
+    <link rel="stylesheet" href="/frontend/css/output.css">
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
+    <title><%= badgeInfo.title %> | BukSU DJS</title>
+    <script>
+        (function() {
+            try {
+                // Expose current authenticated user identifiers
+                window.__CURRENT_USER_ID__ = "<%= user.id %>";
+                window.__CURRENT_USERNAME__ = "<%= user.username %>";
+                window.__CURRENT_ROLE__ = "<%= user.role %>";
+
+                const userId = "<%= user.id %>";
+                const userPrefix = userId ? ('djs_user_' + userId + '_') : 'djs_';
+
+                const serverTheme = "<%= serverTheme %>";
+                const serverColorRule = "<%= serverColorRule %>";
+                const serverNavPlacement = "<%= serverNavPlacement %>";
+
+                // Clean up legacy global settings so they never bleed into other user sessions
+                try {
+                    localStorage.removeItem('djs_theme');
+                    localStorage.removeItem('djs_color_rule');
+                    localStorage.removeItem('djs_nav_placement');
+                } catch (_) {}
+
+                // Load user-specific theme (defaults to crisp light mode)
+                const theme = localStorage.getItem(userPrefix + 'theme') || (serverTheme || 'light');
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+
+                // Load user-specific color rule (defaults to standard normal mode)
+                const colorRule = localStorage.getItem(userPrefix + 'color_rule') || (serverColorRule || 'normal');
+                if (colorRule === 'three-color') {
+                    document.documentElement.classList.add('three-color-mode');
+                } else {
+                    document.documentElement.classList.remove('three-color-mode');
+                }
+
+                // Load user-specific navigation placement (defaults to top tabs)
+                const navPlacement = localStorage.getItem(userPrefix + 'nav_placement') || (serverNavPlacement || 'top');
+                if (navPlacement === 'sidebar') {
+                    document.documentElement.classList.add('layout-sidebar');
+                } else {
+                    document.documentElement.classList.remove('layout-sidebar');
+                }
+            } catch (e) {
+                console.error('Error applying early preferences:', e);
+            }
+        })();
+    </script>
+</head>
