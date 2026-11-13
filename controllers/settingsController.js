@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
-const { getSystemApiKeys, updateEnvFile } = require('../utils/envManager');
+const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName, updateEnvFile } = require('../utils/envManager');
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
@@ -132,11 +132,19 @@ async function getSettings(req, res, next) {
                 }
             }
             responsePayload.api_keys = masked;
+
+            const rawCustom = getCustomApiKeys(settingsDoc);
+            const maskedCustom = {};
+            for (const [ck, cv] of Object.entries(rawCustom)) {
+                maskedCustom[ck] = (cv && String(cv).trim()) ? maskSecretValue(cv) : '';
+            }
+            responsePayload.custom_keys = maskedCustom;
         } else {
             // For public / unauthenticated forms, include public client keys
             responsePayload.api_keys = {
                 RECAPTCHA_SITE_KEY: recaptchaSiteKey
             };
+            responsePayload.custom_keys = {};
         }
 
         res.json(responsePayload);
@@ -292,6 +300,7 @@ async function verifyAdminPin(req, res, next) {
 
         let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
         const unmaskedKeys = getSystemApiKeys(settingsDoc);
+        const unmaskedCustom = getCustomApiKeys(settingsDoc);
 
         await logSystemAction(
             req.user.id,
@@ -306,7 +315,8 @@ async function verifyAdminPin(req, res, next) {
             success: true,
             message: 'Admin PIN verified successfully. Environment credentials unlocked for editing.',
             unlock_token: unlockToken,
-            api_keys: unmaskedKeys
+            api_keys: unmaskedKeys,
+            custom_keys: unmaskedCustom
         });
     } catch (err) {
         next(err);
@@ -359,6 +369,7 @@ async function saveApiKeys(req, res, next) {
 
         let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
         const currentSystemKeys = getSystemApiKeys(settingsDoc);
+        const currentCustomKeys = getCustomApiKeys(settingsDoc);
 
         // Sanitize incoming keys: if a field has bullet mask or empty secret when already set, preserve the real existing value
         const sanitizedKeys = { ...incomingKeys };
@@ -369,8 +380,27 @@ async function saveApiKeys(req, res, next) {
             }
         }
 
+        // Sanitize incoming custom keys
+        const incomingCustom = req.body.custom_keys || {};
+        const sanitizedCustom = {};
+        if (incomingCustom && typeof incomingCustom === 'object') {
+            for (const [rawKey, rawVal] of Object.entries(incomingCustom)) {
+                if (isValidCustomKeyName(rawKey)) {
+                    const normKey = rawKey.trim().toUpperCase();
+                    let val = String(rawVal || '').trim();
+                    if (isMaskedValue(val)) {
+                        val = currentCustomKeys[normKey] || '';
+                    }
+                    sanitizedCustom[normKey] = val;
+                }
+            }
+        }
+
+        // Determine removed custom keys
+        const removedCustomKeys = Object.keys(currentCustomKeys).filter(k => !sanitizedCustom.hasOwnProperty(k));
+
         // 1. Update physical .env on server
-        updateEnvFile(sanitizedKeys);
+        updateEnvFile(sanitizedKeys, sanitizedCustom, removedCustomKeys);
 
         // 2. Persist to MongoDB system_settings to survive restarts
         await collections.settings.updateOne(
@@ -378,6 +408,7 @@ async function saveApiKeys(req, res, next) {
             {
                 $set: {
                     api_keys: sanitizedKeys,
+                    custom_keys: sanitizedCustom,
                     updatedAt: new Date().toISOString(),
                     updatedBy: req.user.username
                 }
@@ -385,7 +416,7 @@ async function saveApiKeys(req, res, next) {
             { upsert: true }
         );
 
-        await logSystemAction(req.user.id, req.user.username, req.user.role, 'UPDATE_API_KEYS', 'Updated environment credentials in .env file and database.', req);
+        await logSystemAction(req.user.id, req.user.username, req.user.role, 'UPDATE_API_KEYS', 'Updated environment credentials and custom API keys in .env file and database.', req);
 
         // Return masked keys for security
         const updatedDoc = await collections.settings.findOne({ _id: 'system_settings' });
@@ -399,10 +430,17 @@ async function saveApiKeys(req, res, next) {
             }
         }
 
+        const latestCustom = getCustomApiKeys(updatedDoc);
+        const maskedCustomLatest = {};
+        for (const [ck, cv] of Object.entries(latestCustom)) {
+            maskedCustomLatest[ck] = (cv && String(cv).trim()) ? maskSecretValue(cv) : '';
+        }
+
         res.json({
             success: true,
-            message: 'API credentials successfully updated in .env and synchronized with cloud database.',
-            api_keys: maskedLatest
+            message: 'API credentials and custom keys successfully updated in .env and synchronized with cloud database.',
+            api_keys: maskedLatest,
+            custom_keys: maskedCustomLatest
         });
     } catch (err) {
         next(err);
@@ -716,6 +754,13 @@ async function exportBackup(req, res, next) {
             for (const key of Object.keys(sanitizedSettings.api_keys)) {
                 if (sanitizedSettings.api_keys[key] && String(sanitizedSettings.api_keys[key]).trim() !== '') {
                     sanitizedSettings.api_keys[key] = '••••••••••••••••';
+                }
+            }
+        }
+        if (sanitizedSettings.custom_keys) {
+            for (const key of Object.keys(sanitizedSettings.custom_keys)) {
+                if (sanitizedSettings.custom_keys[key] && String(sanitizedSettings.custom_keys[key]).trim() !== '') {
+                    sanitizedSettings.custom_keys[key] = '••••••••••••••••';
                 }
             }
         }

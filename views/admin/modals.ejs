@@ -723,6 +723,57 @@
         </div>
     </div>
 
+    <!-- MODAL: ADD CUSTOM API KEY / ENVIRONMENT CREDENTIAL -->
+    <div id="add-custom-key-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[75] hidden">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 border border-slate-100 dark:border-slate-800 animate-fade-in flex flex-col relative text-left">
+            <button type="button" id="closeAddCustomKeyModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl cursor-pointer transition-colors leading-none">&times;</button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shadow-xs border border-amber-500/20 shrink-0">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-buksu-navy dark:text-slate-100 tracking-tight">Add Custom Key / Environment</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Configure a custom application token or webhook secret.</p>
+                </div>
+            </div>
+
+            <div id="add-custom-key-modal-notice" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
+
+            <form id="addCustomKeyForm" onsubmit="return false;" class="space-y-3.5 pt-1">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Variable / Key Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" id="modal-custom-key-name" placeholder="e.g. GEMINI_API_KEY" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs uppercase text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" autocomplete="off" required>
+                    <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Must start with a letter, uppercase alphanumeric and underscores only (2-64 chars).</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Key Value / Secret <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="modal-custom-key-value" placeholder="Enter key value or secret token" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" autocomplete="off" required>
+                        <button type="button" id="toggleModalCustomKeyValBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle visibility">
+                            <i class="fa-solid fa-eye-slash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" id="cancelAddCustomKeyModalBtn" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-colors cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" id="confirmAddCustomKeyBtn" class="px-5 py-2.5 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2 border border-buksu-gold/30 cursor-pointer">
+                        <i class="fa-solid fa-plus text-buksu-gold"></i>
+                        <span>Add Key</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL: PURGE SYSTEM AUDIT LOGS CONFIRMATION -->
     <div id="purge-logs-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[85] hidden">
         <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 border border-rose-100 dark:border-rose-900/40 animate-fade-in flex flex-col text-center relative">

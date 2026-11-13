@@ -24,8 +24,32 @@ const ALLOWED_ENV_KEYS = [
     'PUSHER_CLUSTER'
 ];
 
+const PROTECTED_SYSTEM_KEYS = [
+    'PORT', 'NODE_ENV', 'MONGODB_URI', 'JWT_SECRET', 'PATH', 'PWD', 'HOME', 'SHELL', 'TEMP', 'TMP'
+];
+
+function isValidCustomKeyName(name) {
+    if (!name || typeof name !== 'string') return false;
+    const trimmed = name.trim().toUpperCase();
+    if (PROTECTED_SYSTEM_KEYS.includes(trimmed)) return false;
+    if (ALLOWED_ENV_KEYS.includes(trimmed)) return false;
+    return /^[A-Z][A-Z0-9_]{1,63}$/.test(trimmed);
+}
+
 function getEnvFilePath() {
     return path.resolve(__dirname, '../.env');
+}
+
+function getCustomApiKeys(settingsDoc = null) {
+    const customKeys = {};
+    if (settingsDoc && settingsDoc.custom_keys && typeof settingsDoc.custom_keys === 'object') {
+        for (const [k, v] of Object.entries(settingsDoc.custom_keys)) {
+            if (isValidCustomKeyName(k)) {
+                customKeys[k.trim().toUpperCase()] = String(v || '');
+            }
+        }
+    }
+    return customKeys;
 }
 
 function getSystemApiKeys(settingsDoc = null) {
@@ -87,17 +111,27 @@ function formatEnvVal(val) {
     return val;
 }
 
-function updateEnvFile(newValues) {
+function updateEnvFile(newValues, customValues = {}, removedKeys = []) {
     const envPath = getEnvFilePath();
     const validUpdates = {};
 
-    for (const [k, v] of Object.entries(newValues)) {
+    for (const [k, v] of Object.entries(newValues || {})) {
         if (ALLOWED_ENV_KEYS.includes(k)) {
             validUpdates[k] = String(v || '').trim();
         }
     }
 
-    if (Object.keys(validUpdates).length === 0) {
+    if (customValues && typeof customValues === 'object') {
+        for (const [k, v] of Object.entries(customValues)) {
+            if (isValidCustomKeyName(k)) {
+                validUpdates[k.trim().toUpperCase()] = String(v || '').trim();
+            }
+        }
+    }
+
+    const removedSet = new Set((removedKeys || []).map(k => String(k).trim().toUpperCase()));
+
+    if (Object.keys(validUpdates).length === 0 && removedSet.size === 0) {
         return false;
     }
 
@@ -123,6 +157,10 @@ function updateEnvFile(newValues) {
         const eqIdx = trimmed.indexOf('=');
         if (eqIdx !== -1) {
             const k = trimmed.substring(0, eqIdx).trim();
+            if (removedSet.has(k)) {
+                delete process.env[k];
+                continue;
+            }
             if (validUpdates.hasOwnProperty(k)) {
                 newLines.push(`${k}=${formatEnvVal(validUpdates[k])}`);
                 updatedKeys.add(k);
@@ -135,10 +173,10 @@ function updateEnvFile(newValues) {
     }
 
     // Append any keys that weren't in the file
-    const missing = Object.keys(validUpdates).filter(k => !updatedKeys.has(k));
+    const missing = Object.keys(validUpdates).filter(k => !updatedKeys.has(k) && !removedSet.has(k));
     if (missing.length > 0) {
         newLines.push('');
-        newLines.push('# Additional API Configuration (Admin Settings)');
+        newLines.push('# Custom & Additional API Configuration (Admin Settings)');
         for (const k of missing) {
             newLines.push(`${k}=${formatEnvVal(validUpdates[k])}`);
             process.env[k] = validUpdates[k];
@@ -156,7 +194,10 @@ function updateEnvFile(newValues) {
 
 module.exports = {
     ALLOWED_ENV_KEYS,
+    PROTECTED_SYSTEM_KEYS,
+    isValidCustomKeyName,
     getSystemApiKeys,
+    getCustomApiKeys,
     updateEnvFile
 };
 

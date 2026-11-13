@@ -15,9 +15,12 @@ import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 let cachedSettings = null;
 let isSecurityUnlocked = false;
 let pendingSubtabTarget = null;
+let pendingUnhideTargetId = null;
 let apiKeysUnlockToken = null;
 let cachedMaskedKeys = {};
 let unmaskedApiKeys = null;
+let cachedCustomKeys = {};
+let unmaskedCustomKeys = null;
 
 export async function loadSystemSettings() {
     const loadingEl = document.getElementById('settings-loading-state');
@@ -41,6 +44,10 @@ export async function loadSystemSettings() {
     populateDiagnostics(res.diagnostics);
     if (res.api_keys) {
         populateApiKeysForm(res.api_keys);
+    }
+    if (res.custom_keys) {
+        cachedCustomKeys = { ...res.custom_keys };
+        renderCustomKeysList();
     }
 }
 
@@ -1307,12 +1314,80 @@ function populateApiKeysForm(apiKeys) {
     });
 }
 
-function lockApiKeysInputs(latestMasked = null) {
+function renderCustomKeysList() {
+    const listEl = document.getElementById('custom-keys-list');
+    const emptyEl = document.getElementById('custom-keys-empty');
+    if (!listEl) return;
+
+    const sourceKeys = (apiKeysUnlockToken && unmaskedCustomKeys) ? unmaskedCustomKeys : cachedCustomKeys;
+    const keyNames = Object.keys(sourceKeys || {}).sort();
+
+    if (keyNames.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    listEl.innerHTML = keyNames.map(key => {
+        const isUnlocked = Boolean(apiKeysUnlockToken);
+        const val = sourceKeys[key] || '';
+        const displayVal = isUnlocked ? val : (val ? '••••••••••••••••' : '');
+        const inputBg = isUnlocked 
+            ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100' 
+            : 'bg-slate-100 dark:bg-slate-850 text-slate-500 cursor-not-allowed';
+        const disabledAttr = isUnlocked ? '' : 'disabled';
+        const deleteDisabledAttr = isUnlocked ? '' : 'disabled opacity-40 cursor-not-allowed';
+
+        return `
+            <div class="custom-key-item p-3 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-200/90 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in" data-custom-key-row="${key}">
+                <div class="sm:w-1/3 min-w-[180px]">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span class="font-mono font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-tight break-all">${key}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono">Custom Environment Key</span>
+                </div>
+                <div class="flex-1 flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="password" 
+                               id="setting-custom-${key}" 
+                               data-custom-key-name="${key}"
+                               value="${displayVal.replace(/"/g, '&quot;')}" 
+                               ${disabledAttr}
+                               class="custom-key-input w-full pl-3 pr-9 py-2 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-xs ${inputBg} focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" 
+                               placeholder="••••••••••••••••">
+                        <button type="button" 
+                                data-toggle-password="setting-custom-${key}" 
+                                class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" 
+                                title="Toggle visibility">
+                            <i class="fa-solid fa-eye-slash text-xs"></i>
+                        </button>
+                    </div>
+                    <button type="button" 
+                            data-delete-custom-key="${key}"
+                            ${deleteDisabledAttr}
+                            class="delete-custom-key-btn p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors ${isUnlocked ? 'cursor-pointer' : ''}" 
+                            title="Remove this custom key">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function lockApiKeysInputs(latestMasked = null, latestCustomMasked = null) {
     apiKeysUnlockToken = null;
     unmaskedApiKeys = null;
+    unmaskedCustomKeys = null;
 
     if (latestMasked && typeof latestMasked === 'object') {
         cachedMaskedKeys = { ...latestMasked };
+    }
+    if (latestCustomMasked && typeof latestCustomMasked === 'object') {
+        cachedCustomKeys = { ...latestCustomMasked };
     }
 
     ENV_KEY_FIELDS.forEach(key => {
@@ -1335,13 +1410,15 @@ function lockApiKeysInputs(latestMasked = null) {
         }
     });
 
-    // Reset and disable password visibility toggles
+    renderCustomKeysList();
+
+    // Reset password visibility toggles
     document.querySelectorAll('[data-toggle-password]').forEach(btn => {
-        btn.disabled = true;
-        btn.classList.add('opacity-40', 'cursor-not-allowed');
+        btn.disabled = false;
+        btn.classList.remove('opacity-40', 'cursor-not-allowed');
         const icon = btn.querySelector('i');
         if (icon) {
-            icon.className = 'fa-solid fa-eye-slash text-xs';
+            icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
         }
     });
 
@@ -1372,9 +1449,14 @@ function lockApiKeysInputs(latestMasked = null) {
     }
 }
 
-function unlockApiKeysInputs(unmaskedKeys = null) {
+function unlockApiKeysInputs(unmaskedKeys = null, unmaskedCustom = null) {
     if (unmaskedKeys && typeof unmaskedKeys === 'object') {
         unmaskedApiKeys = { ...unmaskedKeys };
+    }
+    if (unmaskedCustom && typeof unmaskedCustom === 'object') {
+        unmaskedCustomKeys = { ...unmaskedCustom };
+    } else if (!unmaskedCustomKeys) {
+        unmaskedCustomKeys = { ...cachedCustomKeys };
     }
 
     ENV_KEY_FIELDS.forEach(key => {
@@ -1389,6 +1471,8 @@ function unlockApiKeysInputs(unmaskedKeys = null) {
             }
         }
     });
+
+    renderCustomKeysList();
 
     // Enable password visibility toggles
     document.querySelectorAll('[data-toggle-password]').forEach(btn => {
@@ -1423,6 +1507,92 @@ function unlockApiKeysInputs(unmaskedKeys = null) {
     }
 }
 
+function openAddCustomKeyModal() {
+    if (!apiKeysUnlockToken) {
+        openAdminPinModal();
+        return;
+    }
+    const modal = document.getElementById('add-custom-key-modal');
+    const nameInput = document.getElementById('modal-custom-key-name');
+    const valInput = document.getElementById('modal-custom-key-value');
+    const notice = document.getElementById('add-custom-key-modal-notice');
+    if (!modal) return;
+
+    if (notice) {
+        notice.className = 'hidden';
+        notice.textContent = '';
+    }
+    if (nameInput) nameInput.value = '';
+    if (valInput) {
+        valInput.value = '';
+        valInput.type = 'password';
+    }
+    const toggleBtnIcon = document.querySelector('#toggleModalCustomKeyValBtn i');
+    if (toggleBtnIcon) toggleBtnIcon.className = 'fa-solid fa-eye-slash text-xs';
+
+    modal.classList.remove('hidden');
+    setTimeout(() => nameInput?.focus(), 100);
+}
+
+function closeAddCustomKeyModal() {
+    const modal = document.getElementById('add-custom-key-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleConfirmAddCustomKey() {
+    const nameInput = document.getElementById('modal-custom-key-name');
+    const valInput = document.getElementById('modal-custom-key-value');
+    const notice = document.getElementById('add-custom-key-modal-notice');
+
+    const rawKey = (nameInput?.value || '').trim().toUpperCase();
+    const rawVal = (valInput?.value || '').trim();
+
+    const PROTECTED_KEYS = ['PORT', 'NODE_ENV', 'MONGODB_URI', 'JWT_SECRET', 'PATH', 'PWD', 'HOME', 'SHELL', 'TEMP', 'TMP'];
+
+    if (!rawKey) {
+        if (notice) {
+            notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600 block';
+            notice.textContent = 'Please enter a variable / key name.';
+        }
+        return;
+    }
+
+    if (!/^[A-Z][A-Z0-9_]{1,63}$/.test(rawKey)) {
+        if (notice) {
+            notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600 block';
+            notice.textContent = 'Invalid name. Must start with a letter, uppercase alphanumeric and underscores only (2-64 chars).';
+        }
+        return;
+    }
+
+    if (PROTECTED_KEYS.includes(rawKey)) {
+        if (notice) {
+            notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600 block';
+            notice.textContent = `"${rawKey}" is a protected system environment variable and cannot be overwritten.`;
+        }
+        return;
+    }
+
+    if (ENV_KEY_FIELDS.includes(rawKey)) {
+        if (notice) {
+            notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600 block';
+            notice.textContent = `"${rawKey}" is already configured in the service cards above.`;
+        }
+        return;
+    }
+
+    if (!unmaskedCustomKeys) {
+        unmaskedCustomKeys = { ...cachedCustomKeys };
+    }
+
+    unmaskedCustomKeys[rawKey] = rawVal;
+    cachedCustomKeys[rawKey] = rawVal ? '••••••••••••••••' : '';
+
+    renderCustomKeysList();
+    closeAddCustomKeyModal();
+    showToast("Key Added", `"${rawKey}" has been added. Click "Save API Keys to .env" to persist changes.`, "create");
+}
+
 function openAdminPinModal() {
     const modal = document.getElementById('admin-pin-modal');
     const input = document.getElementById('admin-pin-input');
@@ -1447,30 +1617,115 @@ function closeAdminPinModal() {
     const modal = document.getElementById('admin-pin-modal');
     if (modal) modal.classList.add('hidden');
     pendingSubtabTarget = null;
+    pendingUnhideTargetId = null;
 }
 
 function initApiKeysSettings() {
     // Start locked by default
     lockApiKeysInputs();
 
-    // Password visibility toggle click handlers
-    document.querySelectorAll('[data-toggle-password]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!apiKeysUnlockToken) return;
-            const targetId = btn.dataset.togglePassword;
-            const targetInput = document.getElementById(targetId);
-            const icon = btn.querySelector('i');
-            if (!targetInput || !icon) return;
+    // Dropdown toggle buttons on feature sliders / cards
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.api-env-dropdown-btn');
+        if (!btn) return;
+        e.preventDefault();
+        const targetId = btn.dataset.target;
+        const targetPanel = document.getElementById(targetId);
+        if (!targetPanel) return;
 
-            if (targetInput.type === 'password') {
-                targetInput.type = 'text';
-                icon.className = 'fa-solid fa-eye text-xs text-amber-500';
-            } else {
-                targetInput.type = 'password';
-                icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+        const isHidden = targetPanel.classList.contains('hidden');
+        const chevron = btn.querySelector('.dropdown-chevron');
+
+        if (isHidden) {
+            targetPanel.classList.remove('hidden');
+            btn.setAttribute('aria-expanded', 'true');
+            btn.classList.add('bg-amber-100/70', 'border-amber-300', 'text-amber-900', 'dark:bg-amber-950/60', 'dark:border-amber-700/60', 'dark:text-amber-200');
+            btn.classList.remove('bg-slate-100', 'text-slate-600', 'border-slate-200/80', 'dark:bg-slate-800', 'dark:text-slate-300', 'dark:border-slate-700');
+            if (chevron) chevron.classList.add('rotate-180');
+        } else {
+            targetPanel.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.classList.remove('bg-amber-100/70', 'border-amber-300', 'text-amber-900', 'dark:bg-amber-950/60', 'dark:border-amber-700/60', 'dark:text-amber-200');
+            btn.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200/80', 'dark:bg-slate-800', 'dark:text-slate-300', 'dark:border-slate-700');
+            if (chevron) chevron.classList.remove('rotate-180');
+        }
+    });
+
+    // Password visibility toggle click handlers (Event delegation for static & dynamic custom keys)
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-toggle-password]');
+        if (!btn) return;
+        e.preventDefault();
+        const targetId = btn.dataset.togglePassword;
+        const targetInput = document.getElementById(targetId);
+        const icon = btn.querySelector('i');
+        if (!targetInput) return;
+
+        // If credentials are locked, prompt Admin PIN modal to unlock and reveal this secret
+        if (!apiKeysUnlockToken) {
+            pendingUnhideTargetId = targetId;
+            openAdminPinModal();
+            return;
+        }
+
+        if (targetInput.type === 'password') {
+            targetInput.type = 'text';
+            if (icon) icon.className = 'fa-solid fa-eye text-xs text-amber-500';
+        } else {
+            targetInput.type = 'password';
+            if (icon) icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+        }
+    });
+
+    // Add Custom Key Buttons & Modal triggers
+    document.getElementById('addCustomKeyBtn')?.addEventListener('click', openAddCustomKeyModal);
+    document.getElementById('closeAddCustomKeyModalBtn')?.addEventListener('click', closeAddCustomKeyModal);
+    document.getElementById('cancelAddCustomKeyModalBtn')?.addEventListener('click', closeAddCustomKeyModal);
+    document.getElementById('confirmAddCustomKeyBtn')?.addEventListener('click', handleConfirmAddCustomKey);
+    document.getElementById('addCustomKeyForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleConfirmAddCustomKey();
+    });
+    document.getElementById('add-custom-key-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'add-custom-key-modal') {
+            closeAddCustomKeyModal();
+        }
+    });
+    document.getElementById('toggleModalCustomKeyValBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('modal-custom-key-value');
+        const icon = document.querySelector('#toggleModalCustomKeyValBtn i');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fa-solid fa-eye text-xs text-amber-500';
+        } else {
+            input.type = 'password';
+            icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+        }
+    });
+
+    // Delete custom key click handler
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-delete-custom-key]');
+        if (!btn) return;
+        e.preventDefault();
+        if (!apiKeysUnlockToken) {
+            openAdminPinModal();
+            return;
+        }
+        const keyToDelete = btn.dataset.deleteCustomKey;
+        if (!keyToDelete) return;
+
+        if (confirm(`Are you sure you want to delete the custom environment key "${keyToDelete}"? This will be removed from .env when you click Save.`)) {
+            if (unmaskedCustomKeys) {
+                delete unmaskedCustomKeys[keyToDelete];
             }
-        });
+            if (cachedCustomKeys) {
+                delete cachedCustomKeys[keyToDelete];
+            }
+            renderCustomKeysList();
+            showToast("Key Removed", `"${keyToDelete}" removed. Click "Save API Keys to .env" to apply changes.`, "archive");
+        }
     });
 
     // Unlock buttons click -> open modal
@@ -1525,9 +1780,23 @@ function initApiKeysSettings() {
         if (res.success) {
             apiKeysUnlockToken = res.unlock_token;
             isSecurityUnlocked = true;
+            const targetUnhideId = pendingUnhideTargetId;
             closeAdminPinModal();
-            unlockApiKeysInputs(res.api_keys);
+            unlockApiKeysInputs(res.api_keys, res.custom_keys);
             updateSecurityTabLockBadge(true);
+
+            if (targetUnhideId) {
+                const targetInput = document.getElementById(targetUnhideId);
+                if (targetInput) {
+                    targetInput.type = 'text';
+                    const targetBtn = document.querySelector(`[data-toggle-password="${targetUnhideId}"]`);
+                    const targetIcon = targetBtn?.querySelector('i');
+                    if (targetIcon) {
+                        targetIcon.className = 'fa-solid fa-eye text-xs text-amber-500';
+                    }
+                }
+            }
+
             const target = pendingSubtabTarget || 'settings-content-system-security';
             pendingSubtabTarget = null;
             activateSettingsSubtab(target);
@@ -1573,7 +1842,22 @@ function initApiKeysSettings() {
             }
         });
 
-        const res = await saveApiKeys(payload, apiKeysUnlockToken);
+        const customPayload = {};
+        if (unmaskedCustomKeys) {
+            document.querySelectorAll('.custom-key-input').forEach(input => {
+                const k = input.dataset.customKeyName;
+                if (k) {
+                    customPayload[k] = input.value.trim();
+                }
+            });
+            for (const [k, v] of Object.entries(unmaskedCustomKeys)) {
+                if (!customPayload.hasOwnProperty(k)) {
+                    customPayload[k] = v;
+                }
+            }
+        }
+
+        const res = await saveApiKeys({ api_keys: payload, custom_keys: customPayload }, apiKeysUnlockToken);
 
         buttons.forEach(b => {
             b.disabled = false;
@@ -1587,7 +1871,7 @@ function initApiKeysSettings() {
 
         if (res.success) {
             showToast("Credentials Saved", res.message || "API keys written to .env and synchronized.", "create");
-            lockApiKeysInputs(res.api_keys);
+            lockApiKeysInputs(res.api_keys, res.custom_keys);
         } else {
             showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
             if (res.message && res.message.toLowerCase().includes('pin')) {

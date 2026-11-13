@@ -143,10 +143,26 @@ export async function saveApiKeys(apiKeysData, unlockToken = null) {
         if (unlockToken) {
             headers["x-unlock-token"] = unlockToken;
         }
+
+        let bodyPayload = {};
+        if (apiKeysData && typeof apiKeysData === 'object' && ('api_keys' in apiKeysData || 'custom_keys' in apiKeysData)) {
+            bodyPayload = {
+                api_keys: apiKeysData.api_keys || {},
+                custom_keys: apiKeysData.custom_keys || {},
+                unlock_token: unlockToken
+            };
+        } else {
+            bodyPayload = {
+                api_keys: apiKeysData || {},
+                custom_keys: {},
+                unlock_token: unlockToken
+            };
+        }
+
         const response = await fetch("/api/settings/api-keys", {
             method: "POST",
             headers,
-            body: JSON.stringify({ api_keys: apiKeysData, unlock_token: unlockToken }),
+            body: JSON.stringify(bodyPayload),
             credentials: "include"
         });
         return await response.json();

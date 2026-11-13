@@ -362,467 +362,504 @@
                                 </div>
                             </div>
 
-                            <!-- SUB-SECTION 1: AUTHENTICATION & BOT PROTECTION CONTROLS -->
-                            <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
-                                <div class="flex items-center justify-between border-b border-slate-200/70 pb-3 flex-wrap gap-2">
+                            <!-- SUB-SECTION 1: AUTHENTICATION & BOT PROTECTION CONTROLS (INTEGRATED API KEYS) -->
+                            <div class="p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-850/70 border border-slate-200/90 dark:border-slate-800 space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800 pb-3 flex-wrap gap-2">
                                     <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs font-bold shadow-2xs">
                                             <i class="fa-solid fa-shield-halved"></i>
                                         </div>
                                         <div>
-                                            <h3 class="font-extrabold text-sm text-slate-800">Authentication &amp; Bot Protection Controls</h3>
-                                            <p class="text-[11px] text-slate-500">Configure third-party Single Sign-On and automated brute-force protection mechanisms.</p>
+                                            <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">Authentication &amp; Bot Protection Controls</h3>
+                                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Configure third-party Single Sign-On, environment credentials, and automated bot shield mechanisms.</p>
                                         </div>
                                     </div>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-                                        <i class="fa-solid fa-bolt text-emerald-600"></i> Immediate Auto-Apply Active
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                                        <i class="fa-solid fa-bolt text-emerald-600 dark:text-emerald-400"></i> Immediate Auto-Apply Active
                                     </span>
                                 </div>
 
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                                    <!-- Google OAuth 2.0 Card -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
-                                                        <svg class="w-4 h-4" viewBox="0 0 24 24">
-                                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                                                        </svg>
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 items-start">
+                                    <!-- LEFT COLUMN: Google OAuth, Cloudinary, Gmail -->
+                                    <div class="space-y-4 flex flex-col">
+                                        <!-- Google OAuth 2.0 Card -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                                            <svg class="w-4 h-4" viewBox="0 0 24 24">
+                                                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">Google OAuth 2.0</h4>
+                                                            <span id="google-auth-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Google OAuth 2.0</h4>
-                                                        <span id="google-auth-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle Google OAuth 2.0">
+                                                            <input type="checkbox" id="setting-toggle-google-auth" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-google-auth" aria-expanded="false" title="Configure Google OAuth API Keys">
+                                                            <i class="fa-solid fa-key text-[10px] text-amber-500"></i>
+                                                            <span>Keys</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-google-auth" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Enables the "Sign in with Google" button on login. Allows accounts to authenticate directly with Google Cloud credentials.
+                                                </p>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Enables the "Sign in with Google" button on login. Allows accounts to authenticate directly with Google.
-                                            </p>
+
+                                            <!-- Dropdown Panel: Google OAuth API Keys -->
+                                            <div id="dropdown-env-google-auth" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-key text-amber-500"></i> Google OAuth API Keys (.env)
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">OAuth 2.0</span>
+                                                </div>
+                                                <div class="space-y-3 text-xs">
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Google Client ID (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">GOOGLE_CLIENT_ID</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-GOOGLE_CLIENT_ID" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 925851638646-...apps.googleusercontent.com">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Google Client Secret (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">GOOGLE_CLIENT_SECRET</code>)
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="password" id="setting-env-GOOGLE_CLIENT_SECRET" class="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
+                                                            <button type="button" data-toggle-password="setting-env-GOOGLE_CLIENT_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle secret visibility">
+                                                                <i class="fa-solid fa-eye-slash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Google Redirect URI (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">GOOGLE_REDIRECT_URI</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-GOOGLE_REDIRECT_URI" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="http://localhost:8000/backend/auth/google_callback.php">
+                                                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Must match the Authorized Redirect URI configured in Google Cloud Console.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Cloudinary Media API Card -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">Cloudinary Media API</h4>
+                                                            <span id="cloudinary-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle Cloudinary Media API">
+                                                            <input type="checkbox" id="setting-toggle-cloudinary" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-cloudinary" aria-expanded="false" title="Configure Cloudinary API Keys">
+                                                            <i class="fa-solid fa-key text-[10px] text-amber-500"></i>
+                                                            <span>Keys</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Cloud media storage &amp; global CDN delivery for uploaded institution logos. Gracefully falls back to local server storage if unconfigured.
+                                                </p>
+                                            </div>
+
+                                            <!-- Dropdown Panel: Cloudinary Media API Keys -->
+                                            <div id="dropdown-env-cloudinary" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-cloud-arrow-up text-sky-500"></i> Cloudinary CDN Credentials (.env)
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">Media CDN</span>
+                                                </div>
+                                                <div class="space-y-3 text-xs">
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                Cloud Name (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">CLOUDINARY_CLOUD_NAME</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-CLOUDINARY_CLOUD_NAME" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. sqm9yu7u">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                Folder (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">CLOUDINARY_FOLDER</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-CLOUDINARY_FOLDER" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. djs_system_assets">
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            API Key (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">CLOUDINARY_API_KEY</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-CLOUDINARY_API_KEY" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 538713875228598">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            API Secret (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">CLOUDINARY_API_SECRET</code>)
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="password" id="setting-env-CLOUDINARY_API_SECRET" class="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
+                                                            <button type="button" data-toggle-password="setting-env-CLOUDINARY_API_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle secret visibility">
+                                                                <i class="fa-solid fa-eye-slash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gmail / Email Notification Service Card -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                                            <i class="fa-solid fa-envelope"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">Gmail / Email Service</h4>
+                                                            <span id="email-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle Gmail / Email Service">
+                                                            <input type="checkbox" id="setting-toggle-email" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-email" aria-expanded="false" title="Configure SMTP & Gmail Credentials">
+                                                            <i class="fa-solid fa-key text-[10px] text-amber-500"></i>
+                                                            <span>Keys</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Controls system automated email dispatch (SMTP/Gmail). Blocks password reset links and notifications when disabled.
+                                                </p>
+                                            </div>
+
+                                            <!-- Dropdown Panel: Gmail / SMTP API Keys -->
+                                            <div id="dropdown-env-email" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-envelope text-rose-500"></i> SMTP Server Configuration (.env)
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">SMTP</span>
+                                                </div>
+                                                <div class="space-y-3 text-xs">
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                SMTP Host (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_HOST</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-SMTP_HOST" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="smtp.gmail.com">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                SMTP Port (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_PORT</code>)
+                                                            </label>
+                                                            <input type="text" inputmode="numeric" id="setting-env-SMTP_PORT" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="587">
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Encryption Protocol (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_SECURE</code>)
+                                                        </label>
+                                                        <select id="setting-env-SMTP_SECURE" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs cursor-pointer">
+                                                            <option value="masked" id="setting-env-SMTP_SECURE-masked" hidden>••••••••••••••••</option>
+                                                            <option value="tls">TLS (Port 587 - Recommended)</option>
+                                                            <option value="ssl">SSL (Port 465)</option>
+                                                            <option value="none">None / Plain</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            SMTP Username / Email (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_USERNAME</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-SMTP_USERNAME" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. tanneryoly07@gmail.com">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            App Password (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_PASSWORD</code>)
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="password" id="setting-env-SMTP_PASSWORD" class="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
+                                                            <button type="button" data-toggle-password="setting-env-SMTP_PASSWORD" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle secret visibility">
+                                                                <i class="fa-solid fa-eye-slash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">For Gmail, use a 16-character Google App Password.</p>
+                                                    </div>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                From Email (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_FROM_EMAIL</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-SMTP_FROM_EMAIL" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. tanneryoly07@gmail.com">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                Display Name (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">SMTP_FROM_NAME</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-SMTP_FROM_NAME" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Digitalized Judging System">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Google reCAPTCHA v2 Card -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
-                                                        <i class="fa-solid fa-robot"></i>
+                                    <!-- RIGHT COLUMN: Google reCAPTCHA, WebSockets, QR Code -->
+                                    <div class="space-y-4 flex flex-col">
+                                        <!-- Google reCAPTCHA v2 Card -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                                            <i class="fa-solid fa-robot"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">Google reCAPTCHA v2</h4>
+                                                            <span id="recaptcha-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Google reCAPTCHA v2</h4>
-                                                        <span id="recaptcha-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle Google reCAPTCHA v2">
+                                                            <input type="checkbox" id="setting-toggle-recaptcha" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-recaptcha" aria-expanded="false" title="Configure reCAPTCHA API Keys">
+                                                            <i class="fa-solid fa-key text-[10px] text-amber-500"></i>
+                                                            <span>Keys</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-recaptcha" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Enforces the bot challenge across Sign In, Registration, and Password Reset to prevent brute-force automated attacks.
+                                                </p>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Enforces the bot challenge across Sign In, Registration, and Password Reset to prevent brute-force attacks.
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <!-- Gmail / Email Notification Service Card -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">
-                                                        <i class="fa-solid fa-envelope"></i>
+                                            <!-- Dropdown Panel: reCAPTCHA API Keys -->
+                                            <div id="dropdown-env-recaptcha" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-robot text-blue-500"></i> Google reCAPTCHA v2 API Keys (.env)
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">v2 Checkbox</span>
+                                                </div>
+                                                <div class="space-y-3 text-xs">
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Site Key / Public (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">RECAPTCHA_SITE_KEY</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-RECAPTCHA_SITE_KEY" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 6Ld6WQ8uAAAAAJCM...">
                                                     </div>
                                                     <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Gmail / Email Service</h4>
-                                                        <span id="email-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            Secret Key / Private (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">RECAPTCHA_SECRET_KEY</code>)
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="password" id="setting-env-RECAPTCHA_SECRET_KEY" class="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
+                                                            <button type="button" data-toggle-password="setting-env-RECAPTCHA_SECRET_KEY" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle secret visibility">
+                                                                <i class="fa-solid fa-eye-slash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Acquired from the Google reCAPTCHA v2 Admin Console.</p>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-email" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Controls system automated email dispatch (SMTP/Gmail). When disabled, password reset links and email notifications are blocked.
-                                            </p>
                                         </div>
-                                    </div>
 
-                                    <!-- QR Code Generator API Card -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">
-                                                        <i class="fa-solid fa-qrcode"></i>
+                                        <!-- Real-Time WebSockets Card (Pusher / Soketi) -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                                            <i class="fa-solid fa-bolt"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">Real-Time WebSockets</h4>
+                                                            <span id="websocket-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">QR Code Generator API</h4>
-                                                        <span id="qrcode-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle Real-Time WebSockets">
+                                                            <input type="checkbox" id="setting-toggle-websocket" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-websocket" aria-expanded="false" title="Configure Pusher API Keys">
+                                                            <i class="fa-solid fa-key text-[10px] text-amber-500"></i>
+                                                            <span>Keys</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-qrcode" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Instantaneous event broadcasting (Pusher/Soketi) for live scoring matrices, judge unlocks, and status synchronization.
+                                                </p>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Generates dynamic QR codes for judge mobile scoring direct-access, public audience leaderboard views, and print verification seals.
-                                            </p>
+
+                                            <!-- Dropdown Panel: WebSockets API Keys -->
+                                            <div id="dropdown-env-websocket" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-bolt text-amber-500"></i> Pusher Channels Credentials (.env)
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">WebSockets</span>
+                                                </div>
+                                                <div class="space-y-3 text-xs">
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                App ID (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">PUSHER_APP_ID</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-PUSHER_APP_ID" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 2209896">
+                                                        </div>
+                                                        <div>
+                                                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                                Cluster (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">PUSHER_CLUSTER</code>)
+                                                            </label>
+                                                            <input type="text" id="setting-env-PUSHER_CLUSTER" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. ap1">
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            App Key (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">PUSHER_KEY</code>)
+                                                        </label>
+                                                        <input type="text" id="setting-env-PUSHER_KEY" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. e6dff621918761749cbd">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                                            App Secret (<code class="text-[10px] font-mono text-buksu-navy dark:text-amber-400">PUSHER_SECRET</code>)
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="password" id="setting-env-PUSHER_SECRET" class="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
+                                                            <button type="button" data-toggle-password="setting-env-PUSHER_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" title="Toggle secret visibility">
+                                                                <i class="fa-solid fa-eye-slash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Cloudinary Media API Card -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        <!-- QR Code Generator API Card -->
+                                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-start space-y-3.5 transition-all h-fit">
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div class="flex items-center gap-2.5">
+                                                        <div class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                                            <i class="fa-solid fa-qrcode"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100">QR Code Generator API</h4>
+                                                            <span id="qrcode-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Active</span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Cloudinary Media API</h4>
-                                                        <span id="cloudinary-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="Toggle QR Code Generator">
+                                                            <input type="checkbox" id="setting-toggle-qrcode" checked class="sr-only peer">
+                                                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy dark:peer-checked:bg-amber-500"></div>
+                                                        </label>
+                                                        <button type="button" class="api-env-dropdown-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs" data-target="dropdown-env-qrcode" aria-expanded="false" title="Configure QR Code Engine">
+                                                            <i class="fa-solid fa-sliders text-[10px] text-amber-500"></i>
+                                                            <span>Config</span>
+                                                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 dropdown-chevron"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-cloudinary" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                    Generates dynamic QR codes for judge mobile scoring direct-access, public audience leaderboard views, and print verification seals.
+                                                </p>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Cloud media storage &amp; global CDN delivery for uploaded institution logos. Gracefully falls back to local server storage if disabled or unconfigured.
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <!-- Real-Time WebSockets Card (Pusher / Soketi) -->
-                                    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3">
-                                        <div class="space-y-2">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2.5">
-                                                    <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
-                                                        <i class="fa-solid fa-bolt"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h4 class="font-bold text-xs text-slate-800">Real-Time WebSockets</h4>
-                                                        <span id="websocket-status-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span>
+                                            <!-- Dropdown Panel: QR Code Engine Config -->
+                                            <div id="dropdown-env-qrcode" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-qrcode text-purple-500"></i> QR Code Engine Configuration
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">Zero-Config Engine</span>
+                                                </div>
+                                                <div class="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 text-xs space-y-2">
+                                                    <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                                                        QR codes are generated locally by the system's vector rendering engine. No external third-party API key or internet request is required.
+                                                    </p>
+                                                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono pt-1 text-purple-900 dark:text-purple-300">
+                                                        <div>Engine: <span class="font-bold">qrcode-core</span></div>
+                                                        <div>Format: <span class="font-bold">SVG &amp; PNG DataURL</span></div>
+                                                        <div>Correction: <span class="font-bold">Level H (30%)</span></div>
+                                                        <div>Rate Limit: <span class="font-bold text-emerald-600 dark:text-emerald-400">None (Native)</span></div>
                                                     </div>
                                                 </div>
-                                                <label class="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" id="setting-toggle-websocket" checked class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buksu-navy"></div>
-                                                </label>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 leading-relaxed">
-                                                Instantaneous event broadcasting (Pusher/Soketi) for live scoring matrices, judge unlocks, and status changes. Automatically falls back to polling if disabled or unconfigured.
-                                            </p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- SUB-SECTION 2: API KEYS & ENVIRONMENT (.ENV) -->
-                            <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-4">
-                                <div class="flex items-center justify-between border-b border-slate-200/70 pb-3 flex-wrap gap-2">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                            <i class="fa-solid fa-key text-amber-700"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="font-extrabold text-sm text-slate-800">API Keys &amp; Environment Credentials (.env)</h3>
-                                            <p class="text-[11px] text-slate-500">Decrypted and unlocked for immediate editing. Click Save to persist updates to <code class="font-mono">.env</code> and database.</p>
-                                        </div>
-                                    </div>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-                                        <i class="fa-solid fa-unlock text-emerald-600"></i> Editing Enabled
-                                    </span>
-                                </div>
-
-                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 pt-2">
-                                    <!-- CARD 1: GOOGLE OAUTH 2.0 -->
-                                    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                    <i class="fa-brands fa-google"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-extrabold text-xs text-slate-800">Google OAuth 2.0 (Single Sign-On)</h4>
-                                                    <p class="text-[11px] text-slate-500">Sign in with Google credentials from Google Cloud Console</p>
-                                                </div>
+                                <!-- Card 7: Custom API Keys & Environments (Full Width) -->
+                                <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4 transition-all">
+                                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm shadow-2xs border border-amber-200/50 dark:border-amber-700/40 shrink-0">
+                                                <i class="fa-solid fa-key"></i>
                                             </div>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">OAuth 2.0</span>
-                                        </div>
-
-                                        <div class="space-y-3.5 text-xs">
                                             <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Google Client ID (<code class="text-[10px] font-mono text-buksu-navy">GOOGLE_CLIENT_ID</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-GOOGLE_CLIENT_ID" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 925851638646-...apps.googleusercontent.com">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Google Client Secret (<code class="text-[10px] font-mono text-buksu-navy">GOOGLE_CLIENT_SECRET</code>)
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="password" id="setting-env-GOOGLE_CLIENT_SECRET" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
-                                                    <button type="button" data-toggle-password="setting-env-GOOGLE_CLIENT_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Toggle secret visibility">
-                                                        <i class="fa-solid fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Google Redirect URI (<code class="text-[10px] font-mono text-buksu-navy">GOOGLE_REDIRECT_URI</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-GOOGLE_REDIRECT_URI" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="http://localhost:8000/backend/auth/google_callback.php">
-                                                <p class="text-[10px] text-slate-500 mt-1">Must match the Authorized Redirect URI authorized in Google Cloud Console.</p>
+                                                <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-100">Custom API Keys &amp; Environments</h4>
+                                                <p class="text-[11px] text-slate-500 dark:text-slate-400">Configure arbitrary application tokens, external AI models, webhooks, or custom credentials.</p>
                                             </div>
                                         </div>
+                                        <button type="button" id="addCustomKeyBtn" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 border border-amber-600/20">
+                                            <i class="fa-solid fa-plus text-xs"></i>
+                                            <span>Add Custom Key</span>
+                                        </button>
                                     </div>
 
-                                    <!-- CARD 2: GOOGLE RECAPTCHA V2 -->
-                                    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                    <i class="fa-solid fa-robot"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-extrabold text-xs text-slate-800">Google reCAPTCHA v2 (Bot Shield)</h4>
-                                                    <p class="text-[11px] text-slate-500">Anti-spam protection for login and password resets</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">v2 Checkbox</span>
-                                        </div>
-
-                                        <div class="space-y-3.5 text-xs">
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Site Key / Public (<code class="text-[10px] font-mono text-buksu-navy">RECAPTCHA_SITE_KEY</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-RECAPTCHA_SITE_KEY" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 6Ld6WQ8uAAAAAJCM...">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Secret Key / Private (<code class="text-[10px] font-mono text-buksu-navy">RECAPTCHA_SECRET_KEY</code>)
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="password" id="setting-env-RECAPTCHA_SECRET_KEY" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
-                                                    <button type="button" data-toggle-password="setting-env-RECAPTCHA_SECRET_KEY" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Toggle secret visibility">
-                                                        <i class="fa-solid fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </div>
-                                                <p class="text-[10px] text-slate-500 mt-1">Acquired from the Google reCAPTCHA v2 Admin Console.</p>
-                                            </div>
-                                        </div>
+                                    <!-- Custom Keys List -->
+                                    <div id="custom-keys-list" class="space-y-2.5">
+                                        <!-- Dynamically populated via JavaScript -->
                                     </div>
 
-                                    <!-- CARD 3: CLOUDINARY MEDIA CDN -->
-                                    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-extrabold text-xs text-slate-800">Cloudinary Media Storage API</h4>
-                                                    <p class="text-[11px] text-slate-500">Cloud CDN hosting for logos and candidate portraits</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Media CDN</span>
+                                    <!-- Empty State Placeholder -->
+                                    <div id="custom-keys-empty" class="p-6 text-center rounded-xl bg-slate-50/60 dark:bg-slate-850/60 border border-dashed border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                                        <div class="w-9 h-9 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-sm mb-2">
+                                            <i class="fa-solid fa-cube"></i>
                                         </div>
-
-                                        <div class="space-y-3.5 text-xs">
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="block font-bold text-slate-700 mb-1">
-                                                        Cloud Name (<code class="text-[10px] font-mono text-buksu-navy">CLOUDINARY_CLOUD_NAME</code>)
-                                                    </label>
-                                                    <input type="text" id="setting-env-CLOUDINARY_CLOUD_NAME" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. sqm9yu7u">
-                                                </div>
-                                                <div>
-                                                    <label class="block font-bold text-slate-700 mb-1">
-                                                        Asset Folder (<code class="text-[10px] font-mono text-buksu-navy">CLOUDINARY_FOLDER</code>)
-                                                    </label>
-                                                    <input type="text" id="setting-env-CLOUDINARY_FOLDER" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. djs_system_assets">
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    API Key (<code class="text-[10px] font-mono text-buksu-navy">CLOUDINARY_API_KEY</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-CLOUDINARY_API_KEY" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 538713875228598">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    API Secret (<code class="text-[10px] font-mono text-buksu-navy">CLOUDINARY_API_SECRET</code>)
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="password" id="setting-env-CLOUDINARY_API_SECRET" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
-                                                    <button type="button" data-toggle-password="setting-env-CLOUDINARY_API_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Toggle secret visibility">
-                                                        <i class="fa-solid fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- CARD 4: REAL-TIME WEBSOCKETS (PUSHER) -->
-                                    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                    <i class="fa-solid fa-bolt"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-extrabold text-xs text-slate-800">Pusher Channels (Real-Time WebSockets)</h4>
-                                                    <p class="text-[11px] text-slate-500">Live scoring synchronization &amp; verification events</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">WebSockets</span>
-                                        </div>
-
-                                        <div class="space-y-3.5 text-xs">
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="block font-bold text-slate-700 mb-1">
-                                                        App ID (<code class="text-[10px] font-mono text-buksu-navy">PUSHER_APP_ID</code>)
-                                                    </label>
-                                                    <input type="text" id="setting-env-PUSHER_APP_ID" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. 2209896">
-                                                </div>
-                                                <div>
-                                                    <label class="block font-bold text-slate-700 mb-1">
-                                                        Cluster (<code class="text-[10px] font-mono text-buksu-navy">PUSHER_CLUSTER</code>)
-                                                    </label>
-                                                    <input type="text" id="setting-env-PUSHER_CLUSTER" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. ap1">
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    App Key (<code class="text-[10px] font-mono text-buksu-navy">PUSHER_KEY</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-PUSHER_KEY" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. e6dff621918761749cbd">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    App Secret (<code class="text-[10px] font-mono text-buksu-navy">PUSHER_SECRET</code>)
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="password" id="setting-env-PUSHER_SECRET" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
-                                                    <button type="button" data-toggle-password="setting-env-PUSHER_SECRET" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Toggle secret visibility">
-                                                        <i class="fa-solid fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- CARD 5: GMAIL / SMTP EMAIL DELIVERY (SPAN FULL WIDTH) -->
-                                    <div class="xl:col-span-2 p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
-                                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm shadow-2xs">
-                                                    <i class="fa-solid fa-envelope"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-extrabold text-xs text-slate-800">Gmail / SMTP Server Configuration</h4>
-                                                    <p class="text-[11px] text-slate-500">Dispatch automated password reset links, invitations, and security OTP codes</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">SMTP</span>
-                                        </div>
-
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    SMTP Host (<code class="text-[10px] font-mono text-buksu-navy">SMTP_HOST</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-SMTP_HOST" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="smtp.gmail.com">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    SMTP Port (<code class="text-[10px] font-mono text-buksu-navy">SMTP_PORT</code>)
-                                                </label>
-                                                <input type="text" inputmode="numeric" id="setting-env-SMTP_PORT" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="587">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Encryption Protocol (<code class="text-[10px] font-mono text-buksu-navy">SMTP_SECURE</code>)
-                                                </label>
-                                                <select id="setting-env-SMTP_SECURE" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs cursor-pointer">
-                                                    <option value="masked" id="setting-env-SMTP_SECURE-masked" hidden>••••••••••••••••</option>
-                                                    <option value="tls">TLS (Port 587 - Recommended)</option>
-                                                    <option value="ssl">SSL (Port 465)</option>
-                                                    <option value="none">None / Plain</option>
-                                                </select>
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    SMTP Username / Email (<code class="text-[10px] font-mono text-buksu-navy">SMTP_USERNAME</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-SMTP_USERNAME" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. tanneryoly07@gmail.com">
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    App Password (<code class="text-[10px] font-mono text-buksu-navy">SMTP_PASSWORD</code>)
-                                                </label>
-                                                <div class="relative">
-                                                    <input type="password" id="setting-env-SMTP_PASSWORD" class="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="••••••••••••••••">
-                                                    <button type="button" data-toggle-password="setting-env-SMTP_PASSWORD" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Toggle secret visibility">
-                                                        <i class="fa-solid fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </div>
-                                                <p class="text-[10px] text-slate-500 mt-1">For Gmail, use a 16-character Google App Password (not account password).</p>
-                                            </div>
-
-                                            <div>
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Sender Email Address (<code class="text-[10px] font-mono text-buksu-navy">SMTP_FROM_EMAIL</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-SMTP_FROM_EMAIL" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. tanneryoly07@gmail.com">
-                                            </div>
-
-                                            <div class="md:col-span-3">
-                                                <label class="block font-bold text-slate-700 mb-1">
-                                                    Sender Display Name (<code class="text-[10px] font-mono text-buksu-navy">SMTP_FROM_NAME</code>)
-                                                </label>
-                                                <input type="text" id="setting-env-SMTP_FROM_NAME" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Digitalized Judging System">
-                                            </div>
-                                        </div>
+                                        <p class="font-bold text-slate-700 dark:text-slate-300">No custom environment keys added yet.</p>
+                                        <p class="text-[11px] text-slate-400 dark:text-slate-500">Click <strong>Add Custom Key</strong> to add variables like <code class="font-mono text-buksu-navy dark:text-amber-400">GEMINI_API_KEY</code>, <code class="font-mono text-buksu-navy dark:text-amber-400">STRIPE_SECRET_KEY</code>, etc.</p>
                                     </div>
                                 </div>
 
-                                <!-- Action Bar for API Keys -->
-                                <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3">
-                                    <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
-                                        <i class="fa-solid fa-shield-halved text-buksu-navy"></i>
-                                        <span id="apiKeysLockNotice"><span class="text-emerald-600 font-bold"><i class="fa-solid fa-check me-1"></i>Unlocked for editing.</span> Changes will be saved to <code class="font-mono">.env</code> and cloud database.</span>
+                                <!-- Action Bar for Keys & Controls -->
+                                <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-shield-halved text-buksu-navy dark:text-amber-400"></i>
+                                        <span id="apiKeysLockNotice"><span class="text-emerald-600 dark:text-emerald-400 font-bold"><i class="fa-solid fa-check me-1"></i>Unlocked for editing.</span> Changes will be saved to <code class="font-mono">.env</code> and cloud database.</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
                                         <button type="button" id="saveApiKeysBtn" class="px-6 py-2.5 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
                                             <i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save API Keys to .env
                                         </button>
@@ -833,7 +870,7 @@
                                 </div>
                             </div>
 
-                            <!-- SUB-SECTION 3: DATA PROTECTION & LIVE DIAGNOSTICS -->
+                            <!-- SUB-SECTION 2: DATA PROTECTION & LIVE DIAGNOSTICS -->
                             <div class="space-y-4">
                                 <!-- Backup Action Card -->
                                 <div class="backup-action-card p-6 rounded-2xl bg-gradient-to-r from-amber-50 via-amber-100/40 to-amber-50/60 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 border border-amber-200 dark:border-amber-500/40 shadow-sm flex items-center justify-between gap-4 flex-wrap">
