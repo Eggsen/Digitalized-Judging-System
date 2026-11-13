@@ -391,12 +391,25 @@ async function generateTabulationPDF({ event = {}, judges = [], matrix = [], sta
         ? branding.signatories
         : defaultSignatories;
 
+    // Available printable width in A4 landscape: 841.89 - 70 = 771.89 pt
+    const totalPrintableWidth = 771.89;
+    const sigCount = Math.max(1, rawSignatories.length);
+    const approxColWidth = totalPrintableWidth / sigCount;
+    const lineWidth = Math.max(140, Math.min(200, Math.floor(approxColWidth - 30)));
+
     const signatoryColumns = rawSignatories.map(sig => ({
-        stack: [
-            { text: '', margin: [0, 20, 0, 0] },
-            { canvas: [{ type: 'line', x1: 20, y1: 0, x2: 180, y2: 0, lineWidth: 1, lineColor: '#334155' }] },
-            { text: (sig.name || 'Signatory Name').toUpperCase(), bold: true, fontSize: 8, color: '#0F172A', alignment: 'center', margin: [0, 4, 0, 1] },
-            { text: (sig.title || sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
+        columns: [
+            { text: '', width: '*' },
+            {
+                width: lineWidth,
+                stack: [
+                    { text: '', margin: [0, 20, 0, 0] },
+                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: lineWidth, y2: 0, lineWidth: 1, lineColor: '#334155' }] },
+                    { text: (sig.name || 'Signatory Name').toUpperCase(), bold: true, fontSize: 8, color: '#0F172A', alignment: 'center', margin: [0, 4, 0, 1] },
+                    { text: (sig.title || sig.role || 'Designated Signatory').toUpperCase(), fontSize: 6.5, color: '#64748B', alignment: 'center' }
+                ]
+            },
+            { text: '', width: '*' }
         ]
     }));
 
