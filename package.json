@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build:css": "npx @tailwindcss/cli -i ./frontend/src/input.css -o ./frontend/css/output.css --minify",
-    "build": "npm run build:css"
+    "build": "npm run build:css",
+    "seed": "node scripts/seed_test_accounts.js"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.3.3",
