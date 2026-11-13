@@ -28,6 +28,98 @@ const PROTECTED_SYSTEM_KEYS = [
     'PORT', 'NODE_ENV', 'MONGODB_URI', 'JWT_SECRET', 'PATH', 'PWD', 'HOME', 'SHELL', 'TEMP', 'TMP'
 ];
 
+const INTEGRATION_KEYS_MAP = {
+    google: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'],
+    recaptcha: ['RECAPTCHA_SITE_KEY', 'RECAPTCHA_SECRET_KEY'],
+    cloudinary: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET', 'CLOUDINARY_FOLDER'],
+    email: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USERNAME', 'SMTP_PASSWORD', 'SMTP_FROM_EMAIL', 'SMTP_FROM_NAME'],
+    websocket: ['PUSHER_APP_ID', 'PUSHER_KEY', 'PUSHER_SECRET', 'PUSHER_CLUSTER']
+};
+
+function parseEnvString(content) {
+    const result = {};
+    if (!content || typeof content !== 'string') return result;
+    const lines = content.split('\n');
+    for (let line of lines) {
+        line = line.trim();
+        if (!line || line.startsWith('#')) continue;
+        const eqIdx = line.indexOf('=');
+        if (eqIdx !== -1) {
+            const key = line.substring(0, eqIdx).trim();
+            let val = line.substring(eqIdx + 1).trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                val = val.slice(1, -1);
+            }
+            result[key] = val;
+        }
+    }
+    return result;
+}
+
+function getDefaultIntegrationCredentials(targetService = null) {
+    const defaultsPath = path.resolve(__dirname, '../.env.defaults');
+    const backupPath = path.resolve(__dirname, '../.env.backup');
+
+    let parsed = {};
+    if (fs.existsSync(defaultsPath)) {
+        try {
+            parsed = parseEnvString(fs.readFileSync(defaultsPath, 'utf8'));
+        } catch (e) {
+            console.error('[EnvManager] Failed to read .env.defaults:', e.message);
+        }
+    } else if (fs.existsSync(backupPath)) {
+        try {
+            parsed = parseEnvString(fs.readFileSync(backupPath, 'utf8'));
+        } catch (e) {}
+    }
+
+    const credentials = {};
+    for (const [service, keys] of Object.entries(INTEGRATION_KEYS_MAP)) {
+        credentials[service] = {};
+        for (const key of keys) {
+            if (parsed[key] !== undefined && parsed[key] !== '') {
+                credentials[service][key] = parsed[key];
+            } else if (process.env[key] !== undefined && process.env[key] !== '') {
+                credentials[service][key] = process.env[key];
+            } else {
+                credentials[service][key] = '';
+            }
+        }
+    }
+
+    if (targetService) {
+        return credentials[targetService] || null;
+    }
+    return credentials;
+}
+
+const DEFAULT_INTEGRATION_CREDENTIALS = new Proxy({}, {
+    get(target, prop) {
+        if (typeof prop === 'string') {
+            const all = getDefaultIntegrationCredentials();
+            return all[prop];
+        }
+        return Reflect.get(target, prop);
+    },
+    has(target, prop) {
+        return Object.prototype.hasOwnProperty.call(INTEGRATION_KEYS_MAP, prop);
+    },
+    ownKeys(target) {
+        return Object.keys(INTEGRATION_KEYS_MAP);
+    },
+    getOwnPropertyDescriptor(target, prop) {
+        if (Object.prototype.hasOwnProperty.call(INTEGRATION_KEYS_MAP, prop)) {
+            return {
+                value: getDefaultIntegrationCredentials()[prop],
+                writable: false,
+                enumerable: true,
+                configurable: true
+            };
+        }
+        return undefined;
+    }
+});
+
 function isValidCustomKeyName(name) {
     if (!name || typeof name !== 'string') return false;
     const trimmed = name.trim().toUpperCase();
@@ -195,6 +287,8 @@ function updateEnvFile(newValues, customValues = {}, removedKeys = []) {
 module.exports = {
     ALLOWED_ENV_KEYS,
     PROTECTED_SYSTEM_KEYS,
+    DEFAULT_INTEGRATION_CREDENTIALS,
+    getDefaultIntegrationCredentials,
     isValidCustomKeyName,
     getSystemApiKeys,
     getCustomApiKeys,

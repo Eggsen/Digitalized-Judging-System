@@ -172,4 +172,23 @@ export async function saveApiKeys(apiKeysData, unlockToken = null) {
     }
 }
 
+export async function resetIntegration(service, unlockToken = null) {
+    try {
+        const headers = { "Content-Type": "application/json" };
+        if (unlockToken) {
+            headers["x-unlock-token"] = unlockToken;
+        }
+        const response = await fetch("/api/settings/reset-integration", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ service, unlock_token: unlockToken }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Reset Integration API Error: ", error);
+        return { success: false, message: "Unable to reset integration credentials." };
+    }
+}
+
 

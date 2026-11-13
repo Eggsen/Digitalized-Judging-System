@@ -23,6 +23,7 @@ router.get('/websocket-config', (req, res) => {
 router.post('/save', authenticateToken, requireRole(['admin']), settingsController.saveSettings);
 router.post('/verify-admin-pin', authenticateToken, requireRole(['admin']), settingsController.verifyAdminPin);
 router.post('/api-keys', authenticateToken, requireRole(['admin']), settingsController.saveApiKeys);
+router.post('/reset-integration', authenticateToken, requireRole(['admin']), settingsController.resetIntegration);
 router.post('/security-controls', authenticateToken, requireRole(['admin']), settingsController.updateSecurityControls);
 router.post('/export-backup', authenticateToken, requireRole(['admin']), settingsController.exportBackup);
 router.post('/clear-logs', authenticateToken, requireRole(['admin']), settingsController.clearLogs);

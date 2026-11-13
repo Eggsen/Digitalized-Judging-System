@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
-const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName, updateEnvFile } = require('../utils/envManager');
+const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName, updateEnvFile, DEFAULT_INTEGRATION_CREDENTIALS } = require('../utils/envManager');
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
@@ -441,6 +441,107 @@ async function saveApiKeys(req, res, next) {
             message: 'API credentials and custom keys successfully updated in .env and synchronized with cloud database.',
             api_keys: maskedLatest,
             custom_keys: maskedCustomLatest
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Reset specific integration credentials to system defaults
+ */
+async function resetIntegration(req, res, next) {
+    try {
+        const { service, integration } = req.body;
+        const targetService = (service || integration || '').trim().toLowerCase();
+
+        if (!targetService || !DEFAULT_INTEGRATION_CREDENTIALS[targetService]) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid service "${targetService}". Valid options: google, recaptcha, cloudinary, email, websocket.`
+            });
+        }
+
+        const unlockToken = req.headers['x-unlock-token'] || req.body.unlock_token;
+        const submittedPin = req.headers['x-admin-pin'] || req.body.pin;
+
+        let isAuthorized = false;
+
+        // Verify unlock token
+        if (unlockToken) {
+            try {
+                const decoded = jwt.verify(unlockToken, JWT_SECRET);
+                if (decoded.purpose === 'env_credentials_unlock' && decoded.userId === String(req.user.id)) {
+                    isAuthorized = true;
+                }
+            } catch (e) {}
+        }
+
+        // Fallback: Verify direct PIN if provided
+        if (!isAuthorized && submittedPin) {
+            const userDoc = await collections.users.findOne(getIdFilter(req.user.id));
+            if (userDoc) {
+                if (userDoc.admin_pin) {
+                    isAuthorized = await bcrypt.compare(String(submittedPin).trim(), userDoc.admin_pin);
+                } else if (process.env.ADMIN_PIN && String(submittedPin).trim() === process.env.ADMIN_PIN.trim()) {
+                    isAuthorized = true;
+                }
+            }
+        }
+
+        if (!isAuthorized) {
+            return res.status(403).json({
+                success: false,
+                message: 'Elevated authorization required. Please verify your exclusive Admin PIN before resetting credentials.'
+            });
+        }
+
+        let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const currentSystemKeys = getSystemApiKeys(settingsDoc);
+        const currentCustomKeys = getCustomApiKeys(settingsDoc);
+
+        const defaultsToApply = DEFAULT_INTEGRATION_CREDENTIALS[targetService];
+        const newSystemKeys = { ...currentSystemKeys, ...defaultsToApply };
+
+        // 1. Update physical .env and process.env
+        updateEnvFile(newSystemKeys, currentCustomKeys, []);
+
+        // 2. Persist to MongoDB system_settings
+        await collections.settings.updateOne(
+            { _id: 'system_settings' },
+            {
+                $set: {
+                    api_keys: newSystemKeys,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: req.user.username
+                }
+            },
+            { upsert: true }
+        );
+
+        const serviceDisplayNames = {
+            google: 'Google OAuth 2.0',
+            recaptcha: 'Google reCAPTCHA v2',
+            cloudinary: 'Cloudinary CDN',
+            email: 'Gmail / SMTP Service',
+            websocket: 'Pusher WebSockets'
+        };
+        const displayName = serviceDisplayNames[targetService] || targetService;
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'RESET_INTEGRATION_KEYS',
+            `Reset ${displayName} credentials to system defaults.`,
+            req
+        );
+
+        res.json({
+            success: true,
+            message: `${displayName} credentials have been reset to system defaults and saved.`,
+            service: targetService,
+            default_keys: defaultsToApply
         });
     } catch (err) {
         next(err);
@@ -1128,6 +1229,7 @@ module.exports = {
     saveSettings,
     verifyAdminPin,
     saveApiKeys,
+    resetIntegration,
     updateSecurityControls,
     exportBackup,
     clearLogs,

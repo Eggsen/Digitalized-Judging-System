@@ -8,7 +8,8 @@ import {
     confirmSecurityChange,
     resendSecurityCode,
     verifyAdminPin,
-    saveApiKeys
+    saveApiKeys,
+    resetIntegration
 } from "/scripts/admin/settingsAPI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
@@ -16,6 +17,7 @@ let cachedSettings = null;
 let isSecurityUnlocked = false;
 let pendingSubtabTarget = null;
 let pendingUnhideTargetId = null;
+let pendingResetIntegration = null;
 let apiKeysUnlockToken = null;
 let cachedMaskedKeys = {};
 let unmaskedApiKeys = null;
@@ -1618,6 +1620,7 @@ function closeAdminPinModal() {
     if (modal) modal.classList.add('hidden');
     pendingSubtabTarget = null;
     pendingUnhideTargetId = null;
+    pendingResetIntegration = null;
 }
 
 function initApiKeysSettings() {
@@ -1781,6 +1784,7 @@ function initApiKeysSettings() {
             apiKeysUnlockToken = res.unlock_token;
             isSecurityUnlocked = true;
             const targetUnhideId = pendingUnhideTargetId;
+            const targetResetService = pendingResetIntegration;
             closeAdminPinModal();
             unlockApiKeysInputs(res.api_keys, res.custom_keys);
             updateSecurityTabLockBadge(true);
@@ -1795,6 +1799,10 @@ function initApiKeysSettings() {
                         targetIcon.className = 'fa-solid fa-eye text-xs text-amber-500';
                     }
                 }
+            }
+
+            if (targetResetService) {
+                handleResetIntegration(targetResetService);
             }
 
             const target = pendingSubtabTarget || 'settings-content-system-security';
@@ -1880,6 +1888,79 @@ function initApiKeysSettings() {
             }
         }
     };
+
+    // Reset Integration Credentials to System Defaults
+    async function handleResetIntegration(serviceKey, btn = null) {
+        if (!serviceKey) return;
+
+        if (!apiKeysUnlockToken) {
+            pendingResetIntegration = serviceKey;
+            openAdminPinModal();
+            return;
+        }
+
+        const serviceNames = {
+            google: 'Google OAuth 2.0',
+            recaptcha: 'Google reCAPTCHA v2',
+            cloudinary: 'Cloudinary Media Storage',
+            email: 'Gmail / SMTP Service',
+            websocket: 'Pusher Channels / WebSockets'
+        };
+        const displayName = serviceNames[serviceKey] || 'Integration';
+
+        if (!confirm(`Are you sure you want to reset ${displayName} credentials to system defaults? This will restore the default working keys and save them to .env and the database.`)) {
+            return;
+        }
+
+        const buttonEl = btn || document.querySelector(`[data-reset-integration="${serviceKey}"]`);
+        const originalHtml = buttonEl ? buttonEl.innerHTML : '';
+        if (buttonEl) {
+            buttonEl.disabled = true;
+            buttonEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px] text-amber-500"></i> <span>Resetting...</span>';
+        }
+
+        const res = await resetIntegration(serviceKey, apiKeysUnlockToken);
+
+        if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = originalHtml || '<i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i> <span>Reset to Default</span>';
+        }
+
+        if (res.success && res.default_keys) {
+            if (!unmaskedApiKeys) unmaskedApiKeys = {};
+            for (const [k, v] of Object.entries(res.default_keys)) {
+                unmaskedApiKeys[k] = v;
+                const input = document.getElementById(`setting-env-${k}`);
+                if (input) {
+                    input.value = v;
+                    input.classList.add('ring-2', 'ring-emerald-400');
+                    setTimeout(() => input.classList.remove('ring-2', 'ring-emerald-400'), 1500);
+
+                    if (SECRET_ENV_KEYS.includes(k)) {
+                        input.type = 'password';
+                        const toggleBtn = document.querySelector(`[data-toggle-password="setting-env-${k}"]`);
+                        const toggleIcon = toggleBtn?.querySelector('i');
+                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+                    }
+                }
+            }
+            showToast("Defaults Restored", res.message || `${displayName} credentials reset to system defaults.`, "create");
+        } else {
+            showToast("Reset Failed", res.message || "Failed to reset credentials.", "error");
+            if (res.message && res.message.toLowerCase().includes('pin')) {
+                pendingResetIntegration = serviceKey;
+                openAdminPinModal();
+            }
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-reset-integration]');
+        if (!btn) return;
+        e.preventDefault();
+        const service = btn.dataset.resetIntegration;
+        handleResetIntegration(service, btn);
+    });
 
     document.getElementById('saveApiKeysBtn')?.addEventListener('click', handleSaveApiKeys);
     document.getElementById('saveApiKeysBtnTop')?.addEventListener('click', handleSaveApiKeys);

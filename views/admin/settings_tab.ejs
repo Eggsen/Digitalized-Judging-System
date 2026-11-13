@@ -419,11 +419,17 @@
 
                                             <!-- Dropdown Panel: Google OAuth API Keys -->
                                             <div id="dropdown-env-google-auth" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-2">
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-key text-amber-500"></i> Google OAuth API Keys (.env)
                                                     </span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">OAuth 2.0</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" data-reset-integration="google" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Google OAuth credentials to system default">
+                                                            <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
+                                                            <span>Reset to Default</span>
+                                                        </button>
+                                                        <span class="text-[10px] text-slate-400 font-mono">OAuth 2.0</span>
+                                                    </div>
                                                 </div>
                                                 <div class="space-y-3 text-xs">
                                                     <div>
@@ -486,11 +492,17 @@
 
                                             <!-- Dropdown Panel: Cloudinary Media API Keys -->
                                             <div id="dropdown-env-cloudinary" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-2">
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-cloud-arrow-up text-sky-500"></i> Cloudinary CDN Credentials (.env)
                                                     </span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">Media CDN</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" data-reset-integration="cloudinary" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Cloudinary credentials to system default">
+                                                            <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
+                                                            <span>Reset to Default</span>
+                                                        </button>
+                                                        <span class="text-[10px] text-slate-400 font-mono">Media CDN</span>
+                                                    </div>
                                                 </div>
                                                 <div class="space-y-3 text-xs">
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -560,11 +572,17 @@
 
                                             <!-- Dropdown Panel: Gmail / SMTP API Keys -->
                                             <div id="dropdown-env-email" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-2">
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-envelope text-rose-500"></i> SMTP Server Configuration (.env)
                                                     </span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">SMTP</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" data-reset-integration="email" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Gmail/SMTP credentials to system default">
+                                                            <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
+                                                            <span>Reset to Default</span>
+                                                        </button>
+                                                        <span class="text-[10px] text-slate-400 font-mono">SMTP</span>
+                                                    </div>
                                                 </div>
                                                 <div class="space-y-3 text-xs">
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -663,11 +681,17 @@
 
                                             <!-- Dropdown Panel: reCAPTCHA API Keys -->
                                             <div id="dropdown-env-recaptcha" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-2">
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-robot text-blue-500"></i> Google reCAPTCHA v2 API Keys (.env)
                                                     </span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">v2 Checkbox</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" data-reset-integration="recaptcha" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Google reCAPTCHA credentials to system default">
+                                                            <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
+                                                            <span>Reset to Default</span>
+                                                        </button>
+                                                        <span class="text-[10px] text-slate-400 font-mono">v2 Checkbox</span>
+                                                    </div>
                                                 </div>
                                                 <div class="space-y-3 text-xs">
                                                     <div>
@@ -724,11 +748,17 @@
 
                                             <!-- Dropdown Panel: WebSockets API Keys -->
                                             <div id="dropdown-env-websocket" class="api-env-dropdown-panel hidden pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fade-in">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-2">
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-bolt text-amber-500"></i> Pusher Channels Credentials (.env)
                                                     </span>
-                                                    <span class="text-[10px] text-slate-400 font-mono">WebSockets</span>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" data-reset-integration="websocket" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Pusher / WebSockets credentials to system default">
+                                                            <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
+                                                            <span>Reset to Default</span>
+                                                        </button>
+                                                        <span class="text-[10px] text-slate-400 font-mono">WebSockets</span>
+                                                    </div>
                                                 </div>
                                                 <div class="space-y-3 text-xs">
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
