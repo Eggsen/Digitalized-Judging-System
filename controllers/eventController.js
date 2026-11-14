@@ -4,6 +4,8 @@ const { logSystemAction } = require('../utils/logger');
 const { generateQRCodeDataURL } = require('../utils/qrcode');
 const { triggerPusherEvent } = require('../utils/pusher');
 const { getIdFilter, getEventIdQuery } = require('../utils/dbHelpers');
+const { fetchAndComputeTabulationData } = require('./scoreController');
+const { generateExecutiveSummaryPDF } = require('../utils/executiveSummaryPdfGenerator');
 
 /**
  * Helper to normalize judge array into objects { id, username, email }
@@ -716,6 +718,61 @@ async function getEventQR(req, res, next) {
     }
 }
 
+/**
+ * Export Executive Event Summary & Certified Results PDF
+ */
+async function exportExecutiveSummaryPDF(req, res, next) {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Event ID is required.' });
+        }
+
+        const data = await fetchAndComputeTabulationData(id);
+        if (!data || !data.event) {
+            return res.status(404).json({ success: false, message: 'Competition not found.' });
+        }
+
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+
+        const pdfBuffer = await generateExecutiveSummaryPDF({
+            event: data.event,
+            judges: data.judges,
+            contestants: data.contestants,
+            criteria: data.criteria,
+            matrix: data.matrix,
+            stats: data.stats,
+            settings: data.settings,
+            baseUrl
+        });
+
+        const safeTitle = (data.event.eventName || 'Competition').replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
+        const filename = `BukSU_Executive_Summary_${safeTitle}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        if (req.query.action === 'preview') {
+            res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        } else {
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        }
+
+        await logSystemAction(
+            req.user?.id,
+            req.user?.username,
+            req.user?.role,
+            'EXPORT_EXECUTIVE_SUMMARY_PDF',
+            `Exported executive summary memo for "${data.event.eventName}"`,
+            req
+        );
+
+        return res.send(pdfBuffer);
+    } catch (err) {
+        next(err);
+    }
+}
+
 module.exports = {
     listEvents,
     getEvent,
@@ -725,5 +782,6 @@ module.exports = {
     archiveEvent,
     assignJudges,
     updateJudgingPeriod,
-    getEventQR
+    getEventQR,
+    exportExecutiveSummaryPDF
 };

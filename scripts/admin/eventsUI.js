@@ -338,6 +338,9 @@ export async function loadAdminEvents() {
                     </button>
                 </div>
                 <div class="flex items-center gap-1">
+                    <button class="open-executive-report-btn p-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Executive Event Summary Report (PDF)">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </button>
                     <button class="open-qr-modal-btn p-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Generate &amp; Share QR Code">
                         <i class="fa-solid fa-qrcode"></i>
                     </button>
@@ -675,6 +678,101 @@ function initAuditLogsControls(tbodyId = 'logs-tbody') {
                 loadAuditLogs(tbodyId, 1);
             }
         });
+    }
+
+    // Admin Audit Logs Export Controls
+    if (tbodyId === 'logs-tbody') {
+        const exportBtn = document.getElementById('logs-export-btn');
+        const exportMenu = document.getElementById('logs-export-menu');
+        const exportPdfBtn = document.getElementById('logs-export-pdf-btn');
+        const exportCsvBtn = document.getElementById('logs-export-csv-btn');
+
+        if (exportBtn && exportMenu) {
+            exportBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                exportMenu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!exportMenu.classList.contains('hidden') && !e.target.closest('#logs-export-dropdown-container')) {
+                    exportMenu.classList.add('hidden');
+                }
+            });
+        }
+
+        function getExportParams() {
+            const p = new URLSearchParams();
+            const searchVal = (searchInput?.value || state.search || '').trim();
+            const roleVal = roleFilter?.value || state.role || 'all';
+            const dateVal = (dateFilter?.value || state.date || '').trim();
+            const sortVal = dateSort?.value || state.sort || 'desc';
+
+            if (searchVal) p.set('search', searchVal);
+            if (roleVal && roleVal !== 'all') p.set('role', roleVal);
+            if (dateVal) p.set('date', dateVal);
+            if (sortVal) p.set('sort', sortVal);
+            p.set('tz_offset', new Date().getTimezoneOffset());
+            return p.toString();
+        }
+
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', async () => {
+                if (exportMenu) exportMenu.classList.add('hidden');
+                showToast("Generating Audit PDF", "Compiling official system audit trail report...", "info");
+                const params = getExportParams();
+                const endpoint = `/api/logs/export/pdf?${params}&disposition=download`;
+                try {
+                    const res = await fetch(endpoint);
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        const dateTag = new Date().toISOString().slice(0, 10);
+                        a.download = `BukSU_Audit_Trail_${dateTag}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+                        showToast("Audit PDF Ready", "Audit trail report downloaded successfully.", "success");
+                    } else {
+                        const errData = await res.json().catch(() => ({}));
+                        showToast("Export Failed", errData.message || "Failed to generate audit PDF.", "error");
+                    }
+                } catch (err) {
+                    showToast("Export Failed", err.message || "Could not download audit PDF.", "error");
+                }
+            });
+        }
+
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', async () => {
+                if (exportMenu) exportMenu.classList.add('hidden');
+                showToast("Exporting Logs to CSV", "Preparing spreadsheet data...", "info");
+                const params = getExportParams();
+                const endpoint = `/api/logs/export/csv?${params}`;
+                try {
+                    const res = await fetch(endpoint);
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        const dateTag = new Date().toISOString().slice(0, 10);
+                        a.download = `BukSU_Audit_Logs_${dateTag}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+                        showToast("CSV Downloaded", "Audit logs CSV file downloaded successfully.", "success");
+                    } else {
+                        showToast("Export Failed", "Failed to generate CSV export.", "error");
+                    }
+                } catch (err) {
+                    showToast("Export Failed", err.message || "Could not download CSV.", "error");
+                }
+            });
+        }
     }
 
     state.initialized = true;
@@ -1154,6 +1252,38 @@ function bindEventCardActions() {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             openAssignModal(btn.dataset.id, btn.dataset.name);
+        });
+    });
+
+    // Open Executive Summary Report
+    document.querySelectorAll('.open-executive-report-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const eventId = btn.dataset.id;
+            const eventName = btn.dataset.name || 'Competition';
+            showToast("Generating Executive Summary", `Creating certified PDF memo for "${eventName}"...`, "info");
+            const endpoint = `/api/events/${encodeURIComponent(eventId)}/executive-summary?action=download`;
+            try {
+                const res = await fetch(endpoint);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    const safeTitle = eventName.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
+                    a.download = `BukSU_Executive_Summary_${safeTitle}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+                    showToast("Report Downloaded", `Executive summary PDF for "${eventName}" downloaded successfully.`, "success");
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast("Report Failed", errData.message || "Failed to generate executive report.", "error");
+                }
+            } catch (err) {
+                showToast("Download Failed", err.message || "Could not fetch report.", "error");
+            }
         });
     });
 

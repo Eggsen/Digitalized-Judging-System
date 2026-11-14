@@ -13,6 +13,7 @@ router.get('/qr', requireRole(['admin', 'tabulator']), (req, res, next) => {
 });
 router.get('/:id', eventController.getEvent);
 router.get('/:id/qr', requireRole(['admin', 'tabulator']), eventController.getEventQR);
+router.get('/:id/executive-summary', requireRole(['admin']), eventController.exportExecutiveSummaryPDF);
 
 // Admin Management
 router.post('/', requireRole(['admin']), eventController.createEvent);

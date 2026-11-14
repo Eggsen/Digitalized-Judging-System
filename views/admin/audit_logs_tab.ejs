@@ -7,9 +7,40 @@
                         </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Chronological record of system actions, event creations, edits, archiving, and access updates.</p>
                     </div>
-                    <button id="refreshLogsBtn" class="text-xs text-slate-500 dark:text-slate-400 hover:text-buksu-navy dark:hover:text-buksu-gold font-semibold flex items-center gap-1 cursor-pointer">
-                        <i class="fa-solid fa-rotate-right"></i> Refresh
-                    </button>
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <!-- Export Audit Trail Menu -->
+                        <div class="relative inline-block text-left" id="logs-export-dropdown-container">
+                            <button id="logs-export-btn" type="button" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-buksu-navy dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
+                                <i class="fa-solid fa-file-export text-buksu-gold"></i>
+                                <span>Export Report</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-70"></i>
+                            </button>
+                            <div id="logs-export-menu" class="hidden absolute right-0 mt-1.5 w-52 bg-white dark:bg-slate-850 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-30">
+                                <button type="button" id="logs-export-pdf-btn" class="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer transition-colors">
+                                    <div class="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-file-pdf text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-800 dark:text-slate-100">Export Audit (PDF)</div>
+                                        <div class="text-[10px] text-slate-400 font-normal">Governance summary memo</div>
+                                    </div>
+                                </button>
+                                <button type="button" id="logs-export-csv-btn" class="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 cursor-pointer border-t border-slate-100 dark:border-slate-800 transition-colors">
+                                    <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-file-csv text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-800 dark:text-slate-100">Export Logs (CSV)</div>
+                                        <div class="text-[10px] text-slate-400 font-normal">Spreadsheet & raw analytics</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="refreshLogsBtn" class="text-xs text-slate-500 dark:text-slate-400 hover:text-buksu-navy dark:hover:text-buksu-gold font-semibold flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Search and Rows Filter Bar -->

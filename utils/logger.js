@@ -147,11 +147,11 @@ async function logSystemAction(userId, username, role, action, details, req = nu
         let userAgent = 'System / Internal';
 
         if (req) {
-            ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+            ipAddress = req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '127.0.0.1';
             if (typeof ipAddress === 'string' && ipAddress.includes(',')) {
                 ipAddress = ipAddress.split(',')[0].trim();
             }
-            userAgent = req.headers['user-agent'] || 'Unknown Client';
+            userAgent = req.headers?.['user-agent'] || 'Unknown Client';
         }
 
         const rawAction = action || 'UNKNOWN_ACTION';

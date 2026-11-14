@@ -17,7 +17,7 @@ function extractToken(req) {
     }
     // Only permit query token on specific download/export endpoints (e.g. PDF export)
     if (req.query && req.query.token) {
-        const isDownloadEndpoint = req.path.includes('/export-pdf') || req.path.includes('/download') || req.path.includes('/qr');
+        const isDownloadEndpoint = req.path.includes('/export-pdf') || req.path.includes('/download') || req.path.includes('/qr') || req.path.includes('/export') || req.path.includes('/executive-summary');
         if (isDownloadEndpoint) {
             return req.query.token;
         }

@@ -1120,6 +1120,7 @@ async function fetchAndComputeTabulationData(eventId) {
 
     return {
         event: {
+            ...event,
             id: String(event._id),
             _id: event._id,
             eventName: evName,
@@ -1371,5 +1372,6 @@ module.exports = {
     unverifyScore,
     getTabulationMatrix,
     exportTabulationPDF,
-    getScoreVersions
+    getScoreVersions,
+    fetchAndComputeTabulationData
 };
