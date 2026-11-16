@@ -26,7 +26,7 @@ function extractToken(req) {
 }
 
 /**
- * Generate a JWT token for a user
+ * Generate a JWT token for a user with embedded MVCC token_version
  */
 function generateToken(user) {
     const payload = {
@@ -34,7 +34,8 @@ function generateToken(user) {
         username: user.username,
         email: user.email || '',
         role: (user.role || 'judge').toLowerCase(),
-        full_name: user.full_name || user.name || user.username
+        full_name: user.full_name || user.name || user.username,
+        token_version: Number(user.token_version || 1)
     };
 
     return jwt.sign(payload, JWT_SECRET, {
@@ -63,19 +64,34 @@ function authenticateToken(req, res, next) {
             });
         }
 
-        // Active account & role verification: ensures disabled accounts or altered roles apply immediately
+        // Active account, role, and MVCC token_version verification
         try {
             if (collections.users && decoded.id) {
                 const u = await collections.users.findOne(
                     getIdFilter(decoded.id),
-                    { projection: { is_active: 1, status: 1, role: 1 } }
+                    { projection: { is_active: 1, status: 1, role: 1, token_version: 1 } }
                 );
                 if (u && (u.is_active === false || u.status === 'disabled')) {
                     return res.status(403).json({
                         success: false,
+                        code: 'ACCOUNT_DISABLED',
                         message: 'Your account has been deactivated. Please contact an administrator.'
                     });
                 }
+
+                // MVCC: Concurrency Session Version Check
+                // If a newer login or admin action bumped token_version in the DB, this older session is superseded
+                const currentDbVersion = Number(u?.token_version || 1);
+                const tokenVersion = Number(decoded.token_version || 1);
+                if (u && tokenVersion < currentDbVersion) {
+                    return res.status(401).json({
+                        success: false,
+                        code: 'SESSION_SUPERSEDED',
+                        session_expired: true,
+                        message: 'Your session has ended because this account signed in from another device or was refreshed.'
+                    });
+                }
+
                 if (u && u.role) {
                     decoded.role = u.role.toLowerCase();
                 }

@@ -68,6 +68,16 @@ async function connectDB() {
             console.warn('[Database] Log timestamp index/migration notice:', idxErr.message);
         }
 
+        // MVCC: Initialize token_version for user session concurrency control
+        try {
+            await collections.users.updateMany(
+                { token_version: { $exists: false } },
+                { $set: { token_version: 1 } }
+            );
+        } catch (uErr) {
+            console.warn('[Database] User token_version initialization notice:', uErr.message);
+        }
+
         // Overlay api_keys from system_settings into process.env to persist across cloud restarts
         try {
             const settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });

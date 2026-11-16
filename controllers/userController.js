@@ -205,7 +205,10 @@ async function updateRole(req, res, next) {
             updateDoc.status = updateDoc.is_active ? 'active' : 'disabled';
         }
 
-        await collections.users.updateOne(query, { $set: updateDoc });
+        await collections.users.updateOne(query, {
+            $set: updateDoc,
+            $inc: { token_version: 1 }
+        });
 
         res.json({
             success: true,
@@ -301,7 +304,8 @@ async function resetAdminPin(req, res, next) {
                 pin_failed_attempts: 0,
                 pin_locked_until: null,
                 updated_at: new Date().toISOString()
-            }
+            },
+            $inc: { token_version: 1 }
         });
 
         await logSystemAction(
@@ -323,12 +327,54 @@ async function resetAdminPin(req, res, next) {
     }
 }
 
+/**
+ * Revoke Active User Sessions (Admin Action - MVCC Session Invalidation)
+ * POST /api/users/:id/revoke-sessions
+ */
+async function revokeUserSessions(req, res, next) {
+    try {
+        const { id } = req.params;
+        const query = getIdFilter(id);
+
+        const targetUser = await collections.users.findOne(query);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'User account not found.' });
+        }
+
+        const nextVersion = (targetUser.token_version || 1) + 1;
+        await collections.users.updateOne(query, {
+            $set: {
+                token_version: nextVersion,
+                updated_at: new Date().toISOString()
+            }
+        });
+
+        await logSystemAction(
+            req.user.id,
+            req.user.username,
+            req.user.role,
+            'REVOKE_USER_SESSIONS',
+            `Admin revoked all active login sessions for user "${targetUser.username}" (token version bumped to v${nextVersion}).`,
+            req
+        );
+
+        res.json({
+            success: true,
+            message: `All active sessions for "${targetUser.username}" have been terminated. They will be required to log in again.`,
+            token_version: nextVersion
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
 module.exports = {
     listUsers,
     createUser,
     updateRole,
     deleteUser,
     resetAdminPin,
+    revokeUserSessions,
     getUserPreferences,
     saveUserPreferences
 };

@@ -133,7 +133,7 @@ const roleBadges = {
 // -------------------------------------------------------------
 // Web HTML Page Views (Clean URLs)
 // -------------------------------------------------------------
-app.get(['/', '/index.html'], (req, res) => {
+app.get(['/', '/index.html'], async (req, res) => {
     if (req.query.invite_token || req.query.token) {
         return res.redirect('/auth/accept-invitation?token=' + encodeURIComponent(req.query.invite_token || req.query.token));
     }
@@ -143,8 +143,17 @@ app.get(['/', '/index.html'], (req, res) => {
     const token = req.cookies?.djs_token || req.cookies?.jwt_token;
     if (token) {
         try {
-            jwt.verify(token, JWT_SECRET);
-            return res.redirect('/dashboard');
+            const decoded = jwt.verify(token, JWT_SECRET);
+            if (collections.users && decoded?.id) {
+                const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1 } });
+                const currentDbVersion = Number(u?.token_version || 1);
+                const tokenVersion = Number(decoded?.token_version || 1);
+                if (u && tokenVersion >= currentDbVersion && u.is_active !== false && u.status !== 'disabled') {
+                    return res.redirect('/dashboard');
+                }
+            } else {
+                return res.redirect('/dashboard');
+            }
         } catch (e) {
             res.clearCookie('djs_token');
             res.clearCookie('jwt_token');
@@ -186,6 +195,15 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
         return res.redirect('/auth/login?error=account_disabled');
     }
 
+    // MVCC: Concurrency Session Versioning - detect superseded sessions
+    const currentDbVersion = Number(user.token_version || 1);
+    const tokenVersion = Number(decoded.token_version || 1);
+    if (tokenVersion < currentDbVersion) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+        return res.redirect('/auth/login?error=session_superseded');
+    }
+
     const role = (user.role || 'judge').toLowerCase();
     const badgeInfo = roleBadges[role] || { title: 'User Dashboard', icon: 'fa-user', color: 'bg-slate-700' };
 
@@ -217,8 +235,17 @@ app.get(['/auth/login', '/auth/login.html', '/login'], async (req, res) => {
         const token = req.cookies?.djs_token || req.cookies?.jwt_token;
         if (token) {
             try {
-                jwt.verify(token, JWT_SECRET);
-                return res.redirect('/dashboard');
+                const decoded = jwt.verify(token, JWT_SECRET);
+                if (collections.users && decoded?.id) {
+                    const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1 } });
+                    const currentDbVersion = Number(u?.token_version || 1);
+                    const tokenVersion = Number(decoded?.token_version || 1);
+                    if (u && tokenVersion >= currentDbVersion && u.is_active !== false && u.status !== 'disabled') {
+                        return res.redirect('/dashboard');
+                    }
+                } else {
+                    return res.redirect('/dashboard');
+                }
             } catch (e) {
                 res.clearCookie('djs_token');
                 res.clearCookie('jwt_token');

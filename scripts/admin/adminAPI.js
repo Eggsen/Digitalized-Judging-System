@@ -74,7 +74,12 @@ export async function revokeInvitation(userId) {
 
 export async function revokeUserSessions(userId) {
     try {
-        return { success: true, message: "Session revoked." };
+        const response = await fetch(`/api/users/${encodeURIComponent(userId)}/revoke-sessions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+        return await response.json();
     } catch (error) {
         console.error("Revoke sessions API Error: ", error);
         return { success: false, message: "Unable to connect to server." };

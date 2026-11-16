@@ -13,10 +13,11 @@ const JWT_EXPIRES_IN = '7d';
 function generateToken(user) {
     return jwt.sign(
         {
-            id: String(user._id),
+            id: String(user._id || user.id),
             username: user.username,
             role: user.role,
-            full_name: user.full_name || user.name || user.username
+            full_name: user.full_name || user.name || user.username,
+            token_version: Number(user.token_version || 1)
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -175,11 +176,16 @@ async function login(req, res, next) {
             }
         }
 
+        // MVCC: Concurrency Session Versioning - atomically bump token_version on login
+        const currentVersion = Number(user.token_version || 0);
+        const nextVersion = currentVersion + 1;
+
         // Reset failed attempts & upgrade legacy hash if needed
         const updateFields = {
             last_login: new Date().toISOString(),
             pin_failed_attempts: 0,
-            pin_locked_until: null
+            pin_locked_until: null,
+            token_version: nextVersion
         };
         if (user.password && user.password.startsWith('$2y$')) {
             updateFields.password = await bcrypt.hash(password, 10);
@@ -190,6 +196,7 @@ async function login(req, res, next) {
             { $set: updateFields }
         );
 
+        user.token_version = nextVersion;
         const token = generateToken(user);
         const cookieOptions = {
             httpOnly: true,
@@ -307,18 +314,24 @@ async function verifyLoginPin(req, res, next) {
             });
         }
 
-        // Reset failed attempts
+        // MVCC: Concurrency Session Versioning - bump token_version upon 2FA completion
+        const currentVersion = Number(user.token_version || 0);
+        const nextVersion = currentVersion + 1;
+
+        // Reset failed attempts & bump token_version
         await collections.users.updateOne(
             { _id: user._id },
             {
                 $set: {
                     last_login: new Date().toISOString(),
                     pin_failed_attempts: 0,
-                    pin_locked_until: null
+                    pin_locked_until: null,
+                    token_version: nextVersion
                 }
             }
         );
 
+        user.token_version = nextVersion;
         const token = generateToken(user);
         const cookieOptions = {
             httpOnly: true,
@@ -396,7 +409,13 @@ async function logout(req, res) {
     res.clearCookie('djs_token');
     res.clearCookie('jwt_token');
 
-    if (req.user) {
+    if (req.user && req.user.id && collections.users) {
+        try {
+            await collections.users.updateOne(
+                getIdFilter(req.user.id),
+                { $inc: { token_version: 1 } }
+            );
+        } catch (e) {}
         await logSystemAction(req.user.id, req.user.username, req.user.role, 'LOGOUT', 'User signed out.', req);
     }
 
@@ -525,6 +544,21 @@ async function googleCallback(req, res) {
             return res.redirect(`/auth/login?admin_pin_challenge=${encodeURIComponent(challengeToken)}&email=${encodeURIComponent(user.email)}`);
         }
 
+        // MVCC: Concurrency Session Versioning - bump token_version on Google OAuth login
+        const currentVersion = Number(user.token_version || 0);
+        const nextVersion = currentVersion + 1;
+
+        await collections.users.updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    last_login: new Date().toISOString(),
+                    token_version: nextVersion
+                }
+            }
+        );
+
+        user.token_version = nextVersion;
         const token = generateToken(user);
         const cookieOptions = {
             httpOnly: true,
@@ -766,6 +800,7 @@ async function resetPassword(req, res, next) {
                     is_active: true,
                     updated_at: new Date().toISOString()
                 },
+                $inc: { token_version: 1 },
                 $unset: {
                     reset_token: '',
                     reset_token_expires_at: '',

@@ -56,6 +56,7 @@ const ACTION_MAPPINGS = {
     'UPDATE_USER': 'Updated user account',
     'DELETE_USER': 'Deleted user account',
     'UPDATE_ROLE': 'Changed user role',
+    'REVOKE_USER_SESSIONS': 'Terminated active user sessions',
 
     // System Settings & Maintenance
     'UPDATE_SETTINGS': 'Updated system settings',

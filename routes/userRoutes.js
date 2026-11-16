@@ -16,6 +16,7 @@ router.get('/', userController.listUsers);
 router.post('/', userController.createUser);
 router.patch('/:id/role', userController.updateRole);
 router.post('/:id/reset-pin', userController.resetAdminPin);
+router.post('/:id/revoke-sessions', userController.revokeUserSessions);
 router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

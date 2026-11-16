@@ -81,6 +81,9 @@ function initLandingPage() {
             case 'session_revoked':
                 errorMsg = 'Your session was ended or revoked by an administrator. Please sign in again.';
                 break;
+            case 'session_superseded':
+                errorMsg = 'Your session has ended because this account signed in from another device or your credentials were updated.';
+                break;
             case 'oauth_disabled':
                 errorMsg = 'Google Sign-In is currently disabled by the system administrator.';
                 break;

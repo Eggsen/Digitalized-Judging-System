@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, optionalToken } = require('../middleware/auth');
 const { verifyRecaptcha } = require('../middleware/recaptcha');
 
 // Public Auth Endpoints
 router.post('/login', verifyRecaptcha, authController.login);
 router.post('/verify-login-pin', authController.verifyLoginPin);
-router.post('/logout', authController.logout);
+router.post('/logout', optionalToken, authController.logout);
 router.post('/request-reset', verifyRecaptcha, authController.requestPasswordReset);
 router.get('/reset-password', authController.verifyResetToken);
 router.post('/reset-password', authController.resetPassword);
