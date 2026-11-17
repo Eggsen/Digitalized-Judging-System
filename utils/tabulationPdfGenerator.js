@@ -59,8 +59,20 @@ async function resolveImageBase64(imageUrl) {
         }
 
         const cleanUrl = imageUrl.split('?')[0].trim();
+        const isDefaultLogo = cleanUrl.includes('DJS Logo.png') || cleanUrl.includes('djs_logo');
 
-        // 2. If it's a localhost or 127.0.0.1 URL, extract the local pathname
+        // 2. Fast Path: Check if active institution logo is cached on local disk
+        const activeLocalCache = path.resolve(__dirname, '..', 'assets', 'uploads', 'logos', 'institution_logo_active.png');
+        if (!isDefaultLogo && fs.existsSync(activeLocalCache)) {
+            try {
+                const cachedBuf = fs.readFileSync(activeLocalCache);
+                if (isValidPdfKitImage(cachedBuf)) {
+                    return `data:image/png;base64,${cachedBuf.toString('base64')}`;
+                }
+            } catch (e) {}
+        }
+
+        // 3. If it's a localhost or 127.0.0.1 URL, extract the local pathname
         let pathname = cleanUrl;
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
             try {
@@ -71,12 +83,15 @@ async function resolveImageBase64(imageUrl) {
             } catch (e) {}
         }
 
-        // 3. Check local filesystem paths (decoding URL escapes such as %20)
+        // 4. Check local filesystem paths (decoding URL escapes such as %20)
         const decodedPath = decodeURIComponent(pathname).replace(/^\/+/, '');
+        const filename = path.basename(decodedPath);
         const candidatePaths = [
             path.resolve(__dirname, '..', decodedPath),
             path.resolve(__dirname, decodedPath),
-            path.resolve(process.cwd(), decodedPath)
+            path.resolve(process.cwd(), decodedPath),
+            path.resolve(__dirname, '..', 'assets', 'uploads', 'logos', filename),
+            path.resolve(__dirname, '..', 'assets', 'logo', filename)
         ];
 
         for (const p of candidatePaths) {
@@ -89,21 +104,49 @@ async function resolveImageBase64(imageUrl) {
             }
         }
 
-        // 4. Remote HTTP/HTTPS (Cloudinary CDN, remote storage)
+        // 5. Remote HTTP/HTTPS (Cloudinary CDN, remote storage)
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+            let fetchUrl = cleanUrl;
+            // Upgrade insecure http to https
+            if (fetchUrl.startsWith('http://')) {
+                fetchUrl = 'https://' + fetchUrl.slice(7);
+            }
+            // For Cloudinary URLs, inject f_png transformation to guarantee standardized PNG response
+            if (fetchUrl.includes('cloudinary.com') && fetchUrl.includes('/image/upload/') && !fetchUrl.includes('/f_png')) {
+                fetchUrl = fetchUrl.replace('/image/upload/', '/image/upload/f_png/');
+            }
+
             try {
-                const resp = await axios.get(cleanUrl, {
+                const resp = await axios.get(fetchUrl, {
                     responseType: 'arraybuffer',
                     timeout: 8000,
                     headers: { 'Accept': 'image/png,image/jpeg,image/*' }
                 });
                 const buf = Buffer.from(resp.data);
                 if (isValidPdfKitImage(buf)) {
+                    // Cache to local disk for offline resilience and ultra-fast subsequent generation
+                    try {
+                        const targetDir = path.resolve(__dirname, '..', 'assets', 'uploads', 'logos');
+                        if (!fs.existsSync(targetDir)) {
+                            fs.mkdirSync(targetDir, { recursive: true });
+                        }
+                        fs.writeFileSync(activeLocalCache, buf);
+                    } catch (cacheErr) {}
+
                     const ext = (buf[0] === 0x89) ? 'png' : 'jpeg';
                     return `data:image/${ext};base64,${buf.toString('base64')}`;
                 }
             } catch (netErr) {
                 console.warn('[PDF Generator] Could not fetch remote logo from URL:', cleanUrl, netErr.message);
+                // Fallback check: If local cache exists, use it
+                if (fs.existsSync(activeLocalCache)) {
+                    try {
+                        const cachedBuf = fs.readFileSync(activeLocalCache);
+                        if (isValidPdfKitImage(cachedBuf)) {
+                            return `data:image/png;base64,${cachedBuf.toString('base64')}`;
+                        }
+                    } catch (e) {}
+                }
             }
         }
     } catch (err) {

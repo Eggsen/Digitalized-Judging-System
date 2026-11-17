@@ -215,6 +215,12 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
 
     const canCreateAdminFlag = await canUserCreateAdmin(user);
 
+    let settingsDoc = null;
+    try {
+        settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+    } catch (e) {}
+    const branding = settingsDoc?.branding || null;
+
     res.render('dashboard', {
         user: {
             id: String(user._id),
@@ -225,6 +231,7 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
             full_name: user.full_name || user.name || user.username
         },
         badgeInfo,
+        branding,
         serverTheme,
         serverColorRule,
         serverNavPlacement

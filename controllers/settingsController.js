@@ -1076,6 +1076,11 @@ async function uploadLogo(req, res, next) {
                 { _id: 'system_settings' },
                 { $set: { 'branding.logoUrl': null, updatedAt: new Date().toISOString() } }
             );
+            // Clean active cached local logo
+            const activeCache = path.join(__dirname, '..', 'assets', 'uploads', 'logos', 'institution_logo_active.png');
+            if (fs.existsSync(activeCache)) {
+                try { fs.unlinkSync(activeCache); } catch (e) {}
+            }
             return res.json({ success: true, message: 'Logo reset to default.', logoUrl: null });
         }
 
@@ -1083,23 +1088,9 @@ async function uploadLogo(req, res, next) {
         let storage = 'local';
 
         if (logo_base64) {
-            // Attempt Cloudinary upload if credentials are configured
-            try {
-                const { isCloudinaryConfiguredAsync, uploadToCloudinary } = require('../utils/cloudinary');
-                const hasCloudinary = await isCloudinaryConfiguredAsync();
-                if (hasCloudinary) {
-                    const uploadRes = await uploadToCloudinary(logo_base64, 'djs_institution_logos');
-                    if (uploadRes && uploadRes.success) {
-                        finalUrl = uploadRes.url;
-                        storage = 'cloudinary';
-                    }
-                }
-            } catch (cloudErr) {
-                console.warn('[Logo Upload] Cloudinary upload bypassed, falling back to local storage:', cloudErr.message);
-            }
-
-            // Local filesystem storage fallback
-            if (!finalUrl && typeof logo_base64 === 'string' && logo_base64.startsWith('data:image/')) {
+            let localUrl = null;
+            // 1. Always save a high-res local copy for offline and PDF generation resilience
+            if (typeof logo_base64 === 'string' && logo_base64.startsWith('data:image/')) {
                 const matches = logo_base64.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
                 if (matches) {
                     let ext = matches[1].toLowerCase();
@@ -1117,9 +1108,27 @@ async function uploadLogo(req, res, next) {
                         fs.mkdirSync(targetDir, { recursive: true });
                     }
                     fs.writeFileSync(path.join(targetDir, fname), buffer);
-                    finalUrl = `/assets/uploads/logos/${fname}`;
+                    // Also maintain the dedicated active logo copy on disk
+                    fs.writeFileSync(path.join(targetDir, 'institution_logo_active.png'), buffer);
+                    localUrl = `/assets/uploads/logos/${fname}`;
+                    finalUrl = localUrl;
                     storage = 'local';
                 }
+            }
+
+            // 2. Attempt Cloudinary upload if credentials are configured
+            try {
+                const { isCloudinaryConfiguredAsync, uploadToCloudinary } = require('../utils/cloudinary');
+                const hasCloudinary = await isCloudinaryConfiguredAsync();
+                if (hasCloudinary) {
+                    const uploadRes = await uploadToCloudinary(logo_base64, 'djs_institution_logos');
+                    if (uploadRes && uploadRes.success) {
+                        finalUrl = uploadRes.url;
+                        storage = 'cloudinary';
+                    }
+                }
+            } catch (cloudErr) {
+                console.warn('[Logo Upload] Cloudinary upload bypassed, falling back to local storage:', cloudErr.message);
             }
         }
 
@@ -1258,11 +1267,39 @@ async function manageLogoLibrary(req, res, next) {
             let newLogoVal = null;
             let effectiveUrl = defaultLogoUrl;
             let actionNote = 'Reverted active logo to system default BukSU seal.';
+            const targetActive = path.join(__dirname, '..', 'assets', 'uploads', 'logos', 'institution_logo_active.png');
 
             if (selectedUrl && selectedUrl !== defaultLogoUrl && selectedUrl !== 'default_system_logo') {
                 newLogoVal = selectedUrl;
                 effectiveUrl = selectedUrl;
                 actionNote = `Selected logo from library: ${selectedUrl}`;
+
+                // Sync local active cache file for offline/PDF stability
+                if (selectedUrl.startsWith('/assets/uploads/logos/')) {
+                    const srcPath = path.join(__dirname, '..', selectedUrl);
+                    if (fs.existsSync(srcPath)) {
+                        try {
+                            const targetDir = path.dirname(targetActive);
+                            if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+                            fs.copyFileSync(srcPath, targetActive);
+                        } catch (e) {}
+                    }
+                } else if (selectedUrl.startsWith('http://') || selectedUrl.startsWith('https://')) {
+                    try {
+                        const axios = require('axios');
+                        axios.get(selectedUrl, { responseType: 'arraybuffer', timeout: 6000 })
+                            .then(resp => {
+                                const targetDir = path.dirname(targetActive);
+                                if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+                                fs.writeFileSync(targetActive, Buffer.from(resp.data));
+                            })
+                            .catch(() => {});
+                    } catch (e) {}
+                }
+            } else {
+                if (fs.existsSync(targetActive)) {
+                    try { fs.unlinkSync(targetActive); } catch (e) {}
+                }
             }
 
             await collections.settings.updateOne(

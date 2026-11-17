@@ -26,6 +26,128 @@ let unmaskedApiKeys = null;
 let cachedCustomKeys = {};
 let unmaskedCustomKeys = null;
 
+let isSettingsDirty = false;
+let settingsBaseline = null;
+let pendingSubtabDiscardTarget = null;
+let pendingSubtabDiscardTimer = null;
+
+export function captureSettingsBaseline() {
+    const serialized = {};
+    const extraIds = [
+        'setting-institution-name', 'setting-campus-unit', 'setting-system-title', 'setting-header-subtitle',
+        'setting-show-watermark', 'setting-decimal-precision', 'setting-tabulation-method',
+        'setting-tie-breaker', 'setting-unlock-policy', 'setting-blind-judging',
+        'setting-sig-name-0', 'setting-sig-title-0',
+        'setting-sig-name-1', 'setting-sig-title-1',
+        'setting-sig-name-2', 'setting-sig-title-2',
+        'setting-logo-url-hidden'
+    ];
+    extraIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            serialized[id] = (el.type === 'checkbox') ? el.checked : el.value;
+        }
+    });
+    settingsBaseline = JSON.stringify(serialized);
+    isSettingsDirty = false;
+}
+
+export function checkIsSettingsDirty() {
+    if (isSettingsDirty) return true;
+    if (!settingsBaseline) return false;
+    const current = {};
+    const extraIds = [
+        'setting-institution-name', 'setting-campus-unit', 'setting-system-title', 'setting-header-subtitle',
+        'setting-show-watermark', 'setting-decimal-precision', 'setting-tabulation-method',
+        'setting-tie-breaker', 'setting-unlock-policy', 'setting-blind-judging',
+        'setting-sig-name-0', 'setting-sig-title-0',
+        'setting-sig-name-1', 'setting-sig-title-1',
+        'setting-sig-name-2', 'setting-sig-title-2',
+        'setting-logo-url-hidden'
+    ];
+    extraIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            current[id] = (el.type === 'checkbox') ? el.checked : el.value;
+        }
+    });
+    return JSON.stringify(current) !== settingsBaseline;
+}
+
+export function markSettingsDirty() {
+    isSettingsDirty = true;
+}
+
+export function resetSettingsDirtyState() {
+    isSettingsDirty = false;
+    pendingSubtabDiscardTarget = null;
+}
+
+export function triggerUnsavedChangesShake(clickedElement = null) {
+    // 1. Shake the Save button and highlight it with amber ring
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const saveContainer = saveBtn?.closest('.settings-save-bar') || saveBtn;
+
+    [saveBtn, saveContainer].filter(Boolean).forEach(el => {
+        el.classList.remove('animate-minimal-shake');
+        void el.offsetWidth;
+        el.classList.add('animate-minimal-shake');
+        el.classList.add('ring-2', 'ring-amber-400', 'shadow-lg');
+        setTimeout(() => {
+            el.classList.remove('animate-minimal-shake');
+            setTimeout(() => {
+                el.classList.remove('ring-2', 'ring-amber-400', 'shadow-lg');
+            }, 1200);
+        }, 400);
+    });
+
+    // 2. Shake the clicked tab button
+    if (clickedElement) {
+        clickedElement.classList.remove('animate-minimal-shake');
+        void clickedElement.offsetWidth;
+        clickedElement.classList.add('animate-minimal-shake');
+        setTimeout(() => {
+            clickedElement.classList.remove('animate-minimal-shake');
+        }, 400);
+    }
+
+    // 3. Subtle shake on the active subtab container
+    const activeSubtab = document.querySelector('.settings-subtab-content:not(.hidden)');
+    if (activeSubtab) {
+        activeSubtab.classList.remove('animate-minimal-shake');
+        void activeSubtab.offsetWidth;
+        activeSubtab.classList.add('animate-minimal-shake');
+        setTimeout(() => activeSubtab.classList.remove('animate-minimal-shake'), 400);
+    }
+
+    showToast("Unsaved Changes", "You have unsaved changes in Settings. Please save your changes before switching tabs (or click again to discard).", "warning");
+}
+
+export function updateGlobalBranding(branding) {
+    if (!branding) return;
+    const effectiveLogo = branding.logoUrl || '/assets/logo/DJS Logo.png';
+    const topNavLogo = document.getElementById('top-nav-institution-logo');
+    if (topNavLogo) {
+        topNavLogo.src = effectiveLogo;
+    }
+    const topNavTitle = document.getElementById('top-nav-system-title');
+    if (topNavTitle && branding.systemTitle) {
+        topNavTitle.textContent = branding.systemTitle;
+    }
+    const topNavInst = document.getElementById('top-nav-institution-name');
+    if (topNavInst && branding.institutionName) {
+        topNavInst.textContent = branding.institutionName;
+    }
+    const tabPrintLogo = document.getElementById('tab-print-logo');
+    if (tabPrintLogo) {
+        tabPrintLogo.src = effectiveLogo;
+    }
+    const tabScreenLogo = document.getElementById('tab-screen-logo');
+    if (tabScreenLogo) {
+        tabScreenLogo.src = effectiveLogo;
+    }
+}
+
 export async function loadSystemSettings() {
     const loadingEl = document.getElementById('settings-loading-state');
     const contentEl = document.getElementById('settings-content-wrapper');
@@ -53,6 +175,8 @@ export async function loadSystemSettings() {
         cachedCustomKeys = { ...res.custom_keys };
         renderCustomKeysList();
     }
+    captureSettingsBaseline();
+    updateGlobalBranding(res.settings?.branding);
 }
 
 function populateSettingsForm(settings) {
@@ -298,16 +422,37 @@ function initSubTabs() {
     const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
 
     subTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
             const target = btn.dataset.subtab;
-            if (target) {
-                const settingsTab = document.getElementById('settings-tab');
-                if (settingsTab && settingsTab.classList.contains('hidden')) {
-                    const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
-                    if (settingsNavBtn) settingsNavBtn.click();
+            if (!target) return;
+
+            // Check if user has unsaved changes before switching subtabs
+            const currentActiveSubtab = document.querySelector('.settings-subtab-content:not(.hidden)')?.id;
+            if (currentActiveSubtab && currentActiveSubtab !== target && checkIsSettingsDirty()) {
+                if (pendingSubtabDiscardTarget === target) {
+                    clearTimeout(pendingSubtabDiscardTimer);
+                    pendingSubtabDiscardTarget = null;
+                    resetSettingsDirtyState();
+                    if (cachedSettings) populateSettingsForm(cachedSettings);
+                } else {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pendingSubtabDiscardTarget = target;
+                    clearTimeout(pendingSubtabDiscardTimer);
+                    pendingSubtabDiscardTimer = setTimeout(() => {
+                        pendingSubtabDiscardTarget = null;
+                    }, 3000);
+                    triggerUnsavedChangesShake(btn);
+                    return;
                 }
-                activateSettingsSubtab(target);
             }
+
+            const settingsTab = document.getElementById('settings-tab');
+            if (settingsTab && settingsTab.classList.contains('hidden')) {
+                const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
+                if (settingsNavBtn) settingsNavBtn.click();
+            }
+            activateSettingsSubtab(target);
         });
     });
 }
@@ -315,6 +460,13 @@ function initSubTabs() {
 function initSettingsForm() {
     const form = document.getElementById('systemSettingsForm');
     if (!form) return;
+
+    form.addEventListener('input', () => {
+        isSettingsDirty = true;
+    });
+    form.addEventListener('change', () => {
+        isSettingsDirty = true;
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -371,6 +523,9 @@ function initSettingsForm() {
                 cachedSettings = res.settings;
                 populateSettingsForm(res.settings);
             }
+            captureSettingsBaseline();
+            isSettingsDirty = false;
+            updateGlobalBranding(res.settings?.branding);
         } else {
             showToast("Save Failed", res.message || "Failed to update settings.", "error");
         }
@@ -424,7 +579,38 @@ function initLogoUploader() {
         try {
             const base64Data = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
+                reader.onload = (e) => {
+                    const rawData = e.target.result;
+                    // Standardize any image format (SVG, WebP, JPEG, PNG) to valid PNG via canvas
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            let w = img.naturalWidth || 400;
+                            let h = img.naturalHeight || 400;
+                            const maxDim = 800;
+                            if (w > maxDim || h > maxDim) {
+                                if (w > h) {
+                                    h = Math.round((h * maxDim) / w);
+                                    w = maxDim;
+                                } else {
+                                    w = Math.round((w * maxDim) / h);
+                                    h = maxDim;
+                                }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            const pngData = canvas.toDataURL('image/png');
+                            resolve(pngData);
+                        } catch (convErr) {
+                            resolve(rawData);
+                        }
+                    };
+                    img.onerror = () => resolve(rawData);
+                    img.src = rawData;
+                };
                 reader.onerror = (e) => reject(new Error("Failed to read image file"));
                 reader.readAsDataURL(file);
             });
@@ -445,6 +631,8 @@ function initLogoUploader() {
                 if (!cachedSettings.branding) cachedSettings.branding = {};
                 cachedSettings.branding.logoUrl = newLogoUrl;
                 updateLogoPreviewUI(newLogoUrl);
+                updateGlobalBranding(cachedSettings.branding);
+                markSettingsDirty();
                 const storageMethod = data.storage === 'cloudinary' ? 'Cloudinary CDN' : 'Local Storage';
                 showToast("Logo Uploaded", `Institution logo saved via ${storageMethod}.`, "create");
 
@@ -487,6 +675,8 @@ function initLogoUploader() {
                 if (!cachedSettings.branding) cachedSettings.branding = {};
                 cachedSettings.branding.logoUrl = null;
                 updateLogoPreviewUI(null);
+                updateGlobalBranding(cachedSettings.branding);
+                markSettingsDirty();
                 showToast("Logo Reset", "Reverted to default institution seal.", "archive");
 
                 const modal = document.getElementById('logo-library-modal');
@@ -700,6 +890,8 @@ async function selectLogoFromLibrary(url, btn) {
             cachedSettings.branding.logoUrl = data.logoUrl;
 
             updateLogoPreviewUI(data.logoUrl);
+            updateGlobalBranding(cachedSettings.branding);
+            markSettingsDirty();
             await loadLogoLibrary();
             showToast("Active Logo Updated", data.message || "Institution logo updated from library.", "create");
         } else {
@@ -2124,6 +2316,7 @@ function initApiKeysSettings() {
             });
             showToast("Credentials Validated & Saved", res.message || "API keys validated, written to .env, and synchronized.", "create");
             lockApiKeysInputs(res.api_keys, res.custom_keys);
+            isSettingsDirty = false;
         } else {
             showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
             if (res.message && res.message.toLowerCase().includes('pin')) {
@@ -2230,13 +2423,16 @@ function initApiKeysSettings() {
     // Mark service as unvalidated when any env input changes
     document.addEventListener('input', (e) => {
         const target = e.target;
-        if (target && target.id && target.id.startsWith('setting-env-')) {
-            const key = target.id.replace('setting-env-', '');
-            target.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400');
-            for (const [srv, kList] of Object.entries(INTEGRATION_KEY_MAP)) {
-                if (kList.includes(key)) {
-                    updateValidationBadge(srv, 'unvalidated');
-                    break;
+        if (target && target.id && (target.id.startsWith('setting-env-') || target.id.startsWith('setting-custom-'))) {
+            isSettingsDirty = true;
+            if (target.id.startsWith('setting-env-')) {
+                const key = target.id.replace('setting-env-', '');
+                target.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400');
+                for (const [srv, kList] of Object.entries(INTEGRATION_KEY_MAP)) {
+                    if (kList.includes(key)) {
+                        updateValidationBadge(srv, 'unvalidated');
+                        break;
+                    }
                 }
             }
         }

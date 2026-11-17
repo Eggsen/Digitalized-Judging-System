@@ -9,8 +9,8 @@
     <script src="/assets/vendor/pdfmake/pdfmake.min.js"></script>
     <script src="/assets/vendor/pdfmake/vfs_fonts.js"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
-    <title><%= badgeInfo.title %> | BukSU DJS</title>
+    <link rel="icon" type="image/png" href="<%= (typeof branding !== 'undefined' && branding && branding.logoUrl) ? branding.logoUrl : '/assets/logo/DJS Logo.png' %>">
+    <title><%= (typeof branding !== 'undefined' && branding && branding.systemTitle) ? branding.systemTitle : 'JudgeTab' %> | <%= badgeInfo.title %></title>
     <script>
         (function() {
             try {

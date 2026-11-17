@@ -289,11 +289,17 @@ function renderTabulationBoard(data) {
     }
 
     // Dynamic Institution Logo & Print Header Seal
+    const effectiveLogo = branding.logoUrl || '/assets/logo/DJS Logo.png';
     const printLogoEl = document.getElementById('tab-print-logo');
     if (printLogoEl) {
         printLogoEl.crossOrigin = 'anonymous';
-        printLogoEl.src = branding.logoUrl || '/assets/logo/DJS Logo.png';
+        printLogoEl.src = effectiveLogo;
         printLogoEl.style.display = 'block';
+    }
+    const screenLogoEl = document.getElementById('tab-screen-logo');
+    if (screenLogoEl) {
+        screenLogoEl.src = effectiveLogo;
+        screenLogoEl.style.display = 'block';
     }
 
     // Signatories
@@ -1183,10 +1189,13 @@ export function closeScoreBreakdownModal() {
  * into a valid PNG that pdfmake can render without "Unknown image format" errors.
  */
 async function resolveClientImageBase64(imgElement, fallbackUrl) {
+    let targetUrl = fallbackUrl;
     const rawAttr = imgElement ? imgElement.getAttribute('src') : null;
-    const targetUrl = (rawAttr && rawAttr.trim() !== '') ? imgElement.src : fallbackUrl;
+    if (!targetUrl || targetUrl.includes('DJS Logo.png')) {
+        targetUrl = (rawAttr && rawAttr.trim() !== '') ? imgElement.src : (fallbackUrl || '/assets/logo/DJS Logo.png');
+    }
     if (!targetUrl || typeof targetUrl !== 'string' || targetUrl.trim() === '' || targetUrl.endsWith('/dashboard')) {
-        return null;
+        targetUrl = '/assets/logo/DJS Logo.png';
     }
 
     // If it's already a clean PNG data URL
@@ -1226,7 +1235,13 @@ async function resolveClientImageBase64(imgElement, fallbackUrl) {
                 resolve(null);
             }
         };
-        offscreen.onerror = () => resolve(null);
+        offscreen.onerror = () => {
+            if (targetUrl !== '/assets/logo/DJS Logo.png') {
+                resolveClientImageBase64(null, '/assets/logo/DJS Logo.png').then(resolve);
+            } else {
+                resolve(null);
+            }
+        };
         offscreen.src = targetUrl;
     });
 }

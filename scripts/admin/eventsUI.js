@@ -5,7 +5,7 @@ import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCr
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
 import { toggleJudgingPeriod } from "./judgingAPI.js";
-import { loadSystemSettings } from "./settingsUI.js";
+import { loadSystemSettings, checkIsSettingsDirty, triggerUnsavedChangesShake, resetSettingsDirtyState } from "./settingsUI.js";
 
 const userRole = document.body.dataset.role;
 let cachedEventsList = [];
@@ -84,7 +84,32 @@ function handleQrDeepLinks() {
 /* -------------------------------------------------------------
  * ADMIN TABS & NAVIGATION (SIDEBAR + TOP BAR SYNC)
  * ------------------------------------------------------------- */
+let pendingMainTabDiscardTarget = null;
+let pendingMainTabDiscardTimer = null;
+
 export function switchAdminTab(targetTab) {
+    const settingsTab = document.getElementById('settings-tab');
+    const isCurrentlyOnSettings = settingsTab && !settingsTab.classList.contains('hidden');
+
+    if (isCurrentlyOnSettings && targetTab !== 'settings-tab' && typeof checkIsSettingsDirty === 'function' && checkIsSettingsDirty()) {
+        if (pendingMainTabDiscardTarget === targetTab) {
+            clearTimeout(pendingMainTabDiscardTimer);
+            pendingMainTabDiscardTarget = null;
+            if (typeof resetSettingsDirtyState === 'function') resetSettingsDirtyState();
+        } else {
+            pendingMainTabDiscardTarget = targetTab;
+            clearTimeout(pendingMainTabDiscardTimer);
+            pendingMainTabDiscardTimer = setTimeout(() => {
+                pendingMainTabDiscardTarget = null;
+            }, 3000);
+            const targetBtn = document.querySelector(`.admin-tab-btn[data-tab="${targetTab}"], .sidebar-nav-btn[data-tab="${targetTab}"]`);
+            if (typeof triggerUnsavedChangesShake === 'function') {
+                triggerUnsavedChangesShake(targetBtn);
+            }
+            return;
+        }
+    }
+
     const tabBtns = document.querySelectorAll('.admin-tab-btn, .sidebar-nav-btn[data-tab]:not([data-tab^="user-"])');
     const tabContents = document.querySelectorAll('.admin-tab-content');
 
