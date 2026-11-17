@@ -15,9 +15,16 @@ export async function createAccount(accountData) {
     }
 }
 
-export async function listAccounts() {
+export async function listAccounts(params = {}) {
     try {
-        const response = await fetch("/api/users", {
+        const query = new URLSearchParams();
+        if (params.page !== undefined) query.set('page', params.page);
+        if (params.limit !== undefined) query.set('limit', params.limit);
+        if (params.search) query.set('search', params.search);
+        if (params.role && params.role !== 'all') query.set('role', params.role);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+
+        const response = await fetch(`/api/users${qs}`, {
             method: "GET",
             credentials: "include"
         });

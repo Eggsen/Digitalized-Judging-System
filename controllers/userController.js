@@ -72,10 +72,32 @@ async function listUsers(req, res, next) {
             };
         });
 
+        const total = formatted.length;
+        let pagedAccounts = formatted;
+        let currentPage = 1;
+        let currentLimit = total;
+        let totalPages = 1;
+
+        if (req.query.page !== undefined || req.query.limit !== undefined) {
+            currentPage = Math.max(1, parseInt(req.query.page || 1, 10));
+            currentLimit = Math.max(1, parseInt(req.query.limit || 10, 10));
+            totalPages = Math.ceil(total / currentLimit) || 1;
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+            const skip = (currentPage - 1) * currentLimit;
+            pagedAccounts = formatted.slice(skip, skip + currentLimit);
+        }
+
         res.json({
             success: true,
-            accounts: formatted,
-            users: formatted,
+            accounts: pagedAccounts,
+            all_accounts: formatted,
+            users: pagedAccounts,
+            total,
+            page: currentPage,
+            limit: currentLimit,
+            total_pages: totalPages,
             can_create_admin: isRequesterAuthorized
         });
     } catch (err) {

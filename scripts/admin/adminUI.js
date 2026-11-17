@@ -4,21 +4,143 @@ import { showToast } from "/scripts/utils/uiUtils.js";
 import { getRoleBadge, getStatusBadge } from "/scripts/admin/adminHelpers.js";
 import { loadAdminEvents } from "/scripts/admin/eventsUI.js";
 
+const accountsState = {
+    page: 1,
+    limit: 10,
+    search: '',
+    role: 'all',
+    total: 0,
+    totalPages: 1
+};
+
+function getPaginationPageList(current, total) {
+    if (total <= 7) {
+        const pages = [];
+        for (let i = 1; i <= total; i++) pages.push(i);
+        return pages;
+    }
+    if (current <= 4) {
+        return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+        return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+}
+
+function renderAccountsPagination(total, page, limit, totalPages) {
+    accountsState.total = total;
+    accountsState.page = page;
+    accountsState.limit = limit;
+    accountsState.totalPages = totalPages;
+
+    const totalBadge = document.getElementById('accounts-total-badge');
+    if (totalBadge) {
+        totalBadge.textContent = String(total);
+    }
+
+    const infoEl = document.getElementById('accounts-pagination-info');
+    if (infoEl) {
+        if (total === 0) {
+            infoEl.textContent = (accountsState.search || accountsState.role !== 'all')
+                ? 'No matching accounts found.'
+                : 'Showing 0 accounts.';
+        } else {
+            const start = (page - 1) * limit + 1;
+            const end = Math.min(page * limit, total);
+            infoEl.textContent = `Showing ${start} to ${end} of ${total} accounts.`;
+        }
+    }
+
+    const controlsEl = document.getElementById('accounts-pagination-controls');
+    if (!controlsEl) return;
+
+    if (total === 0 || totalPages <= 1) {
+        controlsEl.innerHTML = '';
+        return;
+    }
+
+    const pages = getPaginationPageList(page, totalPages);
+    let html = '';
+
+    // Previous Button
+    const prevDisabled = page <= 1;
+    html += `
+        <button type="button" class="account-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${page - 1}" ${prevDisabled ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            <span class="hidden sm:inline">Prev</span>
+        </button>
+    `;
+
+    // Page Numbers
+    pages.forEach(p => {
+        if (p === '...') {
+            html += `<span class="px-2 py-1 text-slate-400 font-bold select-none text-xs">...</span>`;
+        } else if (p === page) {
+            html += `
+                <button type="button" class="w-7 h-7 rounded-xl bg-buksu-navy text-white font-black shadow-xs border border-buksu-navy text-xs cursor-default">
+                    ${p}
+                </button>
+            `;
+        } else {
+            html += `
+                <button type="button" class="account-page-btn w-7 h-7 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs cursor-pointer" data-page="${p}">
+                    ${p}
+                </button>
+            `;
+        }
+    });
+
+    // Next Button
+    const nextDisabled = page >= totalPages;
+    html += `
+        <button type="button" class="account-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${page + 1}" ${nextDisabled ? 'disabled' : ''}>
+            <span class="hidden sm:inline">Next</span>
+            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+    `;
+
+    controlsEl.innerHTML = html;
+
+    controlsEl.querySelectorAll('.account-page-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const targetPage = parseInt(btn.dataset.page, 10);
+            if (targetPage && targetPage >= 1 && targetPage <= totalPages && targetPage !== page) {
+                accountsState.page = targetPage;
+                await loadAccounts();
+            }
+        });
+    });
+}
+
 async function loadAccounts() {
     const tbody = document.getElementById('accounts-tbody');
     if (!tbody) return;
 
     tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading accounts...</td></tr>';
 
-    const res = await listAccounts();
+    const res = await listAccounts({
+        page: accountsState.page,
+        limit: accountsState.limit,
+        search: accountsState.search,
+        role: accountsState.role
+    });
 
     if (!res.success) {
         tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-rose-500">${res.message}</td></tr>`;
+        renderAccountsPagination(0, 1, accountsState.limit, 1);
         return;
     }
 
+    const total = res.total !== undefined ? res.total : (res.accounts ? res.accounts.length : 0);
+    const page = res.page !== undefined ? res.page : accountsState.page;
+    const limit = res.limit !== undefined ? res.limit : accountsState.limit;
+    const totalPages = res.total_pages !== undefined ? res.total_pages : (Math.ceil(total / limit) || 1);
+
+    renderAccountsPagination(total, page, limit, totalPages);
+
     if (!res.accounts || res.accounts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No accounts found. Send an invitation to get started.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No accounts found.</td></tr>';
         return;
     }
 
@@ -384,7 +506,34 @@ function initAdminPanel() {
         }
     });
 
-    document.getElementById('refreshAccountsBtn')?.addEventListener('click', loadAccounts);
+    const searchInput = document.getElementById('accounts-search-input');
+    let searchDebounce = null;
+    searchInput?.addEventListener('input', (e) => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(async () => {
+            accountsState.search = e.target.value.trim();
+            accountsState.page = 1;
+            await loadAccounts();
+        }, 300);
+    });
+
+    const roleFilter = document.getElementById('accounts-role-filter');
+    roleFilter?.addEventListener('change', async (e) => {
+        accountsState.role = e.target.value;
+        accountsState.page = 1;
+        await loadAccounts();
+    });
+
+    const pageSizeSelect = document.getElementById('accounts-page-size');
+    pageSizeSelect?.addEventListener('change', async (e) => {
+        accountsState.limit = parseInt(e.target.value, 10) || 10;
+        accountsState.page = 1;
+        await loadAccounts();
+    });
+
+    document.getElementById('refreshAccountsBtn')?.addEventListener('click', async () => {
+        await loadAccounts();
+    });
 
     loadAccounts();
 }
