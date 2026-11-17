@@ -7,6 +7,7 @@ const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName, updateEnvFile, DEFAULT_INTEGRATION_CREDENTIALS } = require('../utils/envManager');
+const { validateSingleIntegration, validateAllIntegrationTokens } = require('../utils/tokenValidator');
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
 const { canUserCreateAdmin, getAuthorizedAdminEmails } = require('../utils/authHelpers');
 
@@ -420,6 +421,27 @@ async function saveApiKeys(req, res, next) {
             }
         }
 
+        // Security & Stability Check: Validate API Tokens before saving to .env.
+        // The admin cannot save .env if any configured API token or credentials are not valid!
+        const validationResults = await validateAllIntegrationTokens(sanitizedKeys, sanitizedCustom);
+        if (!validationResults.valid) {
+            await logSystemAction(
+                req.user.id,
+                req.user.username,
+                req.user.role,
+                'SAVE_ENV_BLOCKED',
+                `Blocked .env save due to invalid API token(s): ${validationResults.errors.map(e => e.message).join('; ')}`,
+                req
+            );
+            return res.status(422).json({
+                success: false,
+                message: validationResults.message || 'Cannot save .env: One or more API tokens failed validation.',
+                errors: validationResults.errors,
+                services: validationResults.services,
+                customKeys: validationResults.customKeys
+            });
+        }
+
         // 1. Update physical .env on server
         updateEnvFile(sanitizedKeys, sanitizedCustom, removedCustomKeys);
 
@@ -462,6 +484,94 @@ async function saveApiKeys(req, res, next) {
             message: 'API credentials and custom keys successfully updated in .env and synchronized with cloud database.',
             api_keys: maskedLatest,
             custom_keys: maskedCustomLatest
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Validate a specific API token / integration on-demand
+ */
+async function validateApiToken(req, res, next) {
+    try {
+        const { service, credentials, keyName, keyValue } = req.body;
+
+        if (!service) {
+            return res.status(400).json({ success: false, message: 'Integration service name is required.' });
+        }
+
+        let creds = credentials || {};
+        if (service === 'custom') {
+            creds = { keyName: keyName || creds.keyName, keyValue: keyValue || creds.keyValue };
+        }
+
+        // If secret values are masked, retrieve real values from settings
+        let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const currentSystemKeys = getSystemApiKeys(settingsDoc);
+        const currentCustomKeys = getCustomApiKeys(settingsDoc);
+
+        for (const [k, v] of Object.entries(creds)) {
+            if (isMaskedValue(v)) {
+                creds[k] = currentSystemKeys[k] || currentCustomKeys[k] || '';
+            }
+        }
+
+        const result = await validateSingleIntegration(service, creds);
+
+        res.json({
+            success: true,
+            valid: result.valid,
+            service: result.service || service,
+            message: result.message,
+            warning: result.warning || false
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * Validate all integration API tokens and custom keys
+ */
+async function validateAllKeys(req, res, next) {
+    try {
+        const incomingKeys = req.body.api_keys || {};
+        const incomingCustom = req.body.custom_keys || {};
+
+        let settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
+        const currentSystemKeys = getSystemApiKeys(settingsDoc);
+        const currentCustomKeys = getCustomApiKeys(settingsDoc);
+
+        const sanitizedKeys = { ...incomingKeys };
+        for (const field of Object.keys(currentSystemKeys)) {
+            const incomingVal = sanitizedKeys[field];
+            if (isMaskedValue(incomingVal) || (SECRET_ENV_KEYS.includes(field) && incomingVal === '' && currentSystemKeys[field])) {
+                sanitizedKeys[field] = currentSystemKeys[field] || '';
+            }
+        }
+
+        const sanitizedCustom = {};
+        for (const [rawKey, rawVal] of Object.entries(incomingCustom)) {
+            if (isValidCustomKeyName(rawKey)) {
+                const normKey = rawKey.trim().toUpperCase();
+                let val = String(rawVal || '').trim();
+                if (isMaskedValue(val)) {
+                    val = currentCustomKeys[normKey] || '';
+                }
+                sanitizedCustom[normKey] = val;
+            }
+        }
+
+        const results = await validateAllIntegrationTokens(sanitizedKeys, sanitizedCustom);
+
+        res.json({
+            success: true,
+            valid: results.valid,
+            errors: results.errors,
+            message: results.message,
+            services: results.services,
+            customKeys: results.customKeys
         });
     } catch (err) {
         next(err);
@@ -1250,6 +1360,8 @@ module.exports = {
     saveSettings,
     verifyAdminPin,
     saveApiKeys,
+    validateApiToken,
+    validateAllKeys,
     resetIntegration,
     updateSecurityControls,
     exportBackup,

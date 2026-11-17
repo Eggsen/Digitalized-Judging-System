@@ -423,7 +423,14 @@
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-key text-amber-500"></i> Google OAuth API Keys (.env)
                                                     </span>
-                                                    <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <span id="google-validation-badge" class="token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                                                            <i class="fa-solid fa-clock"></i> Unvalidated
+                                                        </span>
+                                                        <button type="button" data-validate-integration="google" class="validate-token-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-amber-700 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100 bg-amber-50 hover:bg-amber-100/80 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 border border-amber-200/80 dark:border-amber-700/60 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Validate Google OAuth API token and credentials">
+                                                            <i class="fa-solid fa-shield-halved text-[10px] text-amber-500"></i>
+                                                            <span>Validate Token</span>
+                                                        </button>
                                                         <button type="button" data-reset-integration="google" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Google OAuth credentials to system default">
                                                             <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
                                                             <span>Reset to Default</span>
@@ -496,7 +503,14 @@
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-cloud-arrow-up text-sky-500"></i> Cloudinary CDN Credentials (.env)
                                                     </span>
-                                                    <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <span id="cloudinary-validation-badge" class="token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                                                            <i class="fa-solid fa-clock"></i> Unvalidated
+                                                        </span>
+                                                        <button type="button" data-validate-integration="cloudinary" class="validate-token-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-sky-700 hover:text-sky-900 dark:text-sky-300 dark:hover:text-sky-100 bg-sky-50 hover:bg-sky-100/80 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 border border-sky-200/80 dark:border-sky-700/60 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Validate Cloudinary API credentials">
+                                                            <i class="fa-solid fa-shield-halved text-[10px] text-sky-500"></i>
+                                                            <span>Validate Token</span>
+                                                        </button>
                                                         <button type="button" data-reset-integration="cloudinary" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Cloudinary credentials to system default">
                                                             <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
                                                             <span>Reset to Default</span>
@@ -576,7 +590,14 @@
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-envelope text-rose-500"></i> SMTP Server Configuration (.env)
                                                     </span>
-                                                    <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <span id="email-validation-badge" class="token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                                                            <i class="fa-solid fa-clock"></i> Unvalidated
+                                                        </span>
+                                                        <button type="button" data-validate-integration="email" class="validate-token-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-rose-700 hover:text-rose-900 dark:text-rose-300 dark:hover:text-rose-100 bg-rose-50 hover:bg-rose-100/80 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200/80 dark:border-rose-700/60 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Validate SMTP credentials and mail server connection">
+                                                            <i class="fa-solid fa-shield-halved text-[10px] text-rose-500"></i>
+                                                            <span>Validate Token</span>
+                                                        </button>
                                                         <button type="button" data-reset-integration="email" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Gmail/SMTP credentials to system default">
                                                             <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
                                                             <span>Reset to Default</span>
@@ -685,7 +706,14 @@
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-robot text-blue-500"></i> Google reCAPTCHA v2 API Keys (.env)
                                                     </span>
-                                                    <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <span id="recaptcha-validation-badge" class="token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                                                            <i class="fa-solid fa-clock"></i> Unvalidated
+                                                        </span>
+                                                        <button type="button" data-validate-integration="recaptcha" class="validate-token-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100 bg-blue-50 hover:bg-blue-100/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 border border-blue-200/80 dark:border-blue-700/60 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Validate Google reCAPTCHA v2 API keys">
+                                                            <i class="fa-solid fa-shield-halved text-[10px] text-blue-500"></i>
+                                                            <span>Validate Token</span>
+                                                        </button>
                                                         <button type="button" data-reset-integration="recaptcha" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Google reCAPTCHA credentials to system default">
                                                             <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
                                                             <span>Reset to Default</span>
@@ -752,7 +780,14 @@
                                                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
                                                         <i class="fa-solid fa-bolt text-amber-500"></i> Pusher Channels Credentials (.env)
                                                     </span>
-                                                    <div class="flex items-center gap-2">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <span id="websocket-validation-badge" class="token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1">
+                                                            <i class="fa-solid fa-clock"></i> Unvalidated
+                                                        </span>
+                                                        <button type="button" data-validate-integration="websocket" class="validate-token-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-purple-700 hover:text-purple-900 dark:text-purple-300 dark:hover:text-purple-100 bg-purple-50 hover:bg-purple-100/80 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200/80 dark:border-purple-700/60 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Validate Pusher Channels credentials">
+                                                            <i class="fa-solid fa-shield-halved text-[10px] text-purple-500"></i>
+                                                            <span>Validate Token</span>
+                                                        </button>
                                                         <button type="button" data-reset-integration="websocket" class="reset-integration-btn px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 bg-slate-100 hover:bg-amber-50/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600/50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Reset Pusher / WebSockets credentials to system default">
                                                             <i class="fa-solid fa-rotate-left text-[10px] text-amber-500"></i>
                                                             <span>Reset to Default</span>
@@ -881,6 +916,15 @@
                                         <p class="font-bold text-slate-700 dark:text-slate-300">No custom environment keys added yet.</p>
                                         <p class="text-[11px] text-slate-400 dark:text-slate-500">Click <strong>Add Custom Key</strong> to add variables like <code class="font-mono text-buksu-navy dark:text-amber-400">GEMINI_API_KEY</code>, <code class="font-mono text-buksu-navy dark:text-amber-400">STRIPE_SECRET_KEY</code>, etc.</p>
                                     </div>
+                                </div>
+
+                                <!-- Live Validation Alert Box -->
+                                <div id="apiKeysValidationAlert" class="hidden p-3.5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50/90 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between gap-2.5 animate-fade-in">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm shrink-0"></i>
+                                        <span id="apiKeysValidationAlertText">Cannot save .env: One or more API tokens failed validation. Please validate your credentials.</span>
+                                    </div>
+                                    <button type="button" id="dismissValidationAlertBtn" class="text-rose-500 hover:text-rose-700 text-xs px-2 py-1 rounded cursor-pointer font-bold text-sm">&times;</button>
                                 </div>
 
                                 <!-- Action Bar for Keys & Controls -->

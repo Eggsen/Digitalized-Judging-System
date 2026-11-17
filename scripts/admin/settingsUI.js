@@ -9,7 +9,9 @@ import {
     resendSecurityCode,
     verifyAdminPin,
     saveApiKeys,
-    resetIntegration
+    resetIntegration,
+    validateApiToken,
+    validateAllApiKeys
 } from "/scripts/admin/settingsAPI.js";
 import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
@@ -1368,6 +1370,13 @@ function renderCustomKeysList() {
                         </button>
                     </div>
                     <button type="button" 
+                            data-validate-custom-key="${key}"
+                            ${deleteDisabledAttr}
+                            class="validate-custom-key-btn p-2 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-transparent hover:border-amber-200 dark:hover:border-amber-900/50 transition-colors ${isUnlocked ? 'cursor-pointer' : ''}" 
+                            title="Validate custom API token">
+                        <i class="fa-solid fa-shield-halved text-xs"></i>
+                    </button>
+                    <button type="button" 
                             data-delete-custom-key="${key}"
                             ${deleteDisabledAttr}
                             class="delete-custom-key-btn p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors ${isUnlocked ? 'cursor-pointer' : ''}" 
@@ -1449,6 +1458,17 @@ function lockApiKeysInputs(latestMasked = null, latestCustomMasked = null) {
     if (lockNotice) {
         lockNotice.innerHTML = 'Inputs are protected and read-only. Click <strong>Edit Credentials</strong> and verify your exclusive Admin PIN to modify keys.';
     }
+
+    const alertEl = document.getElementById('apiKeysValidationAlert');
+    if (alertEl) alertEl.classList.add('hidden');
+
+    ['google', 'cloudinary', 'email', 'recaptcha', 'websocket'].forEach(srv => {
+        const badge = document.getElementById(`${srv}-validation-badge`);
+        if (badge) {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i> Validated API Token';
+        }
+    });
 }
 
 function unlockApiKeysInputs(unmaskedKeys = null, unmaskedCustom = null) {
@@ -1507,6 +1527,14 @@ function unlockApiKeysInputs(unmaskedKeys = null, unmaskedCustom = null) {
     if (lockNotice) {
         lockNotice.innerHTML = '<span class="text-emerald-600 font-bold"><i class="fa-solid fa-check me-1"></i>Unlocked for editing.</span> Changes will be saved to <code class="font-mono">.env</code> and cloud database.';
     }
+
+    ['google', 'cloudinary', 'email', 'recaptcha', 'websocket'].forEach(srv => {
+        const badge = document.getElementById(`${srv}-validation-badge`);
+        if (badge) {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/50 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i> Validated API Token';
+        }
+    });
 }
 
 function openAddCustomKeyModal() {
@@ -1826,7 +1854,132 @@ function initApiKeysSettings() {
         }
     });
 
-    // Save API keys handler
+    const INTEGRATION_KEY_MAP = {
+        google: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'],
+        cloudinary: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET', 'CLOUDINARY_FOLDER'],
+        email: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USERNAME', 'SMTP_PASSWORD', 'SMTP_FROM_EMAIL', 'SMTP_FROM_NAME'],
+        recaptcha: ['RECAPTCHA_SITE_KEY', 'RECAPTCHA_SECRET_KEY'],
+        websocket: ['PUSHER_APP_ID', 'PUSHER_KEY', 'PUSHER_SECRET', 'PUSHER_CLUSTER']
+    };
+
+    function updateValidationBadge(serviceKey, status, message = '') {
+        const badge = document.getElementById(`${serviceKey}-validation-badge`);
+        if (!badge) return;
+
+        if (status === 'valid') {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/50 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i> Validated API Token';
+            badge.title = message || 'API Token validated successfully';
+        } else if (status === 'invalid') {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300/50 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-500"></i> Invalid Token';
+            badge.title = message || 'API Token validation failed';
+        } else if (status === 'validating') {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/50 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> Validating...';
+            badge.title = 'Validating API Token...';
+        } else {
+            badge.className = 'token-validation-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 flex items-center gap-1';
+            badge.innerHTML = '<i class="fa-solid fa-clock"></i> Unvalidated';
+            badge.title = 'Credentials have been modified or not yet validated';
+        }
+    }
+
+    function clearInputErrorRings(keys = []) {
+        keys.forEach(k => {
+            const input = document.getElementById(`setting-env-${k}`);
+            if (input) {
+                input.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400');
+            }
+        });
+    }
+
+    function highlightInputErrorRings(keys = []) {
+        keys.forEach(k => {
+            const input = document.getElementById(`setting-env-${k}`);
+            if (input) {
+                input.classList.add('ring-2', 'ring-rose-500', 'border-rose-400');
+            }
+        });
+    }
+
+    async function handleValidateIntegration(serviceKey, btn = null) {
+        if (!serviceKey) return;
+        if (!apiKeysUnlockToken) {
+            openAdminPinModal();
+            return;
+        }
+
+        const buttonEl = btn || document.querySelector(`[data-validate-integration="${serviceKey}"]`);
+        const originalHtml = buttonEl ? buttonEl.innerHTML : '';
+        if (buttonEl) {
+            buttonEl.disabled = true;
+            buttonEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px] text-amber-500"></i> <span>Validating...</span>';
+        }
+
+        updateValidationBadge(serviceKey, 'validating');
+
+        const creds = {};
+        const keys = INTEGRATION_KEY_MAP[serviceKey] || [];
+        keys.forEach(k => {
+            const input = document.getElementById(`setting-env-${k}`);
+            if (input) {
+                creds[k] = input.value.trim();
+            }
+        });
+
+        const res = await validateApiToken(serviceKey, creds, apiKeysUnlockToken);
+
+        if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = originalHtml || '<i class="fa-solid fa-shield-halved text-[10px] text-amber-500"></i> <span>Validate Token</span>';
+        }
+
+        if (res.valid) {
+            updateValidationBadge(serviceKey, 'valid', res.message);
+            clearInputErrorRings(keys);
+            showToast("API Token Validated", res.message || "API token and credentials verified successfully.", "create");
+        } else {
+            updateValidationBadge(serviceKey, 'invalid', res.message);
+            highlightInputErrorRings(keys);
+            showToast("Validation Failed", res.message || "Invalid API token. Cannot save .env until valid.", "error");
+        }
+    }
+
+    async function handleValidateCustomKey(keyName, btn = null) {
+        if (!keyName) return;
+        if (!apiKeysUnlockToken) {
+            openAdminPinModal();
+            return;
+        }
+
+        const input = document.getElementById(`setting-custom-${keyName}`);
+        const val = input ? input.value.trim() : (unmaskedCustomKeys?.[keyName] || '');
+
+        const buttonEl = btn || document.querySelector(`[data-validate-custom-key="${keyName}"]`);
+        const origHtml = buttonEl ? buttonEl.innerHTML : '';
+        if (buttonEl) {
+            buttonEl.disabled = true;
+            buttonEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs text-amber-500"></i>';
+        }
+
+        const res = await validateApiToken('custom', { keyName, keyValue: val }, apiKeysUnlockToken);
+
+        if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = origHtml;
+        }
+
+        if (res.valid) {
+            if (input) input.classList.remove('ring-2', 'ring-rose-500');
+            showToast("API Token Validated", res.message || `Custom key "${keyName}" verified.`, "create");
+        } else {
+            if (input) input.classList.add('ring-2', 'ring-rose-500');
+            showToast("Validation Failed", res.message || `Custom key "${keyName}" is invalid.`, "error");
+        }
+    }
+
+    // Save API keys handler with Validated API Token enforcement
     const handleSaveApiKeys = async () => {
         if (!apiKeysUnlockToken) {
             openAdminPinModal();
@@ -1839,7 +1992,7 @@ function initApiKeysSettings() {
 
         buttons.forEach(b => {
             b.disabled = true;
-            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Saving...';
+            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Validating API Tokens...';
         });
 
         const payload = {};
@@ -1865,6 +2018,48 @@ function initApiKeysSettings() {
             }
         }
 
+        // Validate all API tokens before saving: Admin cannot save .env if not valid!
+        const validationRes = await validateAllApiKeys({ api_keys: payload, custom_keys: customPayload }, apiKeysUnlockToken);
+
+        const alertContainer = document.getElementById('apiKeysValidationAlert');
+        const alertText = document.getElementById('apiKeysValidationAlertText');
+
+        if (!validationRes.valid) {
+            buttons.forEach(b => {
+                b.disabled = false;
+            });
+            if (topBtn) topBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> Save .env Keys';
+            if (btmBtn) btmBtn.innerHTML = '<i class="fa-solid fa-floppy-disk text-buksu-gold me-1.5"></i> Save API Keys to .env';
+
+            // Mark invalid services on their badges & inputs
+            if (validationRes.services) {
+                for (const [srv, srvRes] of Object.entries(validationRes.services)) {
+                    if (!srvRes.valid) {
+                        updateValidationBadge(srv, 'invalid', srvRes.message);
+                        highlightInputErrorRings(INTEGRATION_KEY_MAP[srv] || []);
+                    } else if (srvRes.valid && !srvRes.skipped) {
+                        updateValidationBadge(srv, 'valid', srvRes.message);
+                        clearInputErrorRings(INTEGRATION_KEY_MAP[srv] || []);
+                    }
+                }
+            }
+
+            if (alertContainer && alertText) {
+                alertContainer.classList.remove('hidden');
+                alertText.textContent = validationRes.message || 'Cannot save .env: One or more API tokens failed validation. Please validate and correct credentials.';
+                alertContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            showToast("Validation Failed", "Cannot save .env if API token is not valid. Please correct credentials before saving.", "error");
+            return;
+        }
+
+        if (alertContainer) alertContainer.classList.add('hidden');
+
+        buttons.forEach(b => {
+            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Saving to .env...';
+        });
+
         const res = await saveApiKeys({ api_keys: payload, custom_keys: customPayload }, apiKeysUnlockToken);
 
         buttons.forEach(b => {
@@ -1878,7 +2073,11 @@ function initApiKeysSettings() {
         }
 
         if (res.success) {
-            showToast("Credentials Saved", res.message || "API keys written to .env and synchronized.", "create");
+            Object.keys(INTEGRATION_KEY_MAP).forEach(srv => {
+                updateValidationBadge(srv, 'valid');
+                clearInputErrorRings(INTEGRATION_KEY_MAP[srv]);
+            });
+            showToast("Credentials Validated & Saved", res.message || "API keys validated, written to .env, and synchronized.", "create");
             lockApiKeysInputs(res.api_keys, res.custom_keys);
         } else {
             showToast("Save Failed", res.message || "Failed to update API credentials.", "error");
@@ -1944,6 +2143,8 @@ function initApiKeysSettings() {
                     }
                 }
             }
+            updateValidationBadge(serviceKey, 'valid');
+            clearInputErrorRings(INTEGRATION_KEY_MAP[serviceKey] || []);
             showToast("Defaults Restored", res.message || `${displayName} credentials reset to system defaults.`, "create");
         } else {
             showToast("Reset Failed", res.message || "Failed to reset credentials.", "error");
@@ -1954,12 +2155,51 @@ function initApiKeysSettings() {
         }
     }
 
+    // Event listener delegation for validate integration buttons
     document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-reset-integration]');
-        if (!btn) return;
-        e.preventDefault();
-        const service = btn.dataset.resetIntegration;
-        handleResetIntegration(service, btn);
+        const validateBtn = e.target.closest('[data-validate-integration]');
+        if (validateBtn) {
+            e.preventDefault();
+            const service = validateBtn.dataset.validateIntegration;
+            handleValidateIntegration(service, validateBtn);
+            return;
+        }
+
+        const customValidateBtn = e.target.closest('[data-validate-custom-key]');
+        if (customValidateBtn) {
+            e.preventDefault();
+            const keyName = customValidateBtn.dataset.validateCustomKey;
+            handleValidateCustomKey(keyName, customValidateBtn);
+            return;
+        }
+
+        const resetBtn = e.target.closest('[data-reset-integration]');
+        if (resetBtn) {
+            e.preventDefault();
+            const service = resetBtn.dataset.resetIntegration;
+            handleResetIntegration(service, resetBtn);
+            return;
+        }
+    });
+
+    // Mark service as unvalidated when any env input changes
+    document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (target && target.id && target.id.startsWith('setting-env-')) {
+            const key = target.id.replace('setting-env-', '');
+            target.classList.remove('ring-2', 'ring-rose-500', 'border-rose-400');
+            for (const [srv, kList] of Object.entries(INTEGRATION_KEY_MAP)) {
+                if (kList.includes(key)) {
+                    updateValidationBadge(srv, 'unvalidated');
+                    break;
+                }
+            }
+        }
+    });
+
+    document.getElementById('dismissValidationAlertBtn')?.addEventListener('click', () => {
+        const alertEl = document.getElementById('apiKeysValidationAlert');
+        if (alertEl) alertEl.classList.add('hidden');
     });
 
     document.getElementById('saveApiKeysBtn')?.addEventListener('click', handleSaveApiKeys);

@@ -191,4 +191,42 @@ export async function resetIntegration(service, unlockToken = null) {
     }
 }
 
+export async function validateApiToken(service, credentials, unlockToken = null) {
+    try {
+        const headers = { "Content-Type": "application/json" };
+        if (unlockToken) {
+            headers["x-unlock-token"] = unlockToken;
+        }
+        const response = await fetch("/api/settings/validate-api-token", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ service, credentials, unlock_token: unlockToken }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Validate API Token Error: ", error);
+        return { success: false, valid: false, message: "Unable to reach validation service." };
+    }
+}
+
+export async function validateAllApiKeys(payload, unlockToken = null) {
+    try {
+        const headers = { "Content-Type": "application/json" };
+        if (unlockToken) {
+            headers["x-unlock-token"] = unlockToken;
+        }
+        const response = await fetch("/api/settings/validate-all-keys", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ ...payload, unlock_token: unlockToken }),
+            credentials: "include"
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Validate All Keys Error: ", error);
+        return { success: false, valid: false, message: "Unable to reach validation service." };
+    }
+}
+
 
