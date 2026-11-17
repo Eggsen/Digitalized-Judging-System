@@ -4,7 +4,7 @@
  */
 
 const { validateSingleIntegration, validateAllIntegrationTokens } = require('../utils/tokenValidator');
-const { getSystemApiKeys, getCustomApiKeys } = require('../utils/envManager');
+const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName } = require('../utils/envManager');
 
 async function runTests() {
     console.log('====================================================');
@@ -72,8 +72,29 @@ async function runTests() {
     assert(invalidGemini.valid === false, 'Rejects invalid Gemini API token format');
     console.log(`       Message: "${invalidGemini.message}"`);
 
-    // TEST 6: Pre-save validation block when invalid keys are in payload
-    console.log('\n--- Test 6: Pre-Save Blocking (.env protection) ---');
+    // TEST 6: Super Admin Custom Key (ADMIN_CREATOR_EMAILS validation)
+    console.log('\n--- Test 6: Custom Key (ADMIN_CREATOR_EMAILS) ---');
+    assert(isValidCustomKeyName('ADMIN_CREATOR_EMAILS') === true, 'Allows ADMIN_CREATOR_EMAILS as valid custom key name');
+    assert(isValidCustomKeyName('SUPER_ADMIN_EMAILS') === true, 'Allows SUPER_ADMIN_EMAILS as valid custom key name');
+    assert(isValidCustomKeyName('PORT') === false, 'Rejects protected system key PORT');
+    assert(isValidCustomKeyName('GOOGLE_CLIENT_ID') === false, 'Rejects service card key GOOGLE_CLIENT_ID in custom key list');
+
+    const validEmails = await validateSingleIntegration('custom', {
+        keyName: 'ADMIN_CREATOR_EMAILS',
+        keyValue: '2401108432@student.buksu.edu.ph, admin2@buksu.edu.ph'
+    });
+    assert(validEmails.valid === true, 'Validates well-formed comma-separated administrator emails');
+    console.log(`       Message: "${validEmails.message}"`);
+
+    const invalidEmails = await validateSingleIntegration('custom', {
+        keyName: 'ADMIN_CREATOR_EMAILS',
+        keyValue: 'not-an-email, valid@buksu.edu.ph'
+    });
+    assert(invalidEmails.valid === false, 'Rejects malformed email in ADMIN_CREATOR_EMAILS');
+    console.log(`       Message: "${invalidEmails.message}"`);
+
+    // TEST 7: Pre-save validation block when invalid keys are in payload
+    console.log('\n--- Test 7: Pre-Save Blocking (.env protection) ---');
     const savePayloadWithInvalidToken = {
         CLOUDINARY_CLOUD_NAME: 'sqm9yu7u',
         CLOUDINARY_API_KEY: 'not_numeric', // INVALID
@@ -84,8 +105,14 @@ async function runTests() {
     assert(saveResult.errors.length > 0, 'Returns specific error details identifying invalid service');
     console.log(`       Rejection Reason: "${saveResult.message}"`);
 
-    // TEST 7: Current valid keys in .env
-    console.log('\n--- Test 7: Valid Current .env Credentials ---');
+    const savePayloadWithInvalidCustomKey = await validateAllIntegrationTokens({}, {
+        ADMIN_CREATOR_EMAILS: 'bad-email-format'
+    });
+    assert(savePayloadWithInvalidCustomKey.valid === false, 'Blocks saving when custom key ADMIN_CREATOR_EMAILS is invalid');
+    console.log(`       Custom Rejection: "${savePayloadWithInvalidCustomKey.message}"`);
+
+    // TEST 8: Current valid keys in .env
+    console.log('\n--- Test 8: Valid Current .env Credentials ---');
     const sysKeys = getSystemApiKeys();
     const customKeys = getCustomApiKeys();
     const currentKeysResult = await validateAllIntegrationTokens(sysKeys, customKeys);

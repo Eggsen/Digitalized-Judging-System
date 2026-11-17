@@ -1344,24 +1344,30 @@ function renderCustomKeysList() {
         const disabledAttr = isUnlocked ? '' : 'disabled';
         const deleteDisabledAttr = isUnlocked ? '' : 'disabled opacity-40 cursor-not-allowed';
 
+        const isSpecialKey = (key === 'ADMIN_CREATOR_EMAILS');
+        const keyLabel = isSpecialKey ? 'Authorized Admin Creators (.env)' : 'Custom Environment Key';
+        const keyBadge = isSpecialKey ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60">Super Admin</span>' : '';
+        const placeholderText = isSpecialKey ? 'e.g. 2401108432@student.buksu.edu.ph,admin2@buksu.edu.ph' : '••••••••••••••••';
+
         return `
             <div class="custom-key-item p-3 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-200/90 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in" data-custom-key-row="${key}">
                 <div class="sm:w-1/3 min-w-[180px]">
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="w-2 h-2 rounded-full ${isSpecialKey ? 'bg-amber-500 ring-2 ring-amber-300' : 'bg-amber-500'}"></span>
                         <span class="font-mono font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-tight break-all">${key}</span>
+                        ${keyBadge}
                     </div>
-                    <span class="text-[10px] text-slate-400 font-mono">Custom Environment Key</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${keyLabel}</span>
                 </div>
                 <div class="flex-1 flex items-center gap-2">
                     <div class="relative flex-1">
-                        <input type="password" 
+                        <input type="${isSpecialKey ? 'text' : 'password'}" 
                                id="setting-custom-${key}" 
                                data-custom-key-name="${key}"
                                value="${displayVal.replace(/"/g, '&quot;')}" 
                                ${disabledAttr}
                                class="custom-key-input w-full pl-3 pr-9 py-2 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-xs ${inputBg} focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" 
-                               placeholder="••••••••••••••••">
+                               placeholder="${placeholderText}">
                         <button type="button" 
                                 data-toggle-password="setting-custom-${key}" 
                                 class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer" 
@@ -1373,14 +1379,14 @@ function renderCustomKeysList() {
                             data-validate-custom-key="${key}"
                             ${deleteDisabledAttr}
                             class="validate-custom-key-btn p-2 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-transparent hover:border-amber-200 dark:hover:border-amber-900/50 transition-colors ${isUnlocked ? 'cursor-pointer' : ''}" 
-                            title="Validate custom API token">
+                            title="Validate custom API token / emails">
                         <i class="fa-solid fa-shield-halved text-xs"></i>
                     </button>
                     <button type="button" 
                             data-delete-custom-key="${key}"
                             ${deleteDisabledAttr}
                             class="delete-custom-key-btn p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors ${isUnlocked ? 'cursor-pointer' : ''}" 
-                            title="Remove this custom key">
+                            title="Remove this key from .env">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
@@ -1556,6 +1562,7 @@ function openAddCustomKeyModal() {
     if (valInput) {
         valInput.value = '';
         valInput.type = 'password';
+        valInput.placeholder = 'Enter key value or secret token';
     }
     const toggleBtnIcon = document.querySelector('#toggleModalCustomKeyValBtn i');
     if (toggleBtnIcon) toggleBtnIcon.className = 'fa-solid fa-eye-slash text-xs';
@@ -1732,6 +1739,44 @@ function initApiKeysSettings() {
         } else {
             input.type = 'password';
             icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+        }
+    });
+
+    // Preset custom key buttons in Add Custom Key modal
+    document.addEventListener('click', (e) => {
+        const pill = e.target.closest('.preset-custom-key-pill');
+        if (!pill) return;
+        const key = pill.dataset.presetKey;
+        const placeholder = pill.dataset.presetPlaceholder;
+        const nameInput = document.getElementById('modal-custom-key-name');
+        const valInput = document.getElementById('modal-custom-key-value');
+        if (nameInput && key) {
+            nameInput.value = key;
+        }
+        if (valInput) {
+            if (placeholder) {
+                valInput.placeholder = placeholder;
+            }
+            if (key === 'ADMIN_CREATOR_EMAILS' || key === 'SUPER_ADMIN_EMAILS') {
+                valInput.type = 'text';
+                const toggleBtnIcon = document.querySelector('#toggleModalCustomKeyValBtn i');
+                if (toggleBtnIcon) toggleBtnIcon.className = 'fa-solid fa-eye text-xs text-amber-500';
+            }
+            valInput.focus();
+        }
+    });
+
+    document.getElementById('modal-custom-key-name')?.addEventListener('input', (e) => {
+        const valInput = document.getElementById('modal-custom-key-value');
+        if (!valInput) return;
+        const key = e.target.value.trim().toUpperCase();
+        if (key === 'ADMIN_CREATOR_EMAILS' || key === 'SUPER_ADMIN_EMAILS') {
+            valInput.placeholder = 'e.g. 2401108432@student.buksu.edu.ph,other@buksu.edu.ph';
+            valInput.type = 'text';
+            const toggleBtnIcon = document.querySelector('#toggleModalCustomKeyValBtn i');
+            if (toggleBtnIcon) toggleBtnIcon.className = 'fa-solid fa-eye text-xs text-amber-500';
+        } else {
+            valInput.placeholder = 'Enter key value or secret token';
         }
     });
 

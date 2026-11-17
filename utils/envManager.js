@@ -121,10 +121,17 @@ const DEFAULT_INTEGRATION_CREDENTIALS = new Proxy({}, {
     }
 });
 
+const ALLOWED_ADMIN_CREATOR_CUSTOM_KEYS = [
+    'ADMIN_CREATOR_EMAILS',
+    'SUPER_ADMIN_EMAILS',
+    'CUSTOM_ADMIN_PIN'
+];
+
 function isValidCustomKeyName(name) {
     if (!name || typeof name !== 'string') return false;
     const trimmed = name.trim().toUpperCase();
     if (PROTECTED_SYSTEM_KEYS.includes(trimmed)) return false;
+    if (ALLOWED_ADMIN_CREATOR_CUSTOM_KEYS.includes(trimmed)) return true;
     if (ALLOWED_ENV_KEYS.includes(trimmed)) return false;
     return /^[A-Z][A-Z0-9_]{1,63}$/.test(trimmed);
 }
@@ -135,6 +142,39 @@ function getEnvFilePath() {
 
 function getCustomApiKeys(settingsDoc = null) {
     const customKeys = {};
+
+    // 1. Read existing custom environment variables and ADMIN_CREATOR_EMAILS from .env file
+    const envPath = getEnvFilePath();
+    if (fs.existsSync(envPath)) {
+        try {
+            const content = fs.readFileSync(envPath, 'utf8');
+            const lines = content.split('\n');
+            for (let line of lines) {
+                line = line.trim();
+                if (!line || line.startsWith('#')) continue;
+                const eqIdx = line.indexOf('=');
+                if (eqIdx !== -1) {
+                    const k = line.substring(0, eqIdx).trim().toUpperCase();
+                    let v = line.substring(eqIdx + 1).trim();
+                    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                        v = v.substring(1, v.length - 1);
+                    }
+                    if (isValidCustomKeyName(k)) {
+                        customKeys[k] = v;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[EnvManager] Error reading custom keys from .env:', e.message);
+        }
+    }
+
+    // 2. Fallback to process.env for ADMIN_CREATOR_EMAILS if present in runtime
+    if (process.env.ADMIN_CREATOR_EMAILS && !customKeys.ADMIN_CREATOR_EMAILS) {
+        customKeys.ADMIN_CREATOR_EMAILS = process.env.ADMIN_CREATOR_EMAILS;
+    }
+
+    // 3. Overlay MongoDB saved custom_keys
     if (settingsDoc && settingsDoc.custom_keys && typeof settingsDoc.custom_keys === 'object') {
         for (const [k, v] of Object.entries(settingsDoc.custom_keys)) {
             if (isValidCustomKeyName(k)) {

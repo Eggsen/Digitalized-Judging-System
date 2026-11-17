@@ -321,6 +321,21 @@ async function validateCustomApiKey(keyName, keyValue) {
         return { valid: false, service: 'custom', keyName: rawKey, message: `API Token / Value for "${rawKey}" must be at least 4 characters.` };
     }
 
+    // Specialized validation for ADMIN_CREATOR_EMAILS / SUPER_ADMIN_EMAILS
+    if (rawKey === 'ADMIN_CREATOR_EMAILS' || rawKey === 'SUPER_ADMIN_EMAILS') {
+        const emails = rawVal.split(',').map(e => e.trim()).filter(Boolean);
+        if (emails.length === 0) {
+            return { valid: false, service: 'custom', keyName: rawKey, message: `"${rawKey}" must contain at least one valid authorized administrator email address.` };
+        }
+        const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+        for (const email of emails) {
+            if (!emailRegex.test(email)) {
+                return { valid: false, service: 'custom', keyName: rawKey, message: `Invalid email address format "${email}" in ${rawKey}. Expected valid email address (e.g. user@student.buksu.edu.ph).` };
+            }
+        }
+        return { valid: true, service: 'custom', keyName: rawKey, message: `Validated ${emails.length} authorized administrator creator email(s) for ${rawKey}.` };
+    }
+
     // Specialized format checking for common API tokens
     if (rawKey.includes('GEMINI') || rawKey.includes('GOOGLE_AI')) {
         if (!/^AIzaSy[a-zA-Z0-9_-]{33}$/.test(rawVal)) {
@@ -481,6 +496,10 @@ async function validateAllIntegrationTokens(apiKeys = {}, customKeys = {}) {
     const customResults = {};
     if (customKeys && typeof customKeys === 'object') {
         for (const [k, v] of Object.entries(customKeys)) {
+            // Empty custom keys represent unset placeholders and are skipped in batch validation
+            if (!v || !String(v).trim()) {
+                continue;
+            }
             const res = await validateCustomApiKey(k, v);
             customResults[k] = res;
             if (!res.valid) {

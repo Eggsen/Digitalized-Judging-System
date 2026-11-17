@@ -419,6 +419,16 @@ async function saveApiKeys(req, res, next) {
             } else {
                 delete sanitizedCustom.ADMIN_CREATOR_EMAILS;
             }
+        } else {
+            // Super admin has provided or updated ADMIN_CREATOR_EMAILS in custom keys or environment
+            const adminEmailsVal = (sanitizedCustom.ADMIN_CREATOR_EMAILS !== undefined)
+                ? sanitizedCustom.ADMIN_CREATOR_EMAILS
+                : sanitizedKeys.ADMIN_CREATOR_EMAILS;
+
+            if (adminEmailsVal !== undefined) {
+                sanitizedKeys.ADMIN_CREATOR_EMAILS = adminEmailsVal;
+                sanitizedCustom.ADMIN_CREATOR_EMAILS = adminEmailsVal;
+            }
         }
 
         // Security & Stability Check: Validate API Tokens before saving to .env.
