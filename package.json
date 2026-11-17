@@ -8,7 +8,8 @@
     "dev": "node server.js",
     "build:css": "npx @tailwindcss/cli -i ./frontend/src/input.css -o ./frontend/css/output.css --minify",
     "build": "npm run build:css",
-    "seed": "node scripts/seed_test_accounts.js"
+    "seed": "node scripts/seed_test_accounts.js",
+    "test:env-validation": "node scripts/test_env_token_validation.js"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.3.3",
