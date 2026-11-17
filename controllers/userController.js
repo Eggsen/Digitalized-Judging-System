@@ -4,6 +4,7 @@ const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getIdFilter } = require('../utils/dbHelpers');
+const { canUserCreateAdmin, isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
 
 /**
  * List System Users / Accounts
@@ -34,6 +35,7 @@ async function listUsers(req, res, next) {
 
         const protocol = req.protocol;
         const host = req.get('host');
+        const isRequesterAuthorized = await canUserCreateAdmin(req.user);
 
         const formatted = users.map(u => {
             const idStr = String(u._id);
@@ -42,6 +44,12 @@ async function listUsers(req, res, next) {
             const lastName = u.last_name || (fullName ? fullName.split(' ').slice(1).join(' ') : '');
             const inviteLink = u.invite_token ? `${protocol}://${host}/auth/accept-invitation?token=${u.invite_token}` : null;
             const isActive = u.is_active !== false && u.status !== 'disabled';
+            const userEmail = (u.email || '').toLowerCase().trim();
+            const isUserAdminCreator = (u.role === 'admin') && Boolean(
+                u.can_create_admin === true ||
+                u.is_super_admin === true ||
+                isEmailAuthorizedAdminCreator(userEmail)
+            );
 
             return {
                 id: idStr,
@@ -53,6 +61,7 @@ async function listUsers(req, res, next) {
                 name: fullName || `${firstName} ${lastName}`.trim() || u.username,
                 full_name: fullName || `${firstName} ${lastName}`.trim() || u.username,
                 role: u.role || 'judge',
+                can_create_admin: isUserAdminCreator,
                 status: u.status || (isActive ? 'active' : 'disabled'),
                 is_active: isActive,
                 has_admin_pin: Boolean(u.admin_pin),
@@ -66,7 +75,8 @@ async function listUsers(req, res, next) {
         res.json({
             success: true,
             accounts: formatted,
-            users: formatted
+            users: formatted,
+            can_create_admin: isRequesterAuthorized
         });
     } catch (err) {
         next(err);
@@ -85,6 +95,19 @@ async function createUser(req, res, next) {
         }
 
         const cleanEmail = email.toLowerCase().trim();
+        const cleanRole = (role || 'judge').toLowerCase().trim();
+
+        // RBAC: Verify if requester has permission to create an Administrator account
+        if (cleanRole === 'admin') {
+            const isAuthorized = await canUserCreateAdmin(req.user);
+            if (!isAuthorized) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You do not have privilege to create or invite Administrator accounts. Only selective authorized accounts (e.g. 2401108432@student.buksu.edu.ph) are permitted to create administrators.'
+                });
+            }
+        }
+
         const existing = await collections.users.findOne({ email: cleanEmail });
         if (existing) {
             return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
@@ -105,7 +128,7 @@ async function createUser(req, res, next) {
         let hashedAdminPin = null;
         let assignedAdminPin = null;
 
-        if (role.toLowerCase() === 'admin') {
+        if (cleanRole === 'admin') {
             if (admin_pin && String(admin_pin).trim() !== '') {
                 assignedAdminPin = String(admin_pin).trim();
             } else {
@@ -122,7 +145,8 @@ async function createUser(req, res, next) {
             full_name: effectiveFullName,
             first_name: first_name || effectiveFullName.split(' ')[0],
             last_name: last_name || effectiveFullName.split(' ').slice(1).join(' '),
-            role: role.toLowerCase(),
+            role: cleanRole,
+            can_create_admin: cleanRole === 'admin' ? isEmailAuthorizedAdminCreator(cleanEmail) : false,
             status: inviteToken ? 'pending' : 'active',
             is_active: true,
             password: hashedPassword,
@@ -193,13 +217,39 @@ async function updateRole(req, res, next) {
         const { role, is_active } = req.body;
         const query = getIdFilter(id);
 
+        const targetUser = await collections.users.findOne(query);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'User account not found.' });
+        }
+
+        const isRequesterAuthorized = await canUserCreateAdmin(req.user);
+
         const updateDoc = { updated_at: new Date().toISOString() };
         if (role !== undefined) {
-            if (!['admin', 'tabulator', 'judge'].includes(role.toLowerCase())) {
+            const cleanRole = role.toLowerCase().trim();
+            if (!['admin', 'tabulator', 'judge'].includes(cleanRole)) {
                 return res.status(400).json({ success: false, message: 'Invalid role assignment.' });
             }
-            updateDoc.role = role.toLowerCase();
+
+            // Only authorized admin creators can assign or promote to 'admin'
+            if (cleanRole === 'admin' && !isRequesterAuthorized) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You do not have privilege to assign the Administrator role. Only selective authorized accounts can make an admin account.'
+                });
+            }
+
+            updateDoc.role = cleanRole;
         }
+
+        // Non-authorized admins cannot modify role or active status of Administrator accounts
+        if (targetUser.role === 'admin' && !isRequesterAuthorized && String(targetUser._id) !== String(req.user.id)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have privilege to modify Administrator accounts.'
+            });
+        }
+
         if (is_active !== undefined) {
             updateDoc.is_active = Boolean(is_active);
             updateDoc.status = updateDoc.is_active ? 'active' : 'disabled';
@@ -231,6 +281,22 @@ async function deleteUser(req, res, next) {
         }
 
         const query = getIdFilter(id);
+        const targetUser = await collections.users.findOne(query);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: 'User account not found.' });
+        }
+
+        // Non-authorized admins cannot delete Administrator accounts
+        if (targetUser.role === 'admin') {
+            const isRequesterAuthorized = await canUserCreateAdmin(req.user);
+            if (!isRequesterAuthorized) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You do not have privilege to delete Administrator accounts.'
+                });
+            }
+        }
+
         await collections.users.deleteOne(query);
 
         res.json({ success: true, message: 'User account removed.' });
@@ -293,6 +359,16 @@ async function resetAdminPin(req, res, next) {
 
         if (targetUser.role !== 'admin') {
             return res.status(400).json({ success: false, message: 'Admin PINs are exclusive to administrator accounts.' });
+        }
+
+        const isSelf = String(targetUser._id) === String(req.user.id);
+        const isRequesterAuthorized = await canUserCreateAdmin(req.user);
+
+        if (!isSelf && !isRequesterAuthorized) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Only authorized administrators can reset Admin PINs for other administrators.'
+            });
         }
 
         const generatedPin = (new_pin && String(new_pin).trim()) || String(crypto.randomInt(100000, 999999));

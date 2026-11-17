@@ -8,6 +8,7 @@ const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getSystemApiKeys, getCustomApiKeys, isValidCustomKeyName, updateEnvFile, DEFAULT_INTEGRATION_CREDENTIALS } = require('../utils/envManager');
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
+const { canUserCreateAdmin, getAuthorizedAdminEmails } = require('../utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
@@ -63,7 +64,8 @@ function getDefaultSettings() {
             emailServiceEnabled: true,
             qrCodeEnabled: true,
             cloudinaryEnabled: true,
-            websocketEnabled: true
+            websocketEnabled: true,
+            authorized_admin_creators: ['2401108432@student.buksu.edu.ph']
         },
         backup: {
             lastBackupAt: null,
@@ -112,11 +114,15 @@ async function getSettings(req, res, next) {
         };
 
         const recaptchaSiteKey = (process.env.RECAPTCHA_SITE_KEY || (settingsDoc.api_keys && settingsDoc.api_keys.RECAPTCHA_SITE_KEY) || '').trim();
+        const canCreateAdminFlag = await canUserCreateAdmin(req.user, settingsDoc);
+        const authorizedAdminEmails = getAuthorizedAdminEmails(settingsDoc);
 
         const responsePayload = {
             success: true,
             settings: settingsDoc,
             recaptcha_site_key: recaptchaSiteKey,
+            can_create_admin: canCreateAdminFlag,
+            authorized_admin_creators: authorizedAdminEmails,
             diagnostics
         };
 
@@ -398,6 +404,21 @@ async function saveApiKeys(req, res, next) {
 
         // Determine removed custom keys
         const removedCustomKeys = Object.keys(currentCustomKeys).filter(k => !sanitizedCustom.hasOwnProperty(k));
+
+        // Security check: Only authorized admin creators can alter ADMIN_CREATOR_EMAILS
+        const isAuthorizedToEditAdminCreators = await canUserCreateAdmin(req.user, settingsDoc);
+        if (!isAuthorizedToEditAdminCreators) {
+            if (currentSystemKeys.ADMIN_CREATOR_EMAILS !== undefined) {
+                sanitizedKeys.ADMIN_CREATOR_EMAILS = currentSystemKeys.ADMIN_CREATOR_EMAILS;
+            } else {
+                delete sanitizedKeys.ADMIN_CREATOR_EMAILS;
+            }
+            if (currentCustomKeys.ADMIN_CREATOR_EMAILS !== undefined) {
+                sanitizedCustom.ADMIN_CREATOR_EMAILS = currentCustomKeys.ADMIN_CREATOR_EMAILS;
+            } else {
+                delete sanitizedCustom.ADMIN_CREATOR_EMAILS;
+            }
+        }
 
         // 1. Update physical .env on server
         updateEnvFile(sanitizedKeys, sanitizedCustom, removedCustomKeys);

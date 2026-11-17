@@ -1,6 +1,9 @@
-export function getRoleBadge(role) {
+export function getRoleBadge(role, canCreateAdmin = false) {
     if (role === 'admin') {
-        return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-buksu-navy text-white font-semibold text-[11px] uppercase tracking-wide"><i class="fa-solid fa-user-shield text-[10px] text-buksu-gold"></i> Admin</span>';
+        if (canCreateAdmin) {
+            return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-buksu-navy text-white font-semibold text-[11px] uppercase tracking-wide border border-buksu-gold/50 shadow-2xs" title="Designated Authorized Administrator - Can create admin accounts"><i class="fa-solid fa-crown text-[10px] text-buksu-gold"></i> Super Admin</span>';
+        }
+        return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-slate-700 text-white font-semibold text-[11px] uppercase tracking-wide"><i class="fa-solid fa-user-shield text-[10px] text-slate-300"></i> Admin</span>';
     }
     if (role === 'judge') {
         return '<span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 font-semibold text-[11px] uppercase tracking-wide"><i class="fa-solid fa-gavel text-[10px]"></i> Judge</span>';

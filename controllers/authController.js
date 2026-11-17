@@ -6,16 +6,27 @@ const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getIdFilter } = require('../utils/dbHelpers');
+const { canUserCreateAdmin, isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 const JWT_EXPIRES_IN = '7d';
 
 function generateToken(user) {
+    const role = (user.role || 'judge').toLowerCase();
+    const email = (user.email || '').toLowerCase().trim();
+    const canCreateAdmin = role === 'admin' && Boolean(
+        user.can_create_admin === true ||
+        user.is_super_admin === true ||
+        isEmailAuthorizedAdminCreator(email)
+    );
+
     return jwt.sign(
         {
             id: String(user._id || user.id),
             username: user.username,
-            role: user.role,
+            email: email,
+            role: role,
+            can_create_admin: canCreateAdmin,
             full_name: user.full_name || user.name || user.username,
             token_version: Number(user.token_version || 1)
         },
@@ -385,6 +396,8 @@ async function getMe(req, res) {
             return res.status(403).json({ success: false, message: 'Your account is disabled.' });
         }
 
+        const canCreateAdminFlag = await canUserCreateAdmin(user);
+
         res.json({
             success: true,
             user: {
@@ -392,6 +405,7 @@ async function getMe(req, res) {
                 username: user.username,
                 email: user.email,
                 role: user.role,
+                can_create_admin: canCreateAdminFlag,
                 full_name: user.full_name || user.name || user.username,
                 avatar_url: user.avatar_url || user.avatar || null,
                 preferences: user.preferences || {}
@@ -500,6 +514,34 @@ async function googleCallback(req, res) {
         let user = await collections.users.findOne({
             email: { $regex: new RegExp(`^${googleEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
         });
+
+        // Bootstrap: If this email is a designated authorized admin creator, auto-provision as Administrator
+        if (!user && isEmailAuthorizedAdminCreator(googleEmail)) {
+            const cleanUsername = googleEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+            const fullName = profile.name || cleanUsername;
+            const defaultPin = String(process.env.ADMIN_PIN || '123456');
+            const hashedAdminPin = await bcrypt.hash(defaultPin, 10);
+
+            const newSuperAdmin = {
+                username: cleanUsername,
+                email: googleEmail,
+                full_name: fullName,
+                first_name: profile.given_name || fullName.split(' ')[0],
+                last_name: profile.family_name || fullName.split(' ').slice(1).join(' '),
+                role: 'admin',
+                can_create_admin: true,
+                is_super_admin: true,
+                status: 'active',
+                is_active: true,
+                admin_pin: hashedAdminPin,
+                google_id: profile.sub,
+                avatar_url: profile.picture || null,
+                created_at: new Date().toISOString(),
+                activated_at: new Date().toISOString()
+            };
+            const insRes = await collections.users.insertOne(newSuperAdmin);
+            user = { ...newSuperAdmin, _id: insRes.insertedId };
+        }
 
         if (!user) {
             return res.redirect(`/auth/login?error=no_account&email=${encodeURIComponent(googleEmail)}`);

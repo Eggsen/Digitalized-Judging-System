@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { collections } = require('../config/db');
 const { getIdFilter } = require('../utils/dbHelpers');
+const { isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
@@ -29,11 +30,20 @@ function extractToken(req) {
  * Generate a JWT token for a user with embedded MVCC token_version
  */
 function generateToken(user) {
+    const role = (user.role || 'judge').toLowerCase();
+    const email = (user.email || '').toLowerCase().trim();
+    const canCreateAdmin = role === 'admin' && Boolean(
+        user.can_create_admin === true || 
+        user.is_super_admin === true || 
+        isEmailAuthorizedAdminCreator(email)
+    );
+
     const payload = {
         id: String(user._id || user.id),
         username: user.username,
-        email: user.email || '',
-        role: (user.role || 'judge').toLowerCase(),
+        email: email,
+        role: role,
+        can_create_admin: canCreateAdmin,
         full_name: user.full_name || user.name || user.username,
         token_version: Number(user.token_version || 1)
     };
@@ -95,9 +105,21 @@ function authenticateToken(req, res, next) {
                 if (u && u.role) {
                     decoded.role = u.role.toLowerCase();
                 }
+                const email = (u?.email || decoded.email || '').toLowerCase().trim();
+                decoded.can_create_admin = decoded.role === 'admin' && Boolean(
+                    u?.can_create_admin === true || 
+                    u?.is_super_admin === true || 
+                    decoded.can_create_admin === true || 
+                    isEmailAuthorizedAdminCreator(email)
+                );
             }
         } catch (dbErr) {
             // Fail open on database connection hiccup
+        }
+
+        if (decoded.can_create_admin === undefined) {
+            const email = (decoded.email || '').toLowerCase().trim();
+            decoded.can_create_admin = (decoded.role || '').toLowerCase() === 'admin' && isEmailAuthorizedAdminCreator(email);
         }
 
         req.user = decoded;
@@ -117,6 +139,10 @@ function optionalToken(req, res, next) {
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (!err && decoded) {
+            const email = (decoded.email || '').toLowerCase().trim();
+            decoded.can_create_admin = (decoded.role || '').toLowerCase() === 'admin' && Boolean(
+                decoded.can_create_admin === true || isEmailAuthorizedAdminCreator(email)
+            );
             req.user = decoded;
         } else {
             req.user = null;

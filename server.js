@@ -14,6 +14,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const { connectDB, collections } = require('./config/db');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { getIdFilter } = require('./utils/dbHelpers');
+const { canUserCreateAdmin } = require('./utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
@@ -212,12 +213,15 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
     const serverColorRule = userPrefs.colorRule || 'normal';
     const serverNavPlacement = userPrefs.navPlacement || 'top';
 
+    const canCreateAdminFlag = await canUserCreateAdmin(user);
+
     res.render('dashboard', {
         user: {
             id: String(user._id),
             username: user.username || 'User',
             email: user.email || '',
             role: role,
+            can_create_admin: canCreateAdminFlag,
             full_name: user.full_name || user.name || user.username
         },
         badgeInfo,

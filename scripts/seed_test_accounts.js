@@ -32,12 +32,30 @@ async function seed() {
     // 2. Define Test Users
     const testUsers = [
         {
+            username: 'superadmin_buksu',
+            email: '2401108432@student.buksu.edu.ph',
+            full_name: 'BukSU Primary Administrator (Root)',
+            first_name: 'Primary',
+            last_name: 'Administrator',
+            role: 'admin',
+            can_create_admin: true,
+            is_super_admin: true,
+            status: 'active',
+            is_active: true,
+            password: adminPasswordHash,
+            admin_pin: adminPinHash,
+            has_admin_pin: true,
+            created_at: pastDate,
+            activated_at: pastDate
+        },
+        {
             username: 'admin_main',
             email: 'admin_main@djs.com',
-            full_name: 'Admin Main (Demonstration)',
+            full_name: 'Admin Main (Standard Admin)',
             first_name: 'Admin',
             last_name: 'Main',
             role: 'admin',
+            can_create_admin: false,
             status: 'active',
             is_active: true,
             password: adminPasswordHash,

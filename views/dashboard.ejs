@@ -3,7 +3,9 @@
 <body class="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-between antialiased relative overflow-x-hidden"
     data-role="<%= user.role %>"
     data-username="<%= user.username %>"
-    data-user-id="<%= user.id %>">
+    data-user-id="<%= user.id %>"
+    data-user-email="<%= user.email %>"
+    data-can-create-admin="<%= user.can_create_admin ? 'true' : 'false' %>">
 
     <div class="dashboard-bg"></div>
 

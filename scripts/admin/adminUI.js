@@ -22,6 +22,8 @@ async function loadAccounts() {
         return;
     }
 
+    const canCreateAdmin = document.body.dataset.canCreateAdmin === 'true' || res.can_create_admin === true;
+
     tbody.innerHTML = res.accounts.map(account => `
         <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/90 transition-colors">
             <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100 align-middle">
@@ -32,7 +34,7 @@ async function loadAccounts() {
             </td>
             <td class="px-4 py-3 text-center align-middle">
                 ${account.role === 'admin' 
-                    ? getRoleBadge('admin')
+                    ? getRoleBadge('admin', account.can_create_admin)
                     : `<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                         <i class="fa-solid ${account.role === 'judge' ? 'fa-gavel' : 'fa-calculator'} text-buksu-navy dark:text-buksu-gold text-xs"></i>
                         <select class="role-select bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer" data-id="${account.id}" data-current="${account.role}">
@@ -53,21 +55,30 @@ async function loadAccounts() {
                         ? `<button class="revoke-invite-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Cancel and invalidate this invitation link"><i class="fa-solid fa-ban me-1"></i>Revoke</button>`
                         : ''
                     }
-                    ${account.status === 'active' && account.is_active && account.role === 'admin'
+                    ${account.status === 'active' && account.is_active && account.role === 'admin' && canCreateAdmin
                         ? `<button class="reset-admin-pin-btn px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold transition-colors cursor-pointer border border-amber-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Reset exclusive Admin PIN"><i class="fa-solid fa-key me-1 text-amber-600"></i>Reset PIN</button>`
                         : ''
                     }
                     ${account.status === 'active' && account.is_active
-                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>
-                           <button class="revoke-session-btn px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Terminate active logins and force re-login"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out</button>`
+                        ? (account.role === 'admin' && !canCreateAdmin
+                            ? ''
+                            : `<button class="perm-btn px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold transition-colors cursor-pointer border border-rose-200 text-[11px]" data-id="${account.id}" data-action="disable"><i class="fa-solid fa-ban me-1"></i>Disable</button>`
+                          ) +
+                          `<button class="revoke-session-btn px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition-colors cursor-pointer border border-slate-200 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Terminate active logins and force re-login"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>Sign Out</button>`
                         : ''
                     }
                     ${account.status === 'active' && !account.is_active
-                        ? `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                        ? (account.role === 'admin' && !canCreateAdmin
+                            ? ''
+                            : `<button class="perm-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-semibold transition-colors cursor-pointer border border-emerald-200 text-[11px]" data-id="${account.id}" data-action="enable"><i class="fa-solid fa-circle-check me-1"></i>Enable</button>`
+                          )
                         : ''
                     }
                     ${account.status === 'revoked'
-                        ? `<button class="delete-account-btn px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 font-bold transition-colors cursor-pointer border border-rose-200 dark:border-rose-800 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Permanently delete this revoked account"><i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove</button>`
+                        ? (account.role === 'admin' && !canCreateAdmin
+                            ? ''
+                            : `<button class="delete-account-btn px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50 font-bold transition-colors cursor-pointer border border-rose-200 dark:border-rose-800 text-[11px]" data-id="${account.id}" data-name="${account.email || account.username}" title="Permanently delete this revoked account"><i class="fa-solid fa-trash-can me-1 text-rose-500"></i>Remove</button>`
+                          )
                         : ''
                     }
                 </div>
@@ -232,11 +243,20 @@ async function loadAccounts() {
 }
 
 function initAdminPanel() {
+    const canCreateAdmin = document.body.dataset.canCreateAdmin === 'true';
     const roleSelect = document.getElementById('create-role');
     const pinGroup = document.getElementById('create-admin-pin-group');
+
+    // If viewer is not authorized to create administrator accounts, purge option
+    if (!canCreateAdmin && roleSelect) {
+        const adminOption = roleSelect.querySelector('option[value="admin"]');
+        if (adminOption) adminOption.remove();
+        if (pinGroup) pinGroup.classList.add('hidden');
+    }
+
     const updatePinGroupVisibility = () => {
         if (pinGroup && roleSelect) {
-            if (roleSelect.value === 'admin') {
+            if (roleSelect.value === 'admin' && canCreateAdmin) {
                 pinGroup.classList.remove('hidden');
             } else {
                 pinGroup.classList.add('hidden');
@@ -255,6 +275,15 @@ function initAdminPanel() {
 
         const noticeWrap = document.getElementById('admin-create-notice-wrap');
         const notice = document.getElementById('admin-create-notice');
+
+        if (role === 'admin' && !canCreateAdmin) {
+            if (noticeWrap && notice) {
+                noticeWrap.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200';
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1.5"></i>Access denied: Only selective authorized administrator accounts (e.g. 2401108432@student.buksu.edu.ph) can create an Administrator account.';
+                noticeWrap.classList.remove('hidden');
+            }
+            return;
+        }
 
         if (!email) {
             if (noticeWrap && notice) {
