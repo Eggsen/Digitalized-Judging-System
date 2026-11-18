@@ -417,6 +417,16 @@ export function activateSettingsSubtab(target) {
         activeSection.classList.remove('hidden');
         activeSection.classList.add('animate-fade-in');
     }
+
+    // Reset scroll to top of settings container if scrolled down
+    const settingsCard = document.getElementById('settings-tab');
+    if (settingsCard) {
+        const rect = settingsCard.getBoundingClientRect();
+        const absoluteTop = rect.top + window.scrollY - 80;
+        if (window.scrollY > absoluteTop) {
+            window.scrollTo({ top: Math.max(0, absoluteTop), left: 0, behavior: 'instant' });
+        }
+    }
 }
 
 function updateSecurityTabLockBadge(unlocked) {

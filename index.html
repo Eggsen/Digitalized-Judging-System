@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BukSU DigiTab - Redirecting...</title>
-    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo/favicon-192x192.png">
+    <link rel="apple-touch-icon" href="/assets/logo/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
     <link rel="stylesheet" href="/frontend/css/output.css">
     <script>
         (async function() {
@@ -26,7 +30,9 @@
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 const data = await res.json();
                 if (data.success && data.user) {
-                    window.location.replace('/dashboard');
+                    const r = (data.user.role || '').toLowerCase();
+                    const target = r === 'admin' ? '/admin/dashboard' : (r === 'tabulator' ? '/tabulator/dashboard' : '/judge/dashboard');
+                    window.location.replace(target);
                     return;
                 }
             } catch (e) {}

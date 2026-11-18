@@ -14,7 +14,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 const { connectDB, collections } = require('./config/db');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { getIdFilter } = require('./utils/dbHelpers');
-const { canUserCreateAdmin } = require('./utils/authHelpers');
+const { canUserCreateAdmin, getRoleDashboardUrl } = require('./utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
@@ -107,6 +107,17 @@ app.use('/scripts', express.static(path.join(__dirname, 'scripts')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/vendor/pdfmake', express.static(path.join(__dirname, 'node_modules/pdfmake/build')));
 
+// Favicon & Touch Icon Route Handlers (serves browsers requesting /favicon.ico directly)
+app.get(['/favicon.ico', '/favicon.png'], (req, res) => {
+    const isIco = req.path.endsWith('.ico');
+    res.type(isIco ? 'image/x-icon' : 'image/png');
+    res.sendFile(path.join(__dirname, 'assets', 'logo', isIco ? 'favicon.ico' : 'favicon-32x32.png'));
+});
+app.get(/^\/apple-touch-icon.*\.png$/, (req, res) => {
+    res.type('image/png');
+    res.sendFile(path.join(__dirname, 'assets', 'logo', 'apple-touch-icon.png'));
+});
+
 // -------------------------------------------------------------
 // RESTful API Routes (Modern Architecture - Android/Web/iOS)
 // -------------------------------------------------------------
@@ -146,14 +157,14 @@ app.get(['/', '/index.html'], async (req, res) => {
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
             if (collections.users && decoded?.id) {
-                const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1 } });
+                const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1, role: 1 } });
                 const currentDbVersion = Number(u?.token_version || 1);
                 const tokenVersion = Number(decoded?.token_version || 1);
                 if (u && tokenVersion >= currentDbVersion && u.is_active !== false && u.status !== 'disabled') {
-                    return res.redirect('/dashboard');
+                    return res.redirect(getRoleDashboardUrl(u.role || decoded.role));
                 }
             } else {
-                return res.redirect('/dashboard');
+                return res.redirect(getRoleDashboardUrl(decoded?.role));
             }
         } catch (e) {
             res.clearCookie('djs_token');
@@ -163,11 +174,17 @@ app.get(['/', '/index.html'], async (req, res) => {
     return res.redirect('/auth/login');
 });
 
-// Render Dashboard with Authenticated Session State (Exact same as original system)
-app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
+/**
+ * Core renderer for role-specific dashboard views.
+ * Enforces role isolation at the route boundary while providing a tailored dashboard context.
+ */
+async function renderRoleDashboard(req, res, expectedRole) {
     const token = req.cookies?.djs_token || req.cookies?.jwt_token;
+    const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+
     if (!token) {
-        return res.redirect('/auth/login');
+        const redirectParam = encodeURIComponent(req.originalUrl || req.url);
+        return res.redirect(`/auth/login?redirect_to=${redirectParam}`);
     }
 
     let decoded;
@@ -205,8 +222,30 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
         return res.redirect('/auth/login?error=session_superseded');
     }
 
-    const role = (user.role || 'judge').toLowerCase();
-    const badgeInfo = roleBadges[role] || { title: 'User Dashboard', icon: 'fa-user', color: 'bg-slate-700' };
+    const actualRole = (user.role || 'judge').toLowerCase();
+
+    // Enforce role isolation boundaries:
+    // 1. Admin dashboard is strictly restricted to administrator accounts
+    if (expectedRole === 'admin' && actualRole !== 'admin') {
+        return res.redirect(getRoleDashboardUrl(actualRole) + queryStr);
+    }
+
+    // 2. Tabulator dashboard is restricted to tabulators (and admins)
+    if (expectedRole === 'tabulator' && actualRole !== 'tabulator' && actualRole !== 'admin') {
+        return res.redirect(getRoleDashboardUrl(actualRole) + queryStr);
+    }
+
+    // 3. Judge dashboard is restricted to judges (and admins)
+    if (expectedRole === 'judge' && actualRole !== 'judge' && actualRole !== 'admin') {
+        return res.redirect(getRoleDashboardUrl(actualRole) + queryStr);
+    }
+
+    // If an administrator accesses a judge or tabulator route, honor that portal context
+    const viewRole = (actualRole === 'admin' && (expectedRole === 'judge' || expectedRole === 'tabulator'))
+        ? expectedRole
+        : actualRole;
+
+    const badgeInfo = roleBadges[viewRole] || { title: 'User Dashboard', icon: 'fa-user', color: 'bg-slate-700' };
 
     const userPrefs = user.preferences || {};
     const serverTheme = userPrefs.theme || 'light';
@@ -226,25 +265,116 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
         }
     }
 
+    const pageTitleMap = {
+        admin: 'Admin Dashboard',
+        judge: 'Judge Portal',
+        tabulator: 'Tabulator Control Panel'
+    };
+
     res.render('dashboard', {
         user: {
             id: String(user._id),
             username: user.username || 'User',
             email: user.email || '',
-            role: role,
+            role: viewRole,
             can_create_admin: canCreateAdminFlag,
             full_name: user.full_name || user.name || user.username
         },
         badgeInfo,
         branding,
-        pageTitle: 'Dashboard',
+        pageTitle: pageTitleMap[viewRole] || 'Dashboard',
+        dashboardUrl: getRoleDashboardUrl(viewRole),
         serverTheme,
         serverColorRule,
         serverNavPlacement
     });
+}
+
+// -------------------------------------------------------------
+// Role-Specific Dashboard Routes
+// -------------------------------------------------------------
+
+// 1. Admin Dashboard (Strictly guarded for Administrators)
+app.get(['/admin/dashboard', '/admin/dashboard.html', '/admin'], (req, res) => {
+    return renderRoleDashboard(req, res, 'admin');
 });
 
-// Notifications Hub route redirects into Dashboard notifications-tab
+// 2. Judge Dashboard (Official Judge Portal)
+app.get(['/judge/dashboard', '/judge/dashboard.html', '/judge'], (req, res) => {
+    return renderRoleDashboard(req, res, 'judge');
+});
+
+// 3. Tabulator Dashboard (Tabulator Control Panel)
+app.get(['/tabulator/dashboard', '/tabulator/dashboard.html', '/tabulator'], (req, res) => {
+    return renderRoleDashboard(req, res, 'tabulator');
+});
+
+// 4. User Dashboard Alias (Redirects dynamically to current user's role portal)
+app.get(['/user/dashboard', '/user/dashboard.html', '/user'], async (req, res) => {
+    const token = req.cookies?.djs_token || req.cookies?.jwt_token;
+    const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    if (!token) {
+        return res.redirect(`/auth/login?redirect_to=${encodeURIComponent('/user/dashboard' + queryStr)}`);
+    }
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return res.redirect(getRoleDashboardUrl(decoded?.role) + queryStr);
+    } catch (e) {
+        return res.redirect('/dashboard' + queryStr);
+    }
+});
+
+// 5. Smart Dispatcher: /dashboard and /dashboard.html
+// Inspects authenticated session and seamlessly 302-redirects to role-specific dashboard,
+// fully preserving query parameters (?tab=notifications-tab, ?event=123, etc.)
+app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
+    const token = req.cookies?.djs_token || req.cookies?.jwt_token;
+    const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+
+    if (!token) {
+        const redirectParam = encodeURIComponent('/dashboard' + queryStr);
+        return res.redirect(`/auth/login?redirect_to=${redirectParam}`);
+    }
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+        return res.redirect('/auth/login?error=session_expired');
+    }
+
+    let user;
+    try {
+        user = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1, role: 1 } });
+    } catch (e) {}
+
+    if (!user) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+        return res.redirect('/auth/login?error=no_account');
+    }
+
+    if (user.is_active === false || user.status === 'disabled') {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+        return res.redirect('/auth/login?error=account_disabled');
+    }
+
+    const currentDbVersion = Number(user.token_version || 1);
+    const tokenVersion = Number(decoded.token_version || 1);
+    if (tokenVersion < currentDbVersion) {
+        res.clearCookie('djs_token');
+        res.clearCookie('jwt_token');
+        return res.redirect('/auth/login?error=session_superseded');
+    }
+
+    const targetUrl = getRoleDashboardUrl(user.role || decoded.role);
+    return res.redirect(targetUrl + queryStr);
+});
+
+// Notifications Hub route redirects into Dashboard notifications-tab (which dispatches to role portal)
 app.get(['/notifications', '/notifications.html'], (req, res) => {
     return res.redirect('/dashboard?tab=notifications-tab');
 });
@@ -259,14 +389,14 @@ app.get(['/auth/login', '/auth/login.html', '/login'], async (req, res) => {
             try {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 if (collections.users && decoded?.id) {
-                    const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1 } });
+                    const u = await collections.users.findOne(getIdFilter(decoded.id), { projection: { is_active: 1, status: 1, token_version: 1, role: 1 } });
                     const currentDbVersion = Number(u?.token_version || 1);
                     const tokenVersion = Number(decoded?.token_version || 1);
                     if (u && tokenVersion >= currentDbVersion && u.is_active !== false && u.status !== 'disabled') {
-                        return res.redirect('/dashboard');
+                        return res.redirect(getRoleDashboardUrl(u.role || decoded.role));
                     }
                 } else {
-                    return res.redirect('/dashboard');
+                    return res.redirect(getRoleDashboardUrl(decoded?.role));
                 }
             } catch (e) {
                 res.clearCookie('djs_token');

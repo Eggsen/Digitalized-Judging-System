@@ -3,7 +3,7 @@
                 
                 <!-- Sidebar Header (Aligned with topbar height h-16) -->
                 <div class="sidebar-header h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 transition-all duration-300">
-                    <a href="/dashboard" id="sidebar-brand-link" class="sidebar-brand-link flex items-center gap-2.5 min-w-0 hover:opacity-90 transition-opacity">
+                    <a href="<%= (typeof dashboardUrl !== 'undefined' && dashboardUrl) ? dashboardUrl : (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'tabulator' ? '/tabulator/dashboard' : '/judge/dashboard')) %>" id="sidebar-brand-link" class="sidebar-brand-link flex items-center gap-2.5 min-w-0 hover:opacity-90 transition-opacity">
                         <img id="sidebar-institution-logo" 
                              src="/assets/logo/DJS Logo.png" 
                              alt="DigiTab Logo" 

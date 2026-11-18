@@ -6,7 +6,7 @@ const { collections } = require('../config/db');
 const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getIdFilter } = require('../utils/dbHelpers');
-const { canUserCreateAdmin, isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
+const { canUserCreateAdmin, isEmailAuthorizedAdminCreator, getRoleDashboardUrl } = require('../utils/authHelpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 const JWT_EXPIRES_IN = '7d';
@@ -225,7 +225,7 @@ async function login(req, res, next) {
             success: true,
             message: 'Authentication successful.',
             token,
-            redirect: '/dashboard',
+            redirect: getRoleDashboardUrl(user.role),
             user: {
                 id: String(user._id),
                 username: user.username,
@@ -360,7 +360,7 @@ async function verifyLoginPin(req, res, next) {
             success: true,
             message: 'Admin authentication successful.',
             token,
-            redirect: '/dashboard',
+            redirect: '/admin/dashboard',
             user: {
                 id: String(user._id),
                 username: user.username,
@@ -614,7 +614,7 @@ async function googleCallback(req, res) {
 
         await logSystemAction(user._id, user.username, user.role, 'LOGIN_GOOGLE', 'User logged in via Google OAuth SSO.', req);
 
-        res.redirect('/dashboard');
+        res.redirect(getRoleDashboardUrl(user.role));
     } catch (err) {
         console.error('[GoogleOAuth] Callback error:', err.response?.data || err.message);
         const detailMsg = err.response?.data?.error_description || err.message;
@@ -1007,5 +1007,6 @@ module.exports = {
     verifyResetToken,
     resetPassword,
     verifyInvitationToken,
-    acceptInvitation
+    acceptInvitation,
+    getRoleDashboardUrl
 };

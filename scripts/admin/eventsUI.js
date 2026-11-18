@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function handleQrDeepLinks() {
     const urlParams = new URLSearchParams(window.location.search);
-    const eventId = urlParams.get('event_id') || urlParams.get('eventId') || urlParams.get('view_event') || urlParams.get('id');
+    const eventId = urlParams.get('event_id') || urlParams.get('eventId') || urlParams.get('view_event') || urlParams.get('id') || urlParams.get('event');
     const action = urlParams.get('action');
     const type = urlParams.get('type');
 
@@ -89,6 +89,13 @@ let pendingMainTabDiscardTimer = null;
 
 export function switchAdminTab(targetTab) {
     window.switchAdminTab = switchAdminTab;
+
+    const currentVisibleTab = document.querySelector('.admin-tab-content:not(.hidden)');
+    const isAlreadyActive = currentVisibleTab && currentVisibleTab.id === targetTab;
+    if (isAlreadyActive) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        return;
+    }
 
     const settingsTab = document.getElementById('settings-tab');
     const isCurrentlyOnSettings = settingsTab && !settingsTab.classList.contains('hidden');
@@ -177,6 +184,16 @@ export function switchAdminTab(targetTab) {
         activeContent.classList.add('animate-fade-in');
     }
 
+    // Always reset viewport scroll so newly entered tab begins at the top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    });
+
     if (targetTab === 'events-tab') loadAdminEvents();
     if (targetTab === 'assignments-tab') loadJudgeAssignments();
     if (targetTab === 'logs-tab') loadAuditLogs();
@@ -225,6 +242,13 @@ function initAdminTabs() {
 export function switchUserTab(targetTab) {
     window.switchUserTab = switchUserTab;
 
+    const currentVisibleTab = document.querySelector('.user-tab-content:not(.hidden)');
+    const isAlreadyActive = currentVisibleTab && currentVisibleTab.id === targetTab;
+    if (isAlreadyActive) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        return;
+    }
+
     // Toggle welcome hero banner: only visible on primary user-events-tab
     const welcomeHero = document.getElementById('welcome-hero-card');
     if (welcomeHero) {
@@ -271,6 +295,16 @@ export function switchUserTab(targetTab) {
         activeContent.classList.remove('hidden');
         activeContent.classList.add('animate-fade-in');
     }
+
+    // Always reset viewport scroll so newly entered tab begins at the top
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    });
 
     if (targetTab === 'user-events-tab') loadUserAssignedEvents();
     if (targetTab === 'user-logs-tab') loadAuditLogs('user-logs-tbody');
@@ -482,6 +516,19 @@ export async function loadAdminEvents() {
             judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Judging Inactive</span>';
         }
 
+        const contestantsCount = Number(e.contestants_count || 0);
+        const criteriaCount = Number(e.criteria_count || 0);
+        const judgesCount = Number(e.judges_count !== undefined ? e.judges_count : (e.assignedjudges ? e.assignedjudges.length : 0));
+        const tabulatorsCount = Number(e.tabulators_count !== undefined ? e.tabulators_count : (e.tabulators ? e.tabulators.length : 0));
+
+        const missingSetupList = [];
+        if (contestantsCount === 0) missingSetupList.push('contestants');
+        if (criteriaCount === 0) missingSetupList.push('criteria');
+        if (judgesCount === 0) missingSetupList.push('judges');
+        if (tabulatorsCount === 0) missingSetupList.push('tabulator');
+
+        const canStartEvent = missingSetupList.length === 0;
+
         return `
         <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
@@ -506,12 +553,20 @@ export async function loadAdminEvents() {
                         <span>${escapeHtml(e.venue || 'TBA')}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
+                        <i class="fa-solid fa-users text-buksu-navy w-4"></i>
+                        <span>Contestants: ${contestantsCount > 0 ? `<strong class="text-slate-800">${contestantsCount}</strong>` : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-[10px]">0 (Required)</span>'}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px]">
+                        <i class="fa-solid fa-list-check text-buksu-navy w-4"></i>
+                        <span>Criteria: ${criteriaCount > 0 ? `<strong class="text-slate-800">${criteriaCount}</strong>` : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-[10px]">0 (Required)</span>'}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-solid fa-gavel text-buksu-navy w-4"></i>
-                        <span>Judges: ${e.assignedjudges && e.assignedjudges.length > 0 ? e.assignedjudges.map(j => escapeHtml(j.username)).join(', ') : '<span class="text-slate-400">None assigned</span>'}</span>
+                        <span>Judges: ${judgesCount > 0 ? e.assignedjudges.map(j => escapeHtml(j.username)).join(', ') : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-[10px]">None assigned (Required)</span>'}</span>
                     </div>
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-solid fa-calculator text-buksu-navy w-4"></i>
-                        <span>Tabulators: ${e.tabulators && e.tabulators.length > 0 ? e.tabulators.map(t => escapeHtml(t.username)).join(', ') : '<span class="text-slate-400">None assigned</span>'}</span>
+                        <span>Tabulators: ${tabulatorsCount > 0 ? e.tabulators.map(t => escapeHtml(t.username)).join(', ') : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-[10px]">None assigned (Required)</span>'}</span>
                     </div>
                 </div>
             </div>
@@ -525,11 +580,15 @@ export async function loadAdminEvents() {
                         <button class="toggle-judging-btn px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="stop" data-name="${escapeHtml(e.eventName)}">
                             <i class="fa-solid fa-stop"></i> Stop
                         </button>
-                    ` : `
-                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="start" data-name="${escapeHtml(e.eventName)}">
+                    ` : (canStartEvent ? `
+                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="start" data-can-start="true" data-name="${escapeHtml(e.eventName)}">
                             <i class="fa-solid fa-play"></i> Start
                         </button>
-                    `}
+                    ` : `
+                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-500 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 border border-slate-300" data-id="${e.id}" data-action="start" data-can-start="false" data-missing="${escapeHtml(missingSetupList.join(', '))}" data-name="${escapeHtml(e.eventName)}" title="Cannot start: setup incomplete (missing ${escapeHtml(missingSetupList.join(', '))})">
+                            <i class="fa-solid fa-lock text-slate-400"></i> Start
+                        </button>
+                    `)}
                     <button class="open-tab-board-btn px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors border border-amber-200 flex items-center gap-1" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
                         <i class="fa-solid fa-calculator"></i> Board
                     </button>
@@ -1499,6 +1558,13 @@ function bindEventCardActions() {
         });
     });
 
+    // Refresh events grid when setup modal is dismissed so counts & start button reactively update
+    document.querySelectorAll('#manage-event-setup-modal .close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            loadAdminEvents();
+        });
+    });
+
     // Toggle Judging Period (Start / Stop)
     document.querySelectorAll('.toggle-judging-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -1506,6 +1572,19 @@ function bindEventCardActions() {
             const action = btn.dataset.action;
             const eventName = btn.dataset.name;
             const id = btn.dataset.id;
+            const canStart = btn.dataset.canStart !== 'false';
+            const missing = btn.dataset.missing;
+
+            // Prevent starting if setup is incomplete (no contestants, criteria, judges, or tabulator)
+            if (action === 'start' && !canStart) {
+                showToast(
+                    "Setup Incomplete", 
+                    `Cannot start "${eventName}". Please configure ${missing || 'all setup requirements'} before starting the competition.`, 
+                    "warning"
+                );
+                return;
+            }
+
             const confirmMsg = action === 'start' 
                 ? `Are you sure you want to START the judging period for "${eventName}"? Assigned judges will immediately be permitted to enter scores.`
                 : `Are you sure you want to STOP the judging period for "${eventName}"? Judging will be finalized and scoring submissions locked.`;

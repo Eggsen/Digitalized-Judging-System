@@ -18,7 +18,7 @@
                 </button>
 
                 <!-- Brand link: Shows logo and title ONLY on mobile (< lg screens). On desktop, brand lives exclusively in the sidebar -->
-                <a href="/dashboard" id="topbar-brand-link" class="flex lg:hidden items-center gap-2 sm:gap-3 shrink-0 min-w-0 hover:opacity-90 transition-opacity">
+                <a href="<%= (typeof dashboardUrl !== 'undefined' && dashboardUrl) ? dashboardUrl : (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'tabulator' ? '/tabulator/dashboard' : '/judge/dashboard')) %>" id="topbar-brand-link" class="flex lg:hidden items-center gap-2 sm:gap-3 shrink-0 min-w-0 hover:opacity-90 transition-opacity">
                     <img id="top-nav-institution-logo" 
                          src="/assets/logo/DJS Logo.png" 
                          alt="DigiTab Logo" 

@@ -131,10 +131,24 @@ async function canUserCreateAdmin(user, settingsDoc = null) {
     return false;
 }
 
+/**
+ * Resolves the primary dashboard route for a given user role.
+ *
+ * @param {string} role - The user's role (admin, judge, tabulator)
+ * @returns {string} The role-specific dashboard path
+ */
+function getRoleDashboardUrl(role) {
+    const r = (role || '').toLowerCase().trim();
+    if (r === 'admin') return '/admin/dashboard';
+    if (r === 'tabulator') return '/tabulator/dashboard';
+    return '/judge/dashboard';
+}
+
 module.exports = {
     DEFAULT_AUTHORIZED_ADMIN_CREATORS,
     getAuthorizedAdminEmails,
     isEmailAuthorizedAdminCreator,
-    canUserCreateAdmin
+    canUserCreateAdmin,
+    getRoleDashboardUrl
 };
 

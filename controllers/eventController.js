@@ -209,6 +209,13 @@ async function listEvents(req, res, next) {
             const status = ev.status || 'Upcoming';
             const judgingStatus = ev.judgingStatus || ev.judging_status || 'Not Yet Started';
 
+            const isReady = contestantsCount > 0 && criteriaCount > 0 && assignedJudges.length > 0 && tabulators.length > 0;
+            const missingSetup = [];
+            if (contestantsCount === 0) missingSetup.push('contestants');
+            if (criteriaCount === 0) missingSetup.push('criteria');
+            if (assignedJudges.length === 0) missingSetup.push('judges');
+            if (tabulators.length === 0) missingSetup.push('tabulator');
+
             return {
                 ...ev,
                 id: evId,
@@ -231,6 +238,9 @@ async function listEvents(req, res, next) {
                 criteria_count: criteriaCount,
                 judges_count: assignedJudges.length,
                 tabulators_count: tabulators.length,
+                can_start: isReady,
+                is_setup_ready: isReady,
+                missing_setup: missingSetup,
                 description: ev.description || ''
             };
         }));
@@ -442,6 +452,90 @@ async function createEvent(req, res, next) {
 }
 
 /**
+ * Validate that an event has all required setup components before it can start:
+ * 1. At least one contestant
+ * 2. At least one judging criterion
+ * 3. At least one assigned judge
+ * 4. At least one assigned tabulator
+ * 
+ * @param {Object} event - The event document from MongoDB
+ * @returns {Promise<{ canStart: boolean, missing: string[], counts: Object }>}
+ */
+async function validateEventSetupReadiness(event) {
+    if (!event) {
+        return {
+            canStart: false,
+            missing: ['Event not found'],
+            counts: { contestants: 0, criteria: 0, judges: 0, tabulators: 0 }
+        };
+    }
+
+    const countQuery = getEventIdQuery(event._id);
+
+    const [contestantsCount, criteriaCount] = await Promise.all([
+        collections.contestants.countDocuments(countQuery),
+        collections.criteria.countDocuments(countQuery)
+    ]);
+
+    let finalContestantsCount = contestantsCount;
+    if (finalContestantsCount === 0 && Array.isArray(event.contestants)) {
+        finalContestantsCount = event.contestants.length;
+    }
+
+    let finalCriteriaCount = criteriaCount;
+    if (finalCriteriaCount === 0 && Array.isArray(event.criteria)) {
+        finalCriteriaCount = event.criteria.length;
+    }
+
+    const rawJudges = Array.isArray(event.assignedjudges)
+        ? event.assignedjudges
+        : (Array.isArray(event.assigned_judges) ? event.assigned_judges : []);
+    const validJudges = rawJudges.filter(j => {
+        if (!j) return false;
+        if (typeof j === 'object') {
+            return Boolean(j.id || j._id || j.username || j.email);
+        }
+        return String(j).trim() !== '';
+    });
+    const judgesCount = validJudges.length;
+
+    const rawTabs = Array.isArray(event.tabulators) ? event.tabulators : [];
+    const validTabs = rawTabs.filter(t => {
+        if (!t) return false;
+        if (typeof t === 'object') {
+            return Boolean(t.id || t._id || t.username || t.email);
+        }
+        return String(t).trim() !== '';
+    });
+    const tabulatorsCount = validTabs.length;
+
+    const missing = [];
+    if (finalContestantsCount === 0) {
+        missing.push('at least one contestant');
+    }
+    if (finalCriteriaCount === 0) {
+        missing.push('at least one judging criterion');
+    }
+    if (judgesCount === 0) {
+        missing.push('at least one assigned judge');
+    }
+    if (tabulatorsCount === 0) {
+        missing.push('at least one assigned tabulator');
+    }
+
+    return {
+        canStart: missing.length === 0,
+        missing,
+        counts: {
+            contestants: finalContestantsCount,
+            criteria: finalCriteriaCount,
+            judges: judgesCount,
+            tabulators: tabulatorsCount
+        }
+    };
+}
+
+/**
  * Update Event (Admin Only)
  */
 async function updateEvent(req, res, next) {
@@ -532,6 +626,21 @@ async function updateEvent(req, res, next) {
             updateDoc.description = finalDesc;
         }
         if (banner_url !== undefined) updateDoc.banner_url = banner_url;
+
+        // Setup Readiness Enforcement:
+        // Admin cannot start or set an event to Ongoing without contestants, criteria, judges, and tabulator
+        if (updateDoc.status === 'Ongoing' || updateDoc.judgingStatus === 'In Progress') {
+            const readiness = await validateEventSetupReadiness(existing);
+            if (!readiness.canStart) {
+                return res.status(400).json({
+                    success: false,
+                    code: 'SETUP_INCOMPLETE',
+                    message: `Cannot start competition "${updateDoc.eventName || existing.eventName || existing.name}". Setup is incomplete: please configure ${readiness.missing.join(', ')} before setting status to Ongoing.`,
+                    missing: readiness.missing,
+                    counts: readiness.counts
+                });
+            }
+        }
 
         await collections.events.updateOne(query, { $set: updateDoc });
 
@@ -712,6 +821,21 @@ async function updateJudgingPeriod(req, res, next) {
             return res.status(404).json({ success: false, message: 'Event not found.' });
         }
 
+        // Setup Readiness Enforcement:
+        // Admin cannot start an event without contestants, criteria, judges, and tabulator
+        if (actionInput === 'start' || actionInput === 'open' || actionInput === 'in progress') {
+            const readiness = await validateEventSetupReadiness(existing);
+            if (!readiness.canStart) {
+                return res.status(400).json({
+                    success: false,
+                    code: 'SETUP_INCOMPLETE',
+                    message: `Cannot start competition "${existing.eventName || existing.name || id}". Setup is incomplete: please configure ${readiness.missing.join(', ')} before starting judging.`,
+                    missing: readiness.missing,
+                    counts: readiness.counts
+                });
+            }
+        }
+
         await collections.events.updateOne(query, {
             $set: {
                 judgingStatus,
@@ -853,5 +977,6 @@ module.exports = {
     assignJudges,
     updateJudgingPeriod,
     getEventQR,
-    exportExecutiveSummaryPDF
+    exportExecutiveSummaryPDF,
+    validateEventSetupReadiness
 };

@@ -352,6 +352,9 @@ function switchSetupTab(tabId) {
 
     const activeContent = document.getElementById(tabId);
     if (activeContent) activeContent.classList.remove('hidden');
+
+    const modalInner = document.querySelector('#manage-event-setup-modal > div');
+    if (modalInner) modalInner.scrollTop = 0;
 }
 
 /* -------------------------------------------------------------
