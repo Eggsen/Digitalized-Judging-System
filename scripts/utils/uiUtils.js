@@ -65,7 +65,7 @@ export function showToast(title, message = '', type = 'success', duration = 4000
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        container.className = 'fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4';
+        container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4';
         document.body.appendChild(container);
     }
 

@@ -347,6 +347,38 @@ async function createEvent(req, res, next) {
         if (!finalTitle) {
             return res.status(400).json({ success: false, message: 'Event name/title is required.' });
         }
+        if (finalTitle.length > 100) {
+            return res.status(400).json({ success: false, message: 'Event title cannot exceed 100 characters.' });
+        }
+
+        const eventType = (type || category || 'Pageant').trim();
+        if (eventType.length > 50) {
+            return res.status(400).json({ success: false, message: 'Event type cannot exceed 50 characters.' });
+        }
+
+        const finalVenue = (venue || '').trim();
+        if (finalVenue.length > 100) {
+            return res.status(400).json({ success: false, message: 'Event venue cannot exceed 100 characters.' });
+        }
+
+        const finalDesc = (description || '').trim();
+        if (finalDesc.length > 500) {
+            return res.status(400).json({ success: false, message: 'Event description cannot exceed 500 characters.' });
+        }
+
+        // Validate Date & Year limits (reject invalid years e.g. 0001)
+        const eventDate = date || new Date().toISOString();
+        const dObj = new Date(eventDate);
+        if (isNaN(dObj.getTime())) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid event date and time.' });
+        }
+        const eventYear = dObj.getFullYear();
+        if (eventYear < 2000 || eventYear > 2100) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Invalid year (${eventYear}). Event date must have a valid year between 2000 and 2100.` 
+            });
+        }
 
         // Auto-increment integer ID to match MongoDB Atlas schema
         const allEvents = await collections.events.find({}, { projection: { _id: 1 } }).toArray();
@@ -362,8 +394,6 @@ async function createEvent(req, res, next) {
         const resolvedJudges = await resolveJudgeObjects(assignedjudges || []);
         const resolvedTabs = await resolveJudgeObjects(tabulators || []);
 
-        const eventType = (type || category || 'Pageant').trim();
-
         const newEvent = {
             _id: nextId,
             eventName: finalTitle,
@@ -371,8 +401,8 @@ async function createEvent(req, res, next) {
             title: finalTitle,
             type: eventType,
             category: eventType,
-            description: (description || '').trim(),
-            venue: (venue || '').trim(),
+            description: finalDesc,
+            venue: finalVenue,
             date: date || new Date().toISOString().split('T')[0],
             start_time: start_time || '08:00',
             banner_url: banner_url || null,
@@ -439,20 +469,54 @@ async function updateEvent(req, res, next) {
             return res.status(404).json({ success: false, message: 'Event not found.' });
         }
 
+        // Enforce: Ongoing events should not be editable once the event is started, unless it is stopped
+        const isOngoing = (existing.status === 'Ongoing' || existing.judgingStatus === 'In Progress' || existing.judging_status === 'In Progress');
+        if (isOngoing) {
+            return res.status(400).json({
+                success: false,
+                message: 'This competition is currently ongoing and active. It cannot be edited while started. Please stop the judging period before modifying details.'
+            });
+        }
+
         const updateDoc = { updated_at: new Date().toISOString() };
         if (eventName !== undefined || title !== undefined || name !== undefined) {
             const finalName = (eventName || title || name || '').trim();
+            if (finalName.length > 100) {
+                return res.status(400).json({ success: false, message: 'Event title cannot exceed 100 characters.' });
+            }
             updateDoc.eventName = finalName;
             updateDoc.name = finalName;
             updateDoc.title = finalName;
         }
         if (type !== undefined || category !== undefined) {
             const finalType = (type || category || '').trim();
+            if (finalType.length > 50) {
+                return res.status(400).json({ success: false, message: 'Event type cannot exceed 50 characters.' });
+            }
             updateDoc.type = finalType;
             updateDoc.category = finalType;
         }
-        if (venue !== undefined) updateDoc.venue = venue.trim();
-        if (date !== undefined) updateDoc.date = date;
+        if (venue !== undefined) {
+            const finalVenue = venue.trim();
+            if (finalVenue.length > 100) {
+                return res.status(400).json({ success: false, message: 'Venue cannot exceed 100 characters.' });
+            }
+            updateDoc.venue = finalVenue;
+        }
+        if (date !== undefined && date !== null && String(date).trim() !== '') {
+            const dObj = new Date(date);
+            if (isNaN(dObj.getTime())) {
+                return res.status(400).json({ success: false, message: 'Please provide a valid event date and time.' });
+            }
+            const eventYear = dObj.getFullYear();
+            if (eventYear < 2000 || eventYear > 2100) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Invalid year (${eventYear}). Event date must have a valid year between 2000 and 2100.` 
+                });
+            }
+            updateDoc.date = date;
+        }
         if (start_time !== undefined) updateDoc.start_time = start_time;
         if (status !== undefined) updateDoc.status = status;
         if (judgingStatus !== undefined || judging_status !== undefined) {
@@ -460,7 +524,13 @@ async function updateEvent(req, res, next) {
             updateDoc.judgingStatus = jStatus;
             updateDoc.judging_status = jStatus;
         }
-        if (description !== undefined) updateDoc.description = description.trim();
+        if (description !== undefined) {
+            const finalDesc = description.trim();
+            if (finalDesc.length > 500) {
+                return res.status(400).json({ success: false, message: 'Description cannot exceed 500 characters.' });
+            }
+            updateDoc.description = finalDesc;
+        }
         if (banner_url !== undefined) updateDoc.banner_url = banner_url;
 
         await collections.events.updateOne(query, { $set: updateDoc });

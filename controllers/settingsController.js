@@ -39,7 +39,7 @@ function getDefaultSettings() {
         branding: {
             institutionName: 'Bukidnon State University',
             campusUnit: 'Main Campus, Malaybalay City - Office of Student Affairs & Services',
-            systemTitle: 'JudgeTab - Digitalized Judging System',
+            systemTitle: 'DigiTab',
             headerSubtitle: 'Official Tabulation & Certification of Competition Results',
             logoUrl: null,
             primaryColor: '#0F2C59',
@@ -86,6 +86,17 @@ async function getSettings(req, res, next) {
         if (!settingsDoc) {
             settingsDoc = getDefaultSettings();
             await collections.settings.insertOne(settingsDoc);
+        } else if (settingsDoc.branding) {
+            const currentTitle = String(settingsDoc.branding.systemTitle || '').trim();
+            if (!currentTitle || currentTitle.toLowerCase().includes('judgetab')) {
+                settingsDoc.branding.systemTitle = 'DigiTab';
+                try {
+                    await collections.settings.updateOne(
+                        { _id: 'system_settings' },
+                        { $set: { 'branding.systemTitle': 'DigiTab' } }
+                    );
+                } catch (e) {}
+            }
         }
 
         // Diagnostics
@@ -171,10 +182,15 @@ async function saveSettings(req, res, next) {
             ? branding.signatories.map(s => ({ name: String(s.name || '').trim(), title: String(s.title || '').trim() })).filter(s => s.name || s.title)
             : getDefaultSettings().branding.signatories;
 
+        let candidateTitle = (branding.systemTitle || 'DigiTab').trim();
+        if (!candidateTitle || candidateTitle.toLowerCase().includes('judgetab')) {
+            candidateTitle = 'DigiTab';
+        }
+
         const cleanBranding = {
             institutionName: (branding.institutionName || 'Bukidnon State University').trim(),
             campusUnit: (branding.campusUnit || '').trim(),
-            systemTitle: (branding.systemTitle || 'JudgeTab - Digitalized Judging System').trim(),
+            systemTitle: candidateTitle,
             headerSubtitle: (branding.headerSubtitle || '').trim(),
             logoUrl: branding.logoUrl || null,
             primaryColor: branding.primaryColor || '#0F2C59',
@@ -709,6 +725,17 @@ async function updateSecurityControls(req, res, next) {
         if (!settingsDoc) {
             settingsDoc = getDefaultSettings();
             await collections.settings.insertOne(settingsDoc);
+        } else if (settingsDoc.branding) {
+            const currentTitle = String(settingsDoc.branding.systemTitle || '').trim();
+            if (!currentTitle || currentTitle.toLowerCase().includes('judgetab')) {
+                settingsDoc.branding.systemTitle = 'DigiTab';
+                try {
+                    await collections.settings.updateOne(
+                        { _id: 'system_settings' },
+                        { $set: { 'branding.systemTitle': 'DigiTab' } }
+                    );
+                } catch (e) {}
+            }
         }
 
         const currentSecurity = settingsDoc.security || {
@@ -862,7 +889,7 @@ async function updateSecurityControls(req, res, next) {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
                     <h2 style="color: #0F2C59; margin-bottom: 8px;">Security Verification Code</h2>
-                    <p style="color: #475569; font-size: 14px;">Here is your new 6-digit confirmation code to update system security controls in BukSU JudgeTab:</p>
+                    <p style="color: #475569; font-size: 14px;">Here is your new 6-digit confirmation code to update system security controls in BukSU DigiTab:</p>
                     <div style="text-align: center; margin: 24px 0;">
                         <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0F2C59; background: #f1f5f9; padding: 10px 24px; border-radius: 12px; border: 1px dashed #cbd5e1;">${newCode}</span>
                     </div>
@@ -870,7 +897,7 @@ async function updateSecurityControls(req, res, next) {
                 </div>
             `;
 
-            await sendSystemEmail(targetEmail, 'New Security Verification Code - BukSU JudgeTab', emailHtml, true);
+            await sendSystemEmail(targetEmail, 'New Security Verification Code - BukSU DigiTab', emailHtml, true);
 
             return res.json({
                 success: true,
@@ -925,7 +952,7 @@ async function updateSecurityControls(req, res, next) {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
                     <h2 style="color: #0F2C59; margin-bottom: 8px;">Security Verification Code</h2>
-                    <p style="color: #475569; font-size: 14px;">A request has been initiated to modify Authentication &amp; Security Controls in BukSU JudgeTab. To apply these changes, enter the 6-digit confirmation code below:</p>
+                    <p style="color: #475569; font-size: 14px;">A request has been initiated to modify Authentication &amp; Security Controls in BukSU DigiTab. To apply these changes, enter the 6-digit confirmation code below:</p>
                     <div style="text-align: center; margin: 24px 0;">
                         <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0F2C59; background: #f1f5f9; padding: 10px 24px; border-radius: 12px; border: 1px dashed #cbd5e1;">${otpCode}</span>
                     </div>
@@ -934,7 +961,7 @@ async function updateSecurityControls(req, res, next) {
             `;
 
             // Force send verification email even if other automated emails are suppressed
-            await sendSystemEmail(adminEmail, 'Security Controls Verification Code - BukSU JudgeTab', emailHtml, true);
+            await sendSystemEmail(adminEmail, 'Security Controls Verification Code - BukSU DigiTab', emailHtml, true);
 
             return res.json({
                 success: true,
@@ -1015,11 +1042,11 @@ async function exportBackup(req, res, next) {
         res.json({
             success: true,
             message: 'Backup generated successfully.',
-            filename: `judgetab_backup_${now.replace(/[:.]/g, '-')}.json`,
+            filename: `digitab_backup_${now.replace(/[:.]/g, '-')}.json`,
             lastBackupAt: now,
             data: {
                 metadata: {
-                    system: 'BukSU JudgeTab Digitalized Judging System',
+                    system: 'BukSU DigiTab Digitalized Judging System',
                     exportedAt: now,
                     exportedBy: req.user.username,
                     schemaVersion: '3.0'

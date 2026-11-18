@@ -37,6 +37,27 @@ export function initNotificationUI() {
         }
     });
 
+    // Dropdown footer: switch to notifications-tab directly
+    const dropdownOpenNotifsBtn = document.getElementById('headerDropdownOpenNotifsBtn');
+    dropdownOpenNotifsBtn?.addEventListener('click', () => {
+        notifDropdown.classList.add('hidden');
+        const notifTab = document.getElementById('notifications-tab');
+        if (notifTab) {
+            const role = document.body?.dataset.role || 'judge';
+            if (role === 'admin' && typeof window.switchAdminTab === 'function') {
+                window.switchAdminTab('notifications-tab');
+            } else if (typeof window.switchUserTab === 'function') {
+                window.switchUserTab('notifications-tab');
+            } else {
+                const targetBtn = document.querySelector('[data-tab="notifications-tab"]');
+                targetBtn?.click();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.location.href = '/dashboard?tab=notifications-tab';
+        }
+    });
+
     // Initial load & poll every 15 seconds
     loadNotifications();
     setInterval(loadNotifications, 15000);
@@ -62,6 +83,15 @@ export async function loadNotifications() {
             badge.classList.add('hidden');
         }
     }
+
+    document.querySelectorAll('.sidebar-notif-badge').forEach(sBadge => {
+        if (unreadCount > 0) {
+            sBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            sBadge.classList.remove('hidden');
+        } else {
+            sBadge.classList.add('hidden');
+        }
+    });
 
     if (res.notifications.length === 0) {
         list.innerHTML = `

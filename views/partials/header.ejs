@@ -1,19 +1,44 @@
+<%
+    let safeHeaderTitle = 'DigiTab';
+    if (typeof branding !== 'undefined' && branding && branding.systemTitle) {
+        const titleStr = String(branding.systemTitle).trim();
+        if (titleStr && !titleStr.toLowerCase().includes('judgetab')) {
+            safeHeaderTitle = titleStr;
+        }
+    }
+%>
     <!-- Header Navigation -->
-    <header class="w-full max-w-full bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 overflow-x-clip">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 min-w-0">
+    <header id="top-header-navigation" class="w-full max-w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-all duration-300 overflow-x-clip">
+        <div class="h-16 px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 min-w-0">
             <div class="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
-                <img id="top-nav-institution-logo" 
-                     src="<%= (typeof branding !== 'undefined' && branding && branding.logoUrl) ? branding.logoUrl : '/assets/logo/DJS Logo.png' %>" 
-                     alt="Institution Logo" 
-                     class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0"
-                     onerror="if (this.src !== '/assets/logo/DJS Logo.png') { this.src = '/assets/logo/DJS Logo.png'; }">
-                <div class="min-w-0">
-                    <span id="top-nav-system-title" class="font-extrabold text-buksu-navy dark:text-white text-base sm:text-lg tracking-tight truncate block">
-                        <%= (typeof branding !== 'undefined' && branding && branding.systemTitle) ? branding.systemTitle : 'JudgeTab' %>
-                    </span>
-                    <span id="top-nav-institution-name" class="font-medium text-slate-500 dark:text-slate-400 text-xs hidden md:inline-block truncate block max-w-xs">
-                        <%= (typeof branding !== 'undefined' && branding && branding.institutionName) ? branding.institutionName : 'Digitalized Judging System' %>
-                    </span>
+                <!-- Hamburger Button (Visible on mobile, hidden on desktop when sidebar expanded) -->
+                <button id="sidebarToggleBtn" type="button" aria-label="Toggle navigation menu" title="Toggle navigation menu"
+                    class="p-2 -ml-1 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shrink-0 flex items-center justify-center">
+                    <i class="fa-solid fa-bars text-base sm:text-lg"></i>
+                </button>
+
+                <!-- Brand link: Shows logo and title ONLY on mobile (< lg screens). On desktop, brand lives exclusively in the sidebar -->
+                <a href="/dashboard" id="topbar-brand-link" class="flex lg:hidden items-center gap-2 sm:gap-3 shrink-0 min-w-0 hover:opacity-90 transition-opacity">
+                    <img id="top-nav-institution-logo" 
+                         src="/assets/logo/DJS Logo.png" 
+                         alt="DigiTab Logo" 
+                         class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0">
+                    <div class="min-w-0">
+                        <span id="top-nav-system-title" class="font-extrabold text-buksu-navy dark:text-white text-base sm:text-lg tracking-tight truncate block">
+                            <%= safeHeaderTitle %>
+                        </span>
+                    </div>
+                </a>
+
+                <!-- Breadcrumb / Section Header for Desktop Sidebar Mode -->
+                <div id="topbar-context-title" class="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 min-w-0">
+                    <div class="w-8 h-8 rounded-xl bg-buksu-navy/5 dark:bg-white/5 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-buksu-navy dark:text-buksu-gold shrink-0">
+                        <i class="fa-solid fa-compass text-xs"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block truncate leading-tight">DigiTab Platform</span>
+                        <span class="font-extrabold text-buksu-navy dark:text-white text-xs sm:text-sm tracking-tight block truncate leading-tight"><%= (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : 'Dashboard' %></span>
+                    </div>
                 </div>
             </div>
 
@@ -40,10 +65,18 @@
                             <button id="markAllReadBtn" class="text-[11px] font-semibold text-slate-300 hover:text-buksu-gold transition-colors cursor-pointer">Mark all read</button>
                         </div>
 
-                        <div id="notifList" class="max-h-80 overflow-y-auto divide-y divide-slate-100 text-xs">
+                        <div id="notifList" class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                             <div class="p-6 text-center text-slate-400">
                                 <i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading notifications...
                             </div>
+                        </div>
+
+                        <!-- Dropdown Footer: Switch to Notifications Hub Tab -->
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 text-center">
+                            <button type="button" id="headerDropdownOpenNotifsBtn" data-tab="notifications-tab" class="w-full text-xs font-bold text-buksu-navy dark:text-buksu-gold hover:underline flex items-center justify-center gap-1.5 py-1 cursor-pointer">
+                                <span>Open Notifications Hub</span>
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </button>
                         </div>
                     </div>
                 </div>

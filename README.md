@@ -1,4 +1,4 @@
-# BukSU Digitalized Judging System (JudgeTab)
+# BukSU Digitalized Judging System (DigiTab)
 
 > A secure, real-time competition judging, tabulation, and event management platform engineered for institutional academic, cultural, and sports competitions at Bukidnon State University.
 
@@ -6,7 +6,7 @@
 
 ## 📌 Overview
 
-The **BukSU Digitalized Judging System (DJS / JudgeTab)** modernizes institutional event judging and tabulation by replacing manual paper scorecards with an encrypted, synchronized, and automated digital platform. 
+The **BukSU Digitalized Judging System (DJS / DigiTab)** modernizes institutional event judging and tabulation by replacing manual paper scorecards with an encrypted, synchronized, and automated digital platform. 
 
 It provides dedicated, role-specific portals for **Administrators**, **Judges**, and **Tabulators**, featuring live score broadcasting, flexible scoring rubrics, mathematical tie-breaking protocols, and tamper-resistant audit trails.
 

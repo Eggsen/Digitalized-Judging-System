@@ -211,7 +211,7 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
     const userPrefs = user.preferences || {};
     const serverTheme = userPrefs.theme || 'light';
     const serverColorRule = userPrefs.colorRule || 'normal';
-    const serverNavPlacement = userPrefs.navPlacement || 'top';
+    const serverNavPlacement = userPrefs.navPlacement || 'sidebar';
 
     const canCreateAdminFlag = await canUserCreateAdmin(user);
 
@@ -219,7 +219,12 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
     try {
         settingsDoc = await collections.settings.findOne({ _id: 'system_settings' });
     } catch (e) {}
-    const branding = settingsDoc?.branding || null;
+    let branding = settingsDoc?.branding ? { ...settingsDoc.branding } : null;
+    if (branding) {
+        if (!branding.systemTitle || branding.systemTitle.toLowerCase().includes('judgetab')) {
+            branding.systemTitle = 'DigiTab';
+        }
+    }
 
     res.render('dashboard', {
         user: {
@@ -232,10 +237,16 @@ app.get(['/dashboard', '/dashboard.html'], async (req, res) => {
         },
         badgeInfo,
         branding,
+        pageTitle: 'Dashboard',
         serverTheme,
         serverColorRule,
         serverNavPlacement
     });
+});
+
+// Notifications Hub route redirects into Dashboard notifications-tab
+app.get(['/notifications', '/notifications.html'], (req, res) => {
+    return res.redirect('/dashboard?tab=notifications-tab');
 });
 
 app.get(['/auth/login', '/auth/login.html', '/login'], async (req, res) => {
@@ -329,7 +340,7 @@ async function startServer() {
         
         app.listen(PRIMARY_PORT, () => {
             console.log(`\n======================================================`);
-            console.log(`🚀 BukSU JudgeTab RESTful API & Web Server Started`);
+            console.log(`🚀 BukSU DigiTab RESTful API & Web Server Started`);
             console.log(`📡 URL: http://localhost:${PRIMARY_PORT}`);
             console.log(`⚡ REST API Base: http://localhost:${PRIMARY_PORT}/api/`);
             console.log(`📱 Mobile/Android Ready: Full CORS & JWT Token Support`);

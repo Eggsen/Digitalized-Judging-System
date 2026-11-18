@@ -125,26 +125,46 @@ export function triggerUnsavedChangesShake(clickedElement = null) {
 
 export function updateGlobalBranding(branding) {
     if (!branding) return;
-    const effectiveLogo = branding.logoUrl || '/assets/logo/DJS Logo.png';
+    const effectiveReportLogo = branding.logoUrl || '/assets/logo/DJS Logo.png';
+
+    // The website UI logo remains fixed to the default DigiTab app logo
     const topNavLogo = document.getElementById('top-nav-institution-logo');
     if (topNavLogo) {
-        topNavLogo.src = effectiveLogo;
+        topNavLogo.src = '/assets/logo/DJS Logo.png';
+    }
+    const sidebarLogo = document.getElementById('sidebar-institution-logo');
+    if (sidebarLogo) {
+        sidebarLogo.src = '/assets/logo/DJS Logo.png';
+    }
+
+    let effectiveTitle = (branding.systemTitle || 'DigiTab').trim();
+    if (!effectiveTitle || effectiveTitle.toLowerCase().includes('judgetab')) {
+        effectiveTitle = 'DigiTab';
     }
     const topNavTitle = document.getElementById('top-nav-system-title');
-    if (topNavTitle && branding.systemTitle) {
-        topNavTitle.textContent = branding.systemTitle;
+    if (topNavTitle) {
+        topNavTitle.textContent = effectiveTitle;
     }
     const topNavInst = document.getElementById('top-nav-institution-name');
     if (topNavInst && branding.institutionName) {
         topNavInst.textContent = branding.institutionName;
     }
+    const sidebarTitle = document.getElementById('sidebar-system-title');
+    if (sidebarTitle) {
+        sidebarTitle.textContent = effectiveTitle;
+    }
+    const sidebarInst = document.getElementById('sidebar-institution-name');
+    if (sidebarInst && branding.institutionName) {
+        sidebarInst.textContent = branding.institutionName;
+    }
+    // Uploaded institution logo applies exclusively to exported reports & printable sheets
     const tabPrintLogo = document.getElementById('tab-print-logo');
     if (tabPrintLogo) {
-        tabPrintLogo.src = effectiveLogo;
+        tabPrintLogo.src = effectiveReportLogo;
     }
     const tabScreenLogo = document.getElementById('tab-screen-logo');
     if (tabScreenLogo) {
-        tabScreenLogo.src = effectiveLogo;
+        tabScreenLogo.src = effectiveReportLogo;
     }
 }
 
@@ -195,7 +215,11 @@ function populateSettingsForm(settings) {
 
     if (instName) instName.value = branding.institutionName || 'Bukidnon State University';
     if (campusUnit) campusUnit.value = branding.campusUnit || '';
-    if (sysTitle) sysTitle.value = branding.systemTitle || 'JudgeTab - Digitalized Judging System';
+    let cleanSysTitle = (branding.systemTitle || 'DigiTab').trim();
+    if (!cleanSysTitle || cleanSysTitle.toLowerCase().includes('judgetab')) {
+        cleanSysTitle = 'DigiTab';
+    }
+    if (sysTitle) sysTitle.value = cleanSysTitle;
     if (headerSub) headerSub.value = branding.headerSubtitle || '';
     if (showWatermark) showWatermark.checked = (branding.showWatermark !== false);
 
@@ -308,7 +332,11 @@ function updateBrandingPreview(branding) {
 
     if (previewInst) previewInst.textContent = branding.institutionName || 'Bukidnon State University';
     if (previewUnit) previewUnit.textContent = branding.campusUnit || 'Malaybalay City, Bukidnon';
-    if (previewTitle) previewTitle.textContent = branding.systemTitle || 'JudgeTab';
+    let cleanPreviewTitle = (branding.systemTitle || 'DigiTab').trim();
+    if (!cleanPreviewTitle || cleanPreviewTitle.toLowerCase().includes('judgetab')) {
+        cleanPreviewTitle = 'DigiTab';
+    }
+    if (previewTitle) previewTitle.textContent = cleanPreviewTitle;
 }
 
 function populateDiagnostics(diag) {
@@ -495,7 +523,7 @@ function initSettingsForm() {
             branding: {
                 institutionName: document.getElementById('setting-institution-name')?.value.trim() || 'Bukidnon State University',
                 campusUnit: document.getElementById('setting-campus-unit')?.value.trim() || '',
-                systemTitle: document.getElementById('setting-system-title')?.value.trim() || 'JudgeTab - Digitalized Judging System',
+                systemTitle: document.getElementById('setting-system-title')?.value.trim() || 'DigiTab',
                 headerSubtitle: document.getElementById('setting-header-subtitle')?.value.trim() || '',
                 logoUrl: activeLogoUrl,
                 showWatermark: document.getElementById('setting-show-watermark')?.checked ?? true,
@@ -965,7 +993,7 @@ function initBackupAndMaintenance() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = res.filename || `judgetab_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = res.filename || `digitab_backup_${new Date().toISOString().slice(0, 10)}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

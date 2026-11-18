@@ -19,5 +19,5 @@ ENV NODE_ENV=production
 ENV PORT=5000
 EXPOSE 5000
 
-# Start BukSU JudgeTab Node.js RESTful API & Server
+# Start BukSU DigiTab Node.js RESTful API & Server
 CMD ["node", "server.js"]

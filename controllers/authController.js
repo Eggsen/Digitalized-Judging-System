@@ -721,7 +721,7 @@ async function requestPasswordReset(req, res, next) {
             <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
                 <h2 style="color: #0F2C59; margin-bottom: 8px;">Reset Your Password</h2>
                 <p style="color: #475569; font-size: 14px;">Hello <strong>${user.username}</strong>,</p>
-                <p style="color: #475569; font-size: 14px;">We received a request to reset your password for BukSU JudgeTab. Click below to choose a new password:</p>
+                <p style="color: #475569; font-size: 14px;">We received a request to reset your password for BukSU DigiTab. Click below to choose a new password:</p>
                 <div style="text-align: center; margin: 28px 0;">
                     <a href="${resetLink}" style="padding: 12px 28px; background-color: #0F2C59; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px;">Reset Password</a>
                 </div>
@@ -729,7 +729,7 @@ async function requestPasswordReset(req, res, next) {
             </div>
         `;
 
-        await sendSystemEmail(user.email, 'Password Reset Request - BukSU JudgeTab', html, true);
+        await sendSystemEmail(user.email, 'Password Reset Request - BukSU DigiTab', html, true);
 
         await logSystemAction(user._id, user.username, user.role, 'REQUEST_PASSWORD_RESET', `Password reset requested for "${user.username}".`, req);
 

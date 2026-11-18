@@ -88,6 +88,8 @@ let pendingMainTabDiscardTarget = null;
 let pendingMainTabDiscardTimer = null;
 
 export function switchAdminTab(targetTab) {
+    window.switchAdminTab = switchAdminTab;
+
     const settingsTab = document.getElementById('settings-tab');
     const isCurrentlyOnSettings = settingsTab && !settingsTab.classList.contains('hidden');
 
@@ -107,6 +109,16 @@ export function switchAdminTab(targetTab) {
                 triggerUnsavedChangesShake(targetBtn);
             }
             return;
+        }
+    }
+
+    // Toggle welcome hero banner: only visible on primary events-tab
+    const welcomeHero = document.getElementById('welcome-hero-card');
+    if (welcomeHero) {
+        if (targetTab === 'events-tab') {
+            welcomeHero.classList.remove('hidden');
+        } else {
+            welcomeHero.classList.add('hidden');
         }
     }
 
@@ -169,9 +181,13 @@ export function switchAdminTab(targetTab) {
     if (targetTab === 'assignments-tab') loadJudgeAssignments();
     if (targetTab === 'logs-tab') loadAuditLogs();
     if (targetTab === 'settings-tab') loadSystemSettings();
+    if (targetTab === 'notifications-tab' && typeof window.loadPageNotifications === 'function') {
+        window.loadPageNotifications();
+    }
 }
 
 function initAdminTabs() {
+    window.switchAdminTab = switchAdminTab;
     const tabBtns = document.querySelectorAll('.admin-tab-btn, .sidebar-nav-btn[data-tab]:not([data-tab^="user-"])');
 
     tabBtns.forEach(btn => {
@@ -194,13 +210,32 @@ function initAdminTabs() {
     document.getElementById('event-status-filter')?.addEventListener('change', loadAdminEvents);
     document.getElementById('refreshEventsBtn')?.addEventListener('click', loadAdminEvents);
     document.getElementById('refreshLogsBtn')?.addEventListener('click', () => loadAuditLogs('logs-tbody'));
+
+    // Auto-switch to tab if specified in URL query (?tab=notifications-tab)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam && document.getElementById(tabParam)) {
+        switchAdminTab(tabParam);
+    }
 }
 
 /* -------------------------------------------------------------
  * JUDGE / TABULATOR USER TABS & NAVIGATION (SIDEBAR + TOP BAR SYNC)
  * ------------------------------------------------------------- */
 export function switchUserTab(targetTab) {
-    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"]');
+    window.switchUserTab = switchUserTab;
+
+    // Toggle welcome hero banner: only visible on primary user-events-tab
+    const welcomeHero = document.getElementById('welcome-hero-card');
+    if (welcomeHero) {
+        if (targetTab === 'user-events-tab') {
+            welcomeHero.classList.remove('hidden');
+        } else {
+            welcomeHero.classList.add('hidden');
+        }
+    }
+
+    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"], .sidebar-nav-btn[data-tab="notifications-tab"]');
     const userTabContents = document.querySelectorAll('.user-tab-content');
 
     userTabBtns.forEach(b => {
@@ -239,10 +274,14 @@ export function switchUserTab(targetTab) {
 
     if (targetTab === 'user-events-tab') loadUserAssignedEvents();
     if (targetTab === 'user-logs-tab') loadAuditLogs('user-logs-tbody');
+    if (targetTab === 'notifications-tab' && typeof window.loadPageNotifications === 'function') {
+        window.loadPageNotifications();
+    }
 }
 
 function initUserTabs() {
-    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"]');
+    window.switchUserTab = switchUserTab;
+    const userTabBtns = document.querySelectorAll('.user-tab-btn, .sidebar-nav-btn[data-tab^="user-"], .sidebar-nav-btn[data-tab="notifications-tab"]');
 
     userTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -252,6 +291,116 @@ function initUserTabs() {
     });
 
     document.getElementById('refreshUserLogsBtn')?.addEventListener('click', () => loadAuditLogs('user-logs-tbody'));
+
+    // Auto-switch to tab if specified in URL query (?tab=notifications-tab)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam && document.getElementById(tabParam)) {
+        switchUserTab(tabParam);
+    }
+}
+
+/* -------------------------------------------------------------
+ * COMPETITIONS PAGINATION & DATE VALIDATION HELPERS
+ * ------------------------------------------------------------- */
+export const adminEventsPagination = {
+    page: 1,
+    limit: 6,
+    total: 0,
+    totalPages: 1,
+    initialized: false
+};
+
+export const userEventsPagination = {
+    page: 1,
+    limit: 6,
+    total: 0,
+    totalPages: 1,
+    initialized: false
+};
+
+export function validateCompetitionDate(dateStr) {
+    if (!dateStr) return { valid: false, message: 'Event date and time is required.' };
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { valid: false, message: 'Please provide a valid event date and time.' };
+    const year = d.getFullYear();
+    if (year < 2000 || year > 2100) {
+        return { valid: false, message: `Invalid year (${year}). Competition year must be between 2000 and 2100.` };
+    }
+    return { valid: true };
+}
+
+function renderEventsPagination(state, containerId, infoId, controlsId, onPageChange) {
+    const container = document.getElementById(containerId);
+    const infoEl = document.getElementById(infoId);
+    const controlsEl = document.getElementById(controlsId);
+
+    if (!container || !infoEl || !controlsEl) return;
+
+    if (state.total === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+
+    const start = (state.page - 1) * state.limit + 1;
+    const end = Math.min(state.page * state.limit, state.total);
+    infoEl.textContent = `Showing ${start} to ${end} of ${state.total} competitions.`;
+
+    if (state.totalPages <= 1) {
+        controlsEl.innerHTML = '';
+        return;
+    }
+
+    const pages = getPaginationPageList(state.page, state.totalPages);
+    let html = '';
+
+    const prevDisabled = state.page <= 1;
+    html += `
+        <button type="button" class="event-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${state.page - 1}" ${prevDisabled ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            <span class="hidden sm:inline">Prev</span>
+        </button>
+    `;
+
+    pages.forEach(p => {
+        if (p === '...') {
+            html += `<span class="px-2 py-1 text-slate-400 font-bold select-none text-xs">...</span>`;
+        } else if (p === state.page) {
+            html += `
+                <button type="button" class="w-8 h-8 rounded-xl bg-buksu-navy text-white font-black shadow-xs border border-buksu-navy text-xs cursor-default">
+                    ${p}
+                </button>
+            `;
+        } else {
+            html += `
+                <button type="button" class="event-page-btn w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs cursor-pointer" data-page="${p}">
+                    ${p}
+                </button>
+            `;
+        }
+    });
+
+    const nextDisabled = state.page >= state.totalPages;
+    html += `
+        <button type="button" class="event-page-btn px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs" data-page="${state.page + 1}" ${nextDisabled ? 'disabled' : ''}>
+            <span class="hidden sm:inline">Next</span>
+            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+    `;
+
+    controlsEl.innerHTML = html;
+
+    controlsEl.querySelectorAll('.event-page-btn:not([disabled])').forEach(b => {
+        b.addEventListener('click', () => {
+            const newPage = parseInt(b.dataset.page, 10);
+            if (!isNaN(newPage) && newPage >= 1 && newPage <= state.totalPages) {
+                state.page = newPage;
+                onPageChange();
+            }
+        });
+    });
 }
 
 /* -------------------------------------------------------------
@@ -285,7 +434,26 @@ export async function loadAdminEvents() {
     // Prioritize Ongoing events first
     events = sortEventsByPriority(events);
 
+    adminEventsPagination.total = events.length;
+    adminEventsPagination.totalPages = Math.max(1, Math.ceil(events.length / adminEventsPagination.limit));
+    if (adminEventsPagination.page > adminEventsPagination.totalPages) {
+        adminEventsPagination.page = adminEventsPagination.totalPages;
+    }
+
+    if (!adminEventsPagination.initialized) {
+        adminEventsPagination.initialized = true;
+        document.getElementById('admin-events-page-size')?.addEventListener('change', (e) => {
+            adminEventsPagination.limit = parseInt(e.target.value, 10) || 6;
+            adminEventsPagination.page = 1;
+            loadAdminEvents();
+        });
+        document.getElementById('event-status-filter')?.addEventListener('change', () => {
+            adminEventsPagination.page = 1;
+        });
+    }
+
     if (events.length === 0) {
+        document.getElementById('admin-events-pagination-container')?.classList.add('hidden');
         grid.innerHTML = `
             <div class="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
                 <i class="fa-solid fa-trophy text-3xl text-slate-300 mb-2"></i>
@@ -296,10 +464,14 @@ export async function loadAdminEvents() {
         return;
     }
 
-    grid.innerHTML = events.map(e => {
+    const startIndex = (adminEventsPagination.page - 1) * adminEventsPagination.limit;
+    const paginatedEvents = events.slice(startIndex, startIndex + adminEventsPagination.limit);
+
+    grid.innerHTML = paginatedEvents.map(e => {
         const isOngoing = (e.status === 'Ongoing' || e.judgingStatus === 'In Progress');
         const isStopped = (e.judgingStatus === 'Finished' || e.status === 'Completed');
         const canArchive = (!isOngoing || isStopped);
+        const canEdit = (!isOngoing || isStopped);
 
         let judgingBadge = '';
         if (e.judgingStatus === 'In Progress') {
@@ -372,18 +544,31 @@ export async function loadAdminEvents() {
                     <button class="open-assign-btn p-1.5 bg-slate-100 hover:bg-slate-200 text-buksu-navy font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
                         <i class="fa-solid fa-users-gear"></i>
                     </button>
-                    <button class="open-edit-btn p-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" 
-                        data-id="${e.id}" 
-                        data-name="${escapeHtml(e.eventName)}" 
-                        data-type="${escapeHtml(e.type)}" 
-                        data-desc="${escapeHtml(e.description)}" 
-                        data-venue="${escapeHtml(e.venue)}" 
-                        data-rawdate="${e.date || ''}" 
-                        data-status="${e.status}" 
-                        data-judging="${e.judgingStatus}"
-                        title="Edit Competition">
-                        <i class="fa-solid fa-pen text-buksu-navy"></i>
-                    </button>
+                    ${canEdit ? `
+                        <button class="open-edit-btn p-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" 
+                            data-id="${e.id}" 
+                            data-name="${escapeHtml(e.eventName)}" 
+                            data-type="${escapeHtml(e.type)}" 
+                            data-desc="${escapeHtml(e.description)}" 
+                            data-venue="${escapeHtml(e.venue)}" 
+                            data-rawdate="${e.date || ''}" 
+                            data-status="${e.status}" 
+                            data-judging="${e.judgingStatus}"
+                            data-can-edit="true"
+                            title="Edit Competition">
+                            <i class="fa-solid fa-pen text-buksu-navy"></i>
+                        </button>
+                    ` : `
+                        <button class="open-edit-btn p-1.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-xs cursor-not-allowed transition-colors opacity-60" 
+                            data-id="${e.id}" 
+                            data-name="${escapeHtml(e.eventName)}" 
+                            data-status="${e.status}" 
+                            data-judging="${e.judgingStatus}"
+                            data-can-edit="false"
+                            title="Cannot edit: Competition is ongoing. Stop judging first.">
+                            <i class="fa-solid fa-pen text-slate-400"></i>
+                        </button>
+                    `}
                     ${e.status !== 'Archived' ? (
                         canArchive ? `
                             <button class="archive-btn p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="true" title="Archive Competition">
@@ -406,6 +591,7 @@ export async function loadAdminEvents() {
     }).join('');
 
     bindEventCardActions();
+    renderEventsPagination(adminEventsPagination, 'admin-events-pagination-container', 'admin-events-pagination-info', 'admin-events-pagination-controls', loadAdminEvents);
 }
 
 /* -------------------------------------------------------------
@@ -1011,7 +1197,24 @@ export async function loadUserAssignedEvents() {
 
     cachedEventsList = res.events;
 
+    userEventsPagination.total = res.events.length;
+    userEventsPagination.totalPages = Math.max(1, Math.ceil(res.events.length / userEventsPagination.limit));
+    if (userEventsPagination.page > userEventsPagination.totalPages) {
+        userEventsPagination.page = userEventsPagination.totalPages;
+    }
+
+    if (!userEventsPagination.initialized) {
+        userEventsPagination.initialized = true;
+        document.getElementById('user-events-page-size')?.addEventListener('change', (e) => {
+            userEventsPagination.limit = parseInt(e.target.value, 10) || 6;
+            userEventsPagination.page = 1;
+            loadUserAssignedEvents();
+        });
+        document.getElementById('refreshUserEventsBtn')?.addEventListener('click', loadUserAssignedEvents);
+    }
+
     if (res.events.length === 0) {
+        document.getElementById('user-events-pagination-container')?.classList.add('hidden');
         grid.innerHTML = `
             <div class="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
                 <i class="fa-solid fa-clipboard-check text-3xl text-slate-300 mb-2"></i>
@@ -1023,8 +1226,10 @@ export async function loadUserAssignedEvents() {
     }
 
     const events = sortEventsByPriority(res.events);
+    const startIndex = (userEventsPagination.page - 1) * userEventsPagination.limit;
+    const paginatedEvents = events.slice(startIndex, startIndex + userEventsPagination.limit);
 
-    grid.innerHTML = events.map(e => `
+    grid.innerHTML = paginatedEvents.map(e => `
         <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
@@ -1069,7 +1274,7 @@ export async function loadUserAssignedEvents() {
     `).join('');
 
     bindUserEventCardActions();
-
+    renderEventsPagination(userEventsPagination, 'user-events-pagination-container', 'user-events-pagination-info', 'user-events-pagination-controls', loadUserAssignedEvents);
 }
 
 /* -------------------------------------------------------------
@@ -1092,7 +1297,30 @@ function initAdminEventActions() {
         const description = document.getElementById('ev-desc').value.trim();
 
         if (!eventName || !type || !venue || !date) {
-            alert('Please fill in Event Name, Type, Venue, and Date.');
+            showToast("Missing Fields", "Please fill in Event Name, Type, Venue, and Date.", "warning");
+            return;
+        }
+
+        if (eventName.length > 100) {
+            showToast("Invalid Input", "Event title cannot exceed 100 characters.", "warning");
+            return;
+        }
+        if (type.length > 50) {
+            showToast("Invalid Input", "Event type cannot exceed 50 characters.", "warning");
+            return;
+        }
+        if (venue.length > 100) {
+            showToast("Invalid Input", "Venue cannot exceed 100 characters.", "warning");
+            return;
+        }
+        if (description.length > 500) {
+            showToast("Invalid Input", "Description cannot exceed 500 characters.", "warning");
+            return;
+        }
+
+        const dateCheck = validateCompetitionDate(date);
+        if (!dateCheck.valid) {
+            showToast("Invalid Date", dateCheck.message, "warning");
             return;
         }
 
@@ -1125,9 +1353,41 @@ function initAdminEventActions() {
 
         const isOngoing = (status === 'Ongoing' || judgingStatus === 'In Progress');
         const isStopped = (judgingStatus === 'Finished' || status === 'Completed');
+
+        // Ongoing events cannot be edited once started unless stopped
+        if (isOngoing && !isStopped) {
+            showToast("Cannot Update", "Ongoing competitions cannot be edited while started. Please stop the judging period before making changes.", "warning");
+            return;
+        }
+
         if (status === 'Archived' && isOngoing && !isStopped) {
             showToast("Cannot Archive", "Cannot archive an ongoing competition. Please stop the judging period before archiving.", "warning");
             return;
+        }
+
+        if (eventName.length > 100) {
+            showToast("Invalid Input", "Event title cannot exceed 100 characters.", "warning");
+            return;
+        }
+        if (type.length > 50) {
+            showToast("Invalid Input", "Event type cannot exceed 50 characters.", "warning");
+            return;
+        }
+        if (venue.length > 100) {
+            showToast("Invalid Input", "Venue cannot exceed 100 characters.", "warning");
+            return;
+        }
+        if (description.length > 500) {
+            showToast("Invalid Input", "Description cannot exceed 500 characters.", "warning");
+            return;
+        }
+
+        if (date) {
+            const dateCheck = validateCompetitionDate(date);
+            if (!dateCheck.valid) {
+                showToast("Invalid Date", dateCheck.message, "warning");
+                return;
+            }
         }
 
         const res = await editEvent({ id, eventName, type, venue, status, judgingStatus, date, description });
@@ -1324,6 +1584,12 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+
+            if (btn.dataset.canEdit === 'false') {
+                showToast("Event is Ongoing", "This competition is currently active and ongoing. Edits are locked until the judging period is stopped.", "warning");
+                return;
+            }
+
             document.getElementById('edit-ev-id').value = btn.dataset.id;
             document.getElementById('edit-ev-name').value = btn.dataset.name;
             document.getElementById('edit-ev-type').value = btn.dataset.type;
@@ -1336,6 +1602,16 @@ function bindEventCardActions() {
             const isOngoing = (btn.dataset.status === 'Ongoing' || btn.dataset.judging === 'In Progress');
             const isStopped = (btn.dataset.judging === 'Finished' || btn.dataset.status === 'Completed');
             const canArchive = (!isOngoing || isStopped);
+
+            const ongoingWarning = document.getElementById('edit-event-ongoing-warning');
+            const saveBtn = document.getElementById('saveEditEventBtn');
+            if (isOngoing && !isStopped) {
+                ongoingWarning?.classList.remove('hidden');
+                if (saveBtn) saveBtn.disabled = true;
+            } else {
+                ongoingWarning?.classList.add('hidden');
+                if (saveBtn) saveBtn.disabled = false;
+            }
 
             const archivedOption = document.querySelector('#edit-ev-status option[value="Archived"]');
             if (archivedOption) {

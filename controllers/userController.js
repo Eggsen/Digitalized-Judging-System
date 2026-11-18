@@ -187,8 +187,8 @@ async function createUser(req, res, next) {
 
             const html = `
                 <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
-                    <h2 style="color: #0F2C59;">Invitation to BukSU JudgeTab</h2>
-                    <p style="color: #475569; font-size: 14px;">You have been invited to join BukSU JudgeTab as an official <strong>${role.toUpperCase()}</strong>.</p>
+                    <h2 style="color: #0F2C59;">Invitation to BukSU DigiTab</h2>
+                    <p style="color: #475569; font-size: 14px;">You have been invited to join BukSU DigiTab as an official <strong>${role.toUpperCase()}</strong>.</p>
                     ${role.toLowerCase() === 'admin' && assignedAdminPin ? `
                     <div style="background-color: #fefce8; border: 1px solid #fde047; border-radius: 12px; padding: 14px; margin: 18px 0; text-align: center;">
                         <p style="margin: 0; font-size: 11px; color: #854d0e; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Your Exclusive Admin PIN</p>
@@ -202,7 +202,7 @@ async function createUser(req, res, next) {
                     <p style="font-size: 12px; color: #94a3b8;">This invitation link will expire in 48 hours.</p>
                 </div>
             `;
-            await sendSystemEmail(cleanEmail, `Invitation to join as ${role.toUpperCase()} - BukSU JudgeTab`, html);
+            await sendSystemEmail(cleanEmail, `Invitation to join as ${role.toUpperCase()} - BukSU DigiTab`, html);
         }
 
         await logSystemAction(
@@ -336,7 +336,7 @@ async function getUserPreferences(req, res, next) {
         const user = await collections.users.findOne(query, { projection: { preferences: 1 } });
         res.json({
             success: true,
-            preferences: user?.preferences || { theme: 'light', colorRule: 'normal', navPlacement: 'top' }
+            preferences: user?.preferences || { theme: 'light', colorRule: 'normal', navPlacement: 'sidebar' }
         });
     } catch (err) {
         next(err);
@@ -352,7 +352,7 @@ async function saveUserPreferences(req, res, next) {
         const prefs = {
             theme: ['dark', 'light'].includes(theme) ? theme : 'light',
             colorRule: ['three-color', 'normal'].includes(colorRule) ? colorRule : 'normal',
-            navPlacement: ['sidebar', 'top'].includes(navPlacement) ? navPlacement : 'top',
+            navPlacement: ['sidebar', 'top'].includes(navPlacement) ? navPlacement : 'sidebar',
             updated_at: new Date().toISOString()
         };
 

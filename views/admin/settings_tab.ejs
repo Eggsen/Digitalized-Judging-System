@@ -1,22 +1,25 @@
             <!-- TAB 5: SYSTEM SETTINGS HUB -->
-            <div id="settings-tab" class="admin-tab-content bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8 hidden">
+            <div id="settings-tab" class="admin-tab-content bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 sm:p-8 hidden">
                 <!-- Header Banner -->
-                <div class="flex items-start justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 pb-5">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-buksu-navy text-buksu-gold shadow-2xs">
-                                Global Configuration
-                            </span>
-                            <span id="setting-last-backup-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200">
-                                Checking status...
-                            </span>
+                <div class="flex items-start justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 dark:border-slate-800 pb-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-lg shrink-0 shadow-xs border border-buksu-gold/20 mt-0.5">
+                            <i class="fa-solid fa-sliders"></i>
                         </div>
-                        <h2 class="text-xl sm:text-2xl font-black text-buksu-navy flex items-center gap-2">
-                            <i class="fa-solid fa-sliders text-buksu-navy"></i> System Settings Hub
-                        </h2>
-                        <p class="text-xs text-slate-500 max-w-2xl">
-                            Configure institutional identity &amp; branding, enforce judging &amp; tabulation rules, manage report signatories, and generate system data backups.
-                        </p>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-buksu-navy text-buksu-gold shadow-2xs">
+                                    Global Configuration
+                                </span>
+                                <span id="setting-last-backup-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                    Checking status...
+                                </span>
+                            </div>
+                            <h2 class="text-xl sm:text-2xl font-black text-buksu-navy dark:text-slate-100">System Settings Hub</h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+                                Configure institutional identity &amp; branding, enforce judging &amp; tabulation rules, manage report signatories, and generate system data backups.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">
@@ -75,22 +78,22 @@
                                         <div class="space-y-3.5 text-xs">
                                             <div>
                                                 <label class="block font-bold text-slate-700 mb-1">Institution / University Name <span class="text-rose-500">*</span></label>
-                                                <input type="text" id="setting-institution-name" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Bukidnon State University">
+                                                <input type="text" id="setting-institution-name" maxlength="100" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Bukidnon State University (max 100 chars)">
                                             </div>
 
                                             <div>
                                                 <label class="block font-bold text-slate-700 mb-1">Campus / Department / Organizing Unit</label>
-                                                <input type="text" id="setting-campus-unit" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Main Campus, Malaybalay City - Office of Student Affairs &amp; Services">
+                                                <input type="text" id="setting-campus-unit" maxlength="100" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="e.g. Main Campus, Malaybalay City - Office of Student Affairs &amp; Services">
                                             </div>
 
                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div>
                                                     <label class="block font-bold text-slate-700 mb-1">System Title / App Name</label>
-                                                    <input type="text" id="setting-system-title" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="JudgeTab - Digitalized Judging System">
+                                                    <input type="text" id="setting-system-title" maxlength="60" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="DigiTab">
                                                 </div>
                                                 <div>
                                                     <label class="block font-bold text-slate-700 mb-1">Official Report Subtitle</label>
-                                                    <input type="text" id="setting-header-subtitle" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="Official Tabulation &amp; Certification of Results">
+                                                    <input type="text" id="setting-header-subtitle" maxlength="100" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs" placeholder="Official Tabulation &amp; Certification of Results">
                                                 </div>
                                             </div>
 
@@ -119,7 +122,7 @@
                                                         <input type="file" id="setting-logo-file-input" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
                                                         <input type="hidden" id="setting-logo-url-hidden" value="">
                                                         <p class="text-[11px] text-slate-500 leading-tight">
-                                                            PNG, JPG, WebP, or SVG up to 5MB. Uploaded via Cloudinary Media API (or local storage if disabled) and displayed on official print sheets.
+                                                            PNG, JPG, WebP, or SVG up to 5MB. Applied exclusively to official exported PDFs &amp; printable tally sheets (does not alter the DigiTab website logo).
                                                         </p>
                                                     </div>
                                                 </div>
@@ -144,16 +147,16 @@
                                     <div class="p-5 rounded-2xl bg-gradient-to-br from-buksu-navy to-buksu-navy-light text-white shadow-md relative overflow-hidden border border-buksu-gold/30">
                                         <div class="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-buksu-gold/10 blur-xl pointer-events-none"></div>
                                         <div class="flex items-center justify-between pb-3 border-b border-white/15">
-                                            <span class="text-[10px] uppercase font-black tracking-widest text-buksu-gold">Live Header Preview</span>
-                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 border border-white/20">System Brand</span>
+                                            <span class="text-[10px] uppercase font-black tracking-widest text-buksu-gold">Report Header Preview</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 border border-white/20">PDFs &amp; Prints</span>
                                         </div>
                                         <div class="py-4 space-y-1">
                                             <h4 id="setting-preview-inst" class="text-base font-black tracking-tight text-white">Bukidnon State University</h4>
                                             <p id="setting-preview-unit" class="text-xs text-slate-300">Malaybalay City, Bukidnon</p>
                                             <div class="pt-3 flex items-center gap-2.5">
-                                                <img id="setting-preview-logo-img" src="/assets/logo/DJS Logo.png" alt="Brand Logo" class="w-9 h-9 rounded-xl object-contain bg-white/10 p-1 border border-white/20 shadow-xs shrink-0">
+                                                <img id="setting-preview-logo-img" src="/assets/logo/DJS Logo.png" alt="Report Logo" class="w-9 h-9 rounded-xl object-contain bg-white/10 p-1 border border-white/20 shadow-xs shrink-0">
                                                 <div>
-                                                    <span id="setting-preview-title" class="text-xs font-black text-buksu-gold block">JudgeTab</span>
+                                                    <span id="setting-preview-title" class="text-xs font-black text-buksu-gold block">DigiTab</span>
                                                     <span class="text-[10px] text-slate-300 block">Tabulation &amp; Evaluation Platform</span>
                                                 </div>
                                             </div>
@@ -166,7 +169,7 @@
                                             <span>Branding Usage Note</span>
                                         </div>
                                         <p class="text-[11px] text-amber-800 leading-relaxed">
-                                            Changes to the institution name and campus header are applied immediately to judge scorecards, tabulation boards, and printable reports.
+                                            The custom institution logo and identity settings apply exclusively to exported PDFs, official tally sheets, and scorecards. The DigiTab website interface retains its standard application logo.
                                         </p>
                                     </div>
                                 </div>

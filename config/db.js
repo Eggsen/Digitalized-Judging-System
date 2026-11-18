@@ -92,6 +92,22 @@ async function connectDB() {
             console.warn('[Database] Could not overlay MongoDB API keys into process.env:', err.message);
         }
 
+        // Auto-migrate legacy 'JudgeTab' branding in system_settings to 'DigiTab'
+        try {
+            await collections.settings.updateOne(
+                {
+                    _id: 'system_settings',
+                    $or: [
+                        { 'branding.systemTitle': { $regex: /judgetab/i } },
+                        { 'branding.systemTitle': { $exists: false } }
+                    ]
+                },
+                { $set: { 'branding.systemTitle': 'DigiTab' } }
+            );
+        } catch (migErr) {
+            console.warn('[Database] System title migration notice:', migErr.message);
+        }
+
         return { db, collections };
     } catch (err) {
         console.error('[Database] MongoDB Connection Failed:', err.message);

@@ -88,6 +88,14 @@ async function createCriterion(req, res, next) {
         if (!event_id || !criterionName) {
             return res.status(400).json({ success: false, message: 'Event ID and criterion name are required.' });
         }
+        if (criterionName.length > 100) {
+            return res.status(400).json({ success: false, message: 'Criterion title cannot exceed 100 characters.' });
+        }
+
+        const criterionDesc = (description || instructions || '').trim();
+        if (criterionDesc.length > 500) {
+            return res.status(400).json({ success: false, message: 'Criterion description cannot exceed 500 characters.' });
+        }
 
         const criterionWeight = parseFloat(percentage !== undefined ? percentage : (weight !== undefined ? weight : 0)) || 0;
         const maxScoreVal = parseFloat(max_points !== undefined ? max_points : (max_score !== undefined ? max_score : 100)) || 100;
@@ -200,11 +208,19 @@ async function updateCriterion(req, res, next) {
 
         const updateDoc = { updated_at: new Date().toISOString() };
         if (title !== undefined || name !== undefined) {
-            updateDoc.name = (title || name || '').trim();
-            updateDoc.title = updateDoc.name;
+            const trimmedTitle = (title || name || '').trim();
+            if (trimmedTitle.length > 100) {
+                return res.status(400).json({ success: false, message: 'Criterion title cannot exceed 100 characters.' });
+            }
+            updateDoc.name = trimmedTitle;
+            updateDoc.title = trimmedTitle;
         }
         if (description !== undefined) {
-            updateDoc.description = description.trim();
+            const trimmedDesc = description.trim();
+            if (trimmedDesc.length > 500) {
+                return res.status(400).json({ success: false, message: 'Description cannot exceed 500 characters.' });
+            }
+            updateDoc.description = trimmedDesc;
         }
         if (instructions !== undefined) {
             updateDoc.instructions = instructions.trim();

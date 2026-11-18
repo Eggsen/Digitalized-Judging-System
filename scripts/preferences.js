@@ -15,7 +15,7 @@ import { showToast } from "/scripts/utils/uiUtils.js";
 export const PREF_DEFAULTS = {
     THEME: 'light',
     COLOR_RULE: 'normal',
-    NAV_PLACEMENT: 'top'
+    NAV_PLACEMENT: 'sidebar'
 };
 
 /**
@@ -313,6 +313,125 @@ export function initPreferences() {
             }, 120);
         });
     }
+
+    // Initialize Sticked Sidebar Drawer & Traditional Hamburger Toggle
+    initSidebarDrawer();
+}
+
+/**
+ * Manage Sticked Sidebar drawer (Mobile offcanvas + Desktop collapse)
+ */
+export function initSidebarDrawer() {
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const collapseBtn = document.getElementById('sidebarCollapseBtn');
+    const closeBtn = document.getElementById('sidebarCloseBtn');
+    const sidebar = document.getElementById('dashboard-sidebar-nav');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const contentWrapper = document.getElementById('main-content-wrapper');
+    const header = document.getElementById('top-header-navigation');
+
+    if (!sidebar) return;
+
+    const isDesktop = () => window.innerWidth >= 1024;
+
+    const openMobile = () => {
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        backdrop?.classList.remove('hidden');
+    };
+
+    const closeMobile = () => {
+        if (!isDesktop()) {
+            sidebar.classList.add('-translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            backdrop?.classList.add('hidden');
+        }
+    };
+
+    const collapseDesktop = () => {
+        document.documentElement.classList.add('sidebar-collapsed');
+        sidebar.classList.add('sidebar-collapsed');
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('lg:translate-x-0');
+        contentWrapper?.classList.add('sidebar-collapsed');
+        header?.classList.add('sidebar-collapsed');
+        try { localStorage.setItem('djs_desktop_sidebar_collapsed', 'true'); } catch (e) {}
+    };
+
+    const expandDesktop = () => {
+        document.documentElement.classList.remove('sidebar-collapsed');
+        sidebar.classList.remove('sidebar-collapsed');
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('lg:translate-x-0');
+        contentWrapper?.classList.remove('sidebar-collapsed');
+        header?.classList.remove('sidebar-collapsed');
+        try { localStorage.setItem('djs_desktop_sidebar_collapsed', 'false'); } catch (e) {}
+    };
+
+    const toggleSidebar = (e) => {
+        e?.stopPropagation();
+        if (isDesktop()) {
+            const isCollapsed = document.documentElement.classList.contains('sidebar-collapsed') ||
+                                sidebar.classList.contains('sidebar-collapsed');
+            if (isCollapsed) {
+                expandDesktop();
+            } else {
+                collapseDesktop();
+            }
+        } else {
+            const isOpen = sidebar.classList.contains('translate-x-0');
+            if (isOpen) {
+                closeMobile();
+            } else {
+                openMobile();
+            }
+        }
+    };
+
+    toggleBtn?.addEventListener('click', toggleSidebar);
+    collapseBtn?.addEventListener('click', toggleSidebar);
+    closeBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isDesktop()) {
+            collapseDesktop();
+        } else {
+            closeMobile();
+        }
+    });
+
+    backdrop?.addEventListener('click', closeMobile);
+
+    // Initial desktop sidebar collapsed check
+    if (isDesktop() && localStorage.getItem('djs_desktop_sidebar_collapsed') === 'true') {
+        collapseDesktop();
+    }
+
+    // Auto-close on mobile when selecting a navigation tab
+    sidebar.querySelectorAll('button:not(#sidebar-settings-chevron):not(.settings-subtab-btn), a').forEach(el => {
+        el.addEventListener('click', () => {
+            if (!isDesktop()) {
+                closeMobile();
+            }
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        if (isDesktop()) {
+            backdrop?.classList.add('hidden');
+            sidebar.classList.remove('-translate-x-full');
+            sidebar.classList.add('lg:translate-x-0');
+            if (localStorage.getItem('djs_desktop_sidebar_collapsed') === 'true') {
+                collapseDesktop();
+            } else {
+                expandDesktop();
+            }
+        } else {
+            if (!sidebar.classList.contains('translate-x-0')) {
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('lg:translate-x-0');
+            }
+        }
+    });
 }
 
 // Auto-initialize when document is ready

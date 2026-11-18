@@ -1,0 +1,61 @@
+<!-- TAB: NOTIFICATIONS HUB -->
+<div id="notifications-tab" class="admin-tab-content user-tab-content bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-6 sm:p-8 hidden">
+    <!-- Header consistent with all dashboard tabs -->
+    <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-slate-100 dark:border-slate-800 pb-5">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-lg shrink-0 shadow-xs border border-buksu-gold/20">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-buksu-navy dark:text-slate-100 flex items-center gap-2">
+                    Notifications Hub
+                    <span id="page-notif-unread-badge" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-500 text-white shadow-xs hidden">0 Unread</span>
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage your event invitations, system notices, and historical notifications.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            <button id="page-mark-all-read-btn" class="px-3.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-buksu-navy dark:text-slate-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-xs">
+                <i class="fa-solid fa-check-double text-buksu-gold"></i> Mark all read
+            </button>
+            <button id="page-refresh-notifs-btn" class="px-3.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-xs" title="Refresh">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter and Search Toolbar -->
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <!-- Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scroll-smooth" id="notif-filter-tabs">
+            <button type="button" data-filter="all" class="page-notif-filter-btn px-3 py-1.5 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer whitespace-nowrap">
+                All (<span id="count-all">0</span>)
+            </button>
+            <button type="button" data-filter="unread" class="page-notif-filter-btn px-3 py-1.5 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-buksu-navy dark:hover:text-white transition-all cursor-pointer whitespace-nowrap">
+                Unread (<span id="count-unread">0</span>)
+            </button>
+            <button type="button" data-filter="invitations" class="page-notif-filter-btn px-3 py-1.5 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-buksu-navy dark:hover:text-white transition-all cursor-pointer whitespace-nowrap">
+                Invitations (<span id="count-invitations">0</span>)
+            </button>
+            <button type="button" data-filter="system" class="page-notif-filter-btn px-3 py-1.5 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-buksu-navy dark:hover:text-white transition-all cursor-pointer whitespace-nowrap">
+                System (<span id="count-system">0</span>)
+            </button>
+        </div>
+
+        <!-- Search Box -->
+        <div class="relative w-full md:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" id="notif-search-input" placeholder="Search notifications..."
+                class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-buksu-navy/20 dark:focus:ring-buksu-gold/30 font-medium text-slate-800 dark:text-slate-100">
+        </div>
+    </div>
+
+    <!-- Notifications List Container -->
+    <div id="notifications-full-list" class="space-y-3">
+        <div class="py-16 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <i class="fa-solid fa-spinner fa-spin text-2xl text-buksu-navy dark:text-buksu-gold mb-2"></i>
+            <p class="text-xs font-semibold text-slate-600 dark:text-slate-400">Loading notifications...</p>
+        </div>
+    </div>
+</div>

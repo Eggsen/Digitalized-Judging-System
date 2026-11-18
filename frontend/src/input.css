@@ -24,7 +24,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 580px;
-  background: url('/assets/backgrounds/JudgeTab%20BG.png') no-repeat top center / cover;
+  background: url('/assets/backgrounds/DigiTab%20BG.png') no-repeat top center / cover;
   pointer-events: none;
   z-index: -10;
   opacity: 0.35;
@@ -641,17 +641,173 @@ html.dark [data-pref-nav].ring-buksu-navy {
 }
 
 /* =============================================================
-   SIDEBAR LAYOUT MODE
+   SIDEBAR LAYOUT MODE (Sticked to start/left, Traditional Layout)
    ============================================================= */
 html.layout-sidebar .top-nav-bar {
   display: none !important;
 }
 
 html.layout-sidebar #dashboard-sidebar-nav {
-  display: block !important;
+  display: flex !important;
+}
+
+/* Sticked Sidebar Desktop Offsetting */
+@media (min-width: 1024px) {
+  html.layout-sidebar #top-header-navigation {
+    padding-left: 18rem !important; /* 72 = 18rem matches w-72 sidebar */
+  }
+
+  /* When collapsed: offset by 4.5rem (72px) for mini icon-only rail */
+  html.layout-sidebar.sidebar-collapsed #top-header-navigation,
+  html.layout-sidebar #top-header-navigation.sidebar-collapsed {
+    padding-left: 4.5rem !important;
+  }
+
+  html.layout-sidebar #main-content-wrapper {
+    padding-left: 18rem !important; /* 72 = 18rem */
+  }
+
+  html.layout-sidebar.sidebar-collapsed #main-content-wrapper,
+  html.layout-sidebar #main-content-wrapper.sidebar-collapsed {
+    padding-left: 4.5rem !important;
+  }
+
+  /* When sidebar is expanded on desktop: hide the redundant hamburger & logo on topbar */
+  html.layout-sidebar:not(.sidebar-collapsed) #top-header-navigation:not(.sidebar-collapsed) #sidebarToggleBtn {
+    display: none !important;
+  }
+  html.layout-sidebar:not(.sidebar-collapsed) #top-header-navigation:not(.sidebar-collapsed) #topbar-brand-link {
+    display: none !important;
+  }
+  html.layout-sidebar:not(.sidebar-collapsed) #top-header-navigation:not(.sidebar-collapsed) #topbar-context-title {
+    display: flex !important;
+  }
+
+  /* When sidebar is collapsed on desktop: keep brand link off the topbar, show breadcrumb context */
+  html.layout-sidebar.sidebar-collapsed #sidebarToggleBtn,
+  html.layout-sidebar #top-header-navigation.sidebar-collapsed #sidebarToggleBtn {
+    display: none !important; /* Hamburger is directly on the mini sidebar header */
+  }
+  html.layout-sidebar.sidebar-collapsed #topbar-brand-link,
+  html.layout-sidebar #top-header-navigation.sidebar-collapsed #topbar-brand-link {
+    display: none !important;
+  }
+  html.layout-sidebar.sidebar-collapsed #topbar-context-title,
+  html.layout-sidebar #top-header-navigation.sidebar-collapsed #topbar-context-title {
+    display: flex !important;
+  }
+
+  /* ========================================================
+     COLLAPSED SIDEBAR: MINI ICON-ONLY RAIL (w-18 / 4.5rem)
+     Only the hamburger and nav icons are seen
+     ======================================================== */
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed {
+    width: 4.5rem !important;
+    transform: translateX(0) !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Collapsed Sidebar Header: center hamburger, hide brand text & logo */
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav .sidebar-header,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-header {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    justify-content: center !important;
+  }
+
+  html.layout-sidebar.sidebar-collapsed #sidebar-brand-link,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed #sidebar-brand-link {
+    display: none !important;
+  }
+
+  html.layout-sidebar.sidebar-collapsed #sidebarCollapseBtn,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed #sidebarCollapseBtn {
+    margin: 0 auto !important;
+    display: flex !important;
+  }
+
+  /* Collapsed Sidebar Nav Container */
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav .sidebar-nav-container,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-nav-container {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Collapsed Sidebar Nav Buttons: center icons only, hide text labels */
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav .sidebar-nav-btn,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-nav-btn {
+    width: 3rem !important;
+    height: 3rem !important;
+    padding: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-content: center !important;
+    border-radius: 1rem !important;
+    position: relative !important;
+  }
+
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav .sidebar-nav-btn span,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-nav-btn span,
+  html.layout-sidebar.sidebar-collapsed #sidebar-settings-chevron,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed #sidebar-settings-chevron,
+  html.layout-sidebar.sidebar-collapsed #sidebar-settings-subnav,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed #sidebar-settings-subnav {
+    display: none !important;
+  }
+
+  html.layout-sidebar.sidebar-collapsed #dashboard-sidebar-nav .sidebar-nav-btn i,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-nav-btn i {
+    margin: 0 !important;
+    width: auto !important;
+    font-size: 1.15rem !important;
+  }
+
+  /* Collapsed Sidebar Notification Dot Badge */
+  html.layout-sidebar.sidebar-collapsed .sidebar-notif-badge:not(.hidden),
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed .sidebar-notif-badge:not(.hidden) {
+    position: absolute !important;
+    top: 0.35rem !important;
+    right: 0.35rem !important;
+    width: 0.55rem !important;
+    height: 0.55rem !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    text-indent: -9999px !important;
+    border-radius: 9999px !important;
+    border: 2px solid #ffffff !important;
+    display: block !important;
+    background-color: #f43f5e !important;
+  }
+
+  /* Collapsed Sidebar Footer: hide text details */
+  html.layout-sidebar.sidebar-collapsed #sidebar-footer-card,
+  html.layout-sidebar #dashboard-sidebar-nav.sidebar-collapsed #sidebar-footer-card {
+    display: none !important;
+  }
 }
 
 html:not(.layout-sidebar) #dashboard-sidebar-nav {
+  display: none !important;
+}
+
+html:not(.layout-sidebar) #sidebarToggleBtn {
+  display: none !important;
+}
+
+html:not(.layout-sidebar) #sidebar-backdrop {
+  display: none !important;
+}
+
+html:not(.layout-sidebar) #top-header-navigation {
+  padding-left: 0 !important;
+}
+
+html:not(.layout-sidebar) #main-content-wrapper {
+  padding-left: 0 !important;
+}
+
+html:not(.layout-sidebar) #topbar-context-title {
   display: none !important;
 }
 

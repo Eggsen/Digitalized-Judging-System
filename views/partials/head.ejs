@@ -9,8 +9,8 @@
     <script src="/assets/vendor/pdfmake/pdfmake.min.js"></script>
     <script src="/assets/vendor/pdfmake/vfs_fonts.js"></script>
     <link rel="stylesheet" href="/frontend/css/output.css">
-    <link rel="icon" type="image/png" href="<%= (typeof branding !== 'undefined' && branding && branding.logoUrl) ? branding.logoUrl : '/assets/logo/DJS Logo.png' %>">
-    <title><%= (typeof branding !== 'undefined' && branding && branding.systemTitle) ? branding.systemTitle : 'JudgeTab' %> | <%= badgeInfo.title %></title>
+    <link rel="icon" type="image/png" href="/assets/logo/DJS Logo.png">
+    <title><%= (typeof branding !== 'undefined' && branding && branding.systemTitle && !branding.systemTitle.toLowerCase().includes('judgetab')) ? branding.systemTitle : 'DigiTab' %> | <%= badgeInfo.title %></title>
     <script>
         (function() {
             try {
@@ -49,8 +49,8 @@
                     document.documentElement.classList.remove('three-color-mode');
                 }
 
-                // Load user-specific navigation placement (defaults to top tabs)
-                const navPlacement = localStorage.getItem(userPrefix + 'nav_placement') || (serverNavPlacement || 'top');
+                // Load user-specific navigation placement (defaults to sidebar)
+                const navPlacement = localStorage.getItem(userPrefix + 'nav_placement') || (serverNavPlacement || 'sidebar');
                 if (navPlacement === 'sidebar') {
                     document.documentElement.classList.add('layout-sidebar');
                 } else {

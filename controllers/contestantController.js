@@ -45,6 +45,20 @@ async function createContestant(req, res, next) {
             return res.status(400).json({ success: false, message: 'Event ID and contestant name are required.' });
         }
 
+        const trimmedName = name.trim();
+        if (trimmedName.length > 100) {
+            return res.status(400).json({ success: false, message: 'Contestant name cannot exceed 100 characters.' });
+        }
+
+        const trimmedRep = (representation || '').trim();
+        if (trimmedRep.length > 100) {
+            return res.status(400).json({ success: false, message: 'Representation cannot exceed 100 characters.' });
+        }
+
+        if (typeof details === 'string' && details.length > 500) {
+            return res.status(400).json({ success: false, message: 'Details cannot exceed 500 characters.' });
+        }
+
         let effectivePhoto = photo_url || null;
 
         // If base64 photo provided, attempt Cloudinary upload
@@ -117,14 +131,31 @@ async function updateContestant(req, res, next) {
         const query = getIdFilter(id);
 
         const updateDoc = { updated_at: new Date().toISOString() };
-        if (name !== undefined) updateDoc.name = name.trim();
+        if (name !== undefined) {
+            const trimmedName = name.trim();
+            if (trimmedName.length > 100) {
+                return res.status(400).json({ success: false, message: 'Contestant name cannot exceed 100 characters.' });
+            }
+            updateDoc.name = trimmedName;
+        }
         if (number !== undefined || contestant_number !== undefined) {
             const num = parseInt(number || contestant_number, 10);
             updateDoc.number = num;
             updateDoc.contestant_number = num;
         }
-        if (representation !== undefined) updateDoc.representation = representation.trim();
-        if (details !== undefined) updateDoc.details = details;
+        if (representation !== undefined) {
+            const trimmedRep = representation.trim();
+            if (trimmedRep.length > 100) {
+                return res.status(400).json({ success: false, message: 'Representation cannot exceed 100 characters.' });
+            }
+            updateDoc.representation = trimmedRep;
+        }
+        if (details !== undefined) {
+            if (typeof details === 'string' && details.length > 500) {
+                return res.status(400).json({ success: false, message: 'Details cannot exceed 500 characters.' });
+            }
+            updateDoc.details = details;
+        }
 
         if (photo_base64) {
             const uploadRes = await uploadToCloudinary(photo_base64, 'contestants');
