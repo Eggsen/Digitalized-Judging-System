@@ -104,4 +104,3 @@
 
 **Client Authentication & 2FA PIN Verification API**  
 `[INSERT CODE SCREENSHOT HERE — scripts/auth/authAPI.js (Lines 15–54)]`
-
