@@ -84,7 +84,7 @@ export function initContestantsCriteriaUI() {
     // Open Weights Modal
     document.getElementById('openConfigureWeightsBtn')?.addEventListener('click', openAdjustWeightsModal);
 
-    // Open Advanced Scoring Builder for New Criterion
+    // Open Modal for New Judging Criterion
     document.getElementById('openNewCriterionRubricBtn')?.addEventListener('click', () => openCriterionRubricModal());
     document.getElementById('openCustomRubricBuilderBtn')?.addEventListener('click', () => openCriterionRubricModal());
 
