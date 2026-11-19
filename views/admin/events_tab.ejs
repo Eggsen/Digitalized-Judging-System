@@ -6,18 +6,19 @@
                             <i class="fa-solid fa-trophy"></i>
                         </div>
                         <div>
-                            <h2 class="text-xl font-extrabold text-buksu-navy dark:text-slate-100">Competitions &amp; Events</h2>
+                            <h1 class="text-xl sm:text-2xl font-extrabold text-buksu-navy dark:text-slate-100">Events &amp; Competitions</h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage scheduled competitions, update status, and archive completed events.</p>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-3">
                         <select id="event-status-filter" class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
-                            <option value="ALL">All Statuses (Ongoing Priority)</option>
+                            <option value="ACTIVE" selected>Active (Ongoing &amp; Upcoming)</option>
                             <option value="Ongoing">Ongoing</option>
                             <option value="Upcoming">Upcoming</option>
                             <option value="Completed">Completed</option>
                             <option value="Archived">Archived</option>
+                            <option value="ALL">All Events</option>
                         </select>
                         <button id="refreshEventsBtn" class="text-xs text-slate-500 dark:text-slate-400 hover:text-buksu-navy dark:hover:text-buksu-gold font-semibold flex items-center gap-1 cursor-pointer transition-colors">
                             <i class="fa-solid fa-rotate-right"></i> Refresh

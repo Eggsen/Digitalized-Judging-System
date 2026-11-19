@@ -360,6 +360,11 @@ function populateDiagnostics(diag) {
     setTxt('diag-system-version', diag.systemVersion || 'v2.4');
 }
 
+let currentActiveSubtab = 'settings-content-branding';
+let isProgrammaticScrolling = false;
+let programmaticScrollTimer = null;
+let settingsObserver = null;
+
 export function initSettingsPanel() {
     initSubTabs();
     initSettingsForm();
@@ -368,19 +373,72 @@ export function initSettingsPanel() {
     initSecuritySettings();
     initBackupAndMaintenance();
     initApiKeysSettings();
+    initSettingsScrollSpy();
     loadSystemSettings();
 }
 
-export function activateSettingsSubtab(target) {
-    if (target === 'settings-content-system-security' && (!isSecurityUnlocked || !apiKeysUnlockToken)) {
-        pendingSubtabTarget = target;
-        openAdminPinModal();
+export function activateSettingsSubtab(target, shouldScroll = true) {
+    if (typeof window !== 'undefined') window.activateSettingsSubtab = activateSettingsSubtab;
+    if (!target) return;
+
+    // Security & Infrastructure Vault: separated from the 3 continuous scrolling tabs
+    if (target === 'settings-content-system-security') {
+        if (!isSecurityUnlocked || !apiKeysUnlockToken) {
+            pendingSubtabTarget = target;
+            openAdminPinModal();
+            return;
+        }
+
+        // Already unlocked via 2FA/PIN: reveal vault section and smoothly scroll to it at the bottom
+        const vaultSec = document.getElementById('settings-content-system-security');
+        const vaultDiv = document.getElementById('settings-security-vault-divider');
+        if (vaultDiv) vaultDiv.classList.remove('hidden');
+        if (vaultSec) {
+            vaultSec.classList.remove('hidden');
+            const headerOffset = 135;
+            const elPosition = vaultSec.getBoundingClientRect().top;
+            const offsetPosition = elPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+                top: Math.max(0, offsetPosition),
+                behavior: 'smooth'
+            });
+        }
+        try {
+            if (typeof window.updateTopbarBreadcrumb === 'function') {
+                window.updateTopbarBreadcrumb('settings-tab', target);
+            }
+        } catch (e) {
+            console.warn('Breadcrumb update failed: ', e);
+        }
         return;
     }
 
-    const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
-    const subTabContents = document.querySelectorAll('.settings-subtab-content');
+    if (!shouldScroll && currentActiveSubtab === target) {
+        return;
+    }
+    currentActiveSubtab = target;
 
+    if (shouldScroll) {
+        isProgrammaticScrolling = true;
+        clearTimeout(programmaticScrollTimer);
+        programmaticScrollTimer = setTimeout(() => {
+            isProgrammaticScrolling = false;
+        }, 850);
+    }
+
+    // Ensure settings-tab is visible if called from outside
+    const settingsTab = document.getElementById('settings-tab');
+    if (settingsTab && settingsTab.classList.contains('hidden')) {
+        if (typeof window.switchAdminTab === 'function') {
+            window.switchAdminTab('settings-tab');
+        } else {
+            const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
+            if (settingsNavBtn) settingsNavBtn.click();
+        }
+    }
+
+    // Update active highlight classes on buttons (in-page subtabs & sidebar sub-items)
+    const subTabBtns = document.querySelectorAll('.settings-subtab-btn:not(.settings-vault-trigger)');
     subTabBtns.forEach(b => {
         const isMatch = b.dataset.subtab === target;
         const icon = b.querySelector('i:first-child');
@@ -394,9 +452,9 @@ export function activateSettingsSubtab(target) {
             }
         } else {
             if (isMatch) {
-                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30';
+                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30 shrink-0';
             } else {
-                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent';
+                b.className = 'settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent shrink-0';
             }
         }
 
@@ -411,22 +469,101 @@ export function activateSettingsSubtab(target) {
         }
     });
 
-    subTabContents.forEach(c => c.classList.add('hidden'));
-    const activeSection = document.getElementById(target);
-    if (activeSection) {
-        activeSection.classList.remove('hidden');
-        activeSection.classList.add('animate-fade-in');
+    // Update top header breadcrumb to reflect current active settings section
+    try {
+        if (typeof window.updateTopbarBreadcrumb === 'function') {
+            window.updateTopbarBreadcrumb('settings-tab', target);
+        }
+    } catch (e) {
+        console.warn('Breadcrumb update failed: ', e);
     }
 
-    // Reset scroll to top of settings container if scrolled down
-    const settingsCard = document.getElementById('settings-tab');
-    if (settingsCard) {
-        const rect = settingsCard.getBoundingClientRect();
-        const absoluteTop = rect.top + window.scrollY - 80;
-        if (window.scrollY > absoluteTop) {
-            window.scrollTo({ top: Math.max(0, absoluteTop), left: 0, behavior: 'instant' });
+    // Smooth scroll reliably up and down to target section anchor in the continuous single-page view
+    if (shouldScroll) {
+        const activeSection = document.getElementById(target);
+        if (activeSection) {
+            const headerOffset = 135;
+            const elPosition = activeSection.getBoundingClientRect().top;
+            const offsetPosition = elPosition + window.pageYOffset - headerOffset;
+            window.scrollTo({
+                top: Math.max(0, offsetPosition),
+                behavior: 'smooth'
+            });
         }
     }
+}
+
+export function initSettingsScrollSpy() {
+    if (typeof window === 'undefined') return;
+
+    // Track ONLY the 3 general scroll tabs (Security & Infra is not part of scrolling thingy)
+    const sectionIds = [
+        'settings-content-branding',
+        'settings-content-judging',
+        'settings-content-preferences'
+    ];
+
+    const getSections = () => sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+    // 1. IntersectionObserver for modern view detection
+    if ('IntersectionObserver' in window) {
+        if (settingsObserver) {
+            settingsObserver.disconnect();
+        }
+
+        const sections = getSections();
+        if (sections.length > 0) {
+            settingsObserver = new IntersectionObserver((entries) => {
+                if (isProgrammaticScrolling) return;
+                const settingsTab = document.getElementById('settings-tab');
+                if (!settingsTab || settingsTab.classList.contains('hidden')) return;
+
+                const visible = entries.filter(e => e.isIntersecting);
+                if (visible.length > 0) {
+                    visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+                    activateSettingsSubtab(visible[0].target.id, false);
+                }
+            }, {
+                root: null,
+                rootMargin: '-20% 0px -55% 0px',
+                threshold: [0.1, 0.25, 0.5]
+            });
+
+            sections.forEach(sec => settingsObserver.observe(sec));
+        }
+    }
+
+    // 2. High-performance scroll fallback for page boundary & rapid scrolling
+    let scrollRaf = null;
+    window.addEventListener('scroll', () => {
+        if (isProgrammaticScrolling) return;
+        if (scrollRaf) cancelAnimationFrame(scrollRaf);
+
+        scrollRaf = requestAnimationFrame(() => {
+            const settingsTab = document.getElementById('settings-tab');
+            if (!settingsTab || settingsTab.classList.contains('hidden')) return;
+
+            const sections = getSections();
+            if (sections.length === 0) return;
+
+            // At very top of document: activate first section
+            if (window.scrollY < 180) {
+                activateSettingsSubtab(sections[0].id, false);
+                return;
+            }
+
+            // Scroll offset accounts for sticky top header (h-16 = 64px) + sticky subtabs bar (~50px)
+            const scrollOffset = 160;
+            let current = sections[0].id;
+            for (const sec of sections) {
+                const rect = sec.getBoundingClientRect();
+                if (rect.top <= scrollOffset) {
+                    current = sec.id;
+                }
+            }
+            activateSettingsSubtab(current, false);
+        });
+    }, { passive: true });
 }
 
 function updateSecurityTabLockBadge(unlocked) {
@@ -437,10 +574,10 @@ function updateSecurityTabLockBadge(unlocked) {
     icons.forEach(icon => {
         if (!icon) return;
         if (unlocked) {
-            icon.className = 'text-[9px] text-emerald-400';
+            icon.setAttribute('class', 'text-[9px] text-emerald-400');
             icon.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
         } else {
-            icon.className = 'text-[9px] text-amber-500';
+            icon.setAttribute('class', 'text-[9px] text-amber-500');
             icon.innerHTML = '<i class="fa-solid fa-lock"></i>';
         }
     });
@@ -451,46 +588,32 @@ export function lockSecuritySection() {
     apiKeysUnlockToken = null;
     lockApiKeysInputs();
     updateSecurityTabLockBadge(false);
-    activateSettingsSubtab('settings-content-branding');
+    const vaultSec = document.getElementById('settings-content-system-security');
+    const vaultDiv = document.getElementById('settings-security-vault-divider');
+    if (vaultDiv) vaultDiv.classList.add('hidden');
+    if (vaultSec) vaultSec.classList.add('hidden');
+    activateSettingsSubtab('settings-content-preferences', true);
     showToast("Vault Locked", "System Security & Infrastructure section is now locked.", "archive");
 }
 
-
 function initSubTabs() {
-    const subTabBtns = document.querySelectorAll('.settings-subtab-btn');
+    const subTabBtns = document.querySelectorAll('.settings-subtab-btn, .settings-vault-trigger');
 
     subTabBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const target = btn.dataset.subtab;
             if (!target) return;
 
-            // Check if user has unsaved changes before switching subtabs
-            const currentActiveSubtab = document.querySelector('.settings-subtab-content:not(.hidden)')?.id;
-            if (currentActiveSubtab && currentActiveSubtab !== target && checkIsSettingsDirty()) {
-                if (pendingSubtabDiscardTarget === target) {
-                    clearTimeout(pendingSubtabDiscardTimer);
-                    pendingSubtabDiscardTarget = null;
-                    resetSettingsDirtyState();
-                    if (cachedSettings) populateSettingsForm(cachedSettings);
-                } else {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    pendingSubtabDiscardTarget = target;
-                    clearTimeout(pendingSubtabDiscardTimer);
-                    pendingSubtabDiscardTimer = setTimeout(() => {
-                        pendingSubtabDiscardTarget = null;
-                    }, 3000);
-                    triggerUnsavedChangesShake(btn);
-                    return;
-                }
-            }
-
             const settingsTab = document.getElementById('settings-tab');
             if (settingsTab && settingsTab.classList.contains('hidden')) {
-                const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
-                if (settingsNavBtn) settingsNavBtn.click();
+                if (typeof window.switchAdminTab === 'function') {
+                    window.switchAdminTab('settings-tab');
+                } else {
+                    const settingsNavBtn = document.querySelector('.admin-tab-btn[data-tab="settings-tab"], .sidebar-nav-btn[data-tab="settings-tab"]');
+                    if (settingsNavBtn) settingsNavBtn.click();
+                }
             }
-            activateSettingsSubtab(target);
+            activateSettingsSubtab(target, true);
         });
     });
 }

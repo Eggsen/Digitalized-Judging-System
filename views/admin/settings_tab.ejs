@@ -15,7 +15,7 @@
                                     Checking status...
                                 </span>
                             </div>
-                            <h2 class="text-xl sm:text-2xl font-black text-buksu-navy dark:text-slate-100">System Settings Hub</h2>
+                            <h1 class="text-xl sm:text-2xl font-black text-buksu-navy dark:text-slate-100">System Settings Hub</h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
                                 Configure institutional identity &amp; branding, enforce judging &amp; tabulation rules, manage report signatories, and generate system data backups.
                             </p>
@@ -32,21 +32,29 @@
                     </div>
                 </div>
 
-                <!-- Sub-tabs Navigation -->
-                <div class="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="settings-subtabs">
-                    <button type="button" data-subtab="settings-content-branding" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30">
-                        <i class="fa-solid fa-building-columns me-1.5"></i> Institution &amp; Branding
-                    </button>
-                    <button type="button" data-subtab="settings-content-judging" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-scale-balanced me-1.5 text-slate-400"></i> Judging &amp; Tabulation Rules
-                    </button>
-                    <button type="button" data-subtab="settings-content-system-security" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent whitespace-nowrap flex items-center gap-1.5">
-                        <i class="fa-solid fa-shield-halved me-1 text-slate-400"></i> System Security &amp; Infrastructure
-                        <span id="system-security-tab-lock-icon" class="text-[10px] text-amber-500"><i class="fa-solid fa-lock"></i></span>
-                    </button>
-                    <button type="button" data-subtab="settings-content-preferences" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent">
-                        <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences &amp; UI
-                    </button>
+                <!-- In-Page Anchor Navigation Bar -->
+                <div class="sticky top-16 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm -mx-6 sm:-mx-8 px-6 sm:px-8 py-3 mb-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none" id="settings-subtabs">
+                    <!-- The 3 Scrollable Settings Sections -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" data-subtab="settings-content-branding" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer border border-buksu-gold/30 shrink-0">
+                            <i class="fa-solid fa-building-columns me-1.5"></i> Institution &amp; Branding
+                        </button>
+                        <button type="button" data-subtab="settings-content-judging" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent shrink-0">
+                            <i class="fa-solid fa-scale-balanced me-1.5 text-slate-400"></i> Judging Rules
+                        </button>
+                        <button type="button" data-subtab="settings-content-preferences" class="settings-subtab-btn px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-buksu-navy hover:bg-slate-100 transition-all cursor-pointer border border-transparent shrink-0">
+                            <i class="fa-solid fa-sliders me-1.5 text-slate-400"></i> Preferences &amp; UI
+                        </button>
+                    </div>
+
+                    <!-- Separated Protected Vault: Security & Infra (Pops up PIN modal, not in continuous scroll) -->
+                    <div class="flex items-center gap-2 shrink-0 ps-3 border-l border-slate-200 dark:border-slate-800">
+                        <button type="button" data-subtab="settings-content-system-security" id="settings-vault-action-btn" class="settings-vault-trigger px-3.5 py-2 text-xs font-bold rounded-xl text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 border border-amber-300 dark:border-amber-800/80 transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-2xs">
+                            <i class="fa-solid fa-shield-halved text-amber-500"></i>
+                            <span class="font-extrabold">Security &amp; Infra</span>
+                            <span id="system-security-tab-lock-icon" class="text-[10px] text-amber-500"><i class="fa-solid fa-lock"></i></span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Loading State -->
@@ -60,7 +68,16 @@
                     <form id="systemSettingsForm" onsubmit="return false;" class="space-y-6">
 
                         <!-- SECTION 1: INSTITUTION & BRANDING -->
-                        <div id="settings-content-branding" class="settings-subtab-content space-y-6 animate-fade-in">
+                        <div id="settings-content-branding" class="settings-subtab-content settings-section scroll-mt-28 space-y-6">
+                            <div class="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-sm font-bold shadow-2xs">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-extrabold text-buksu-navy dark:text-slate-100">Institution &amp; Branding</h2>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Institutional identity, branding assets, custom logos, and official certification signatories.</p>
+                                </div>
+                            </div>
                             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 <!-- Left: Branding Identity Form -->
                                 <div class="lg:col-span-7 space-y-5">
@@ -233,8 +250,18 @@
                             </div>
                         </div>
 
-                        <!-- SECTION 2: JUDGING & TABULATION RULES -->
-                        <div id="settings-content-judging" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                        <!-- SECTION 2: JUDGING RULES -->
+                        <div class="border-t border-slate-200 dark:border-slate-800 my-10"></div>
+                        <div id="settings-content-judging" class="settings-subtab-content settings-section scroll-mt-28 space-y-6">
+                            <div class="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-sm font-bold shadow-2xs">
+                                    <i class="fa-solid fa-scale-balanced"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-extrabold text-buksu-navy dark:text-slate-100">Judging Rules</h2>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Decimal precision, ranking algorithms, score dropping, and live tabulation privacy toggles.</p>
+                                </div>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
                                 <!-- Rule 1: Decimal Precision -->
                                 <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3">
@@ -331,8 +358,43 @@
                             </div>
                         </div>
 
-                        <!-- SECTION 3: SYSTEM SECURITY & INFRASTRUCTURE (UNIFIED 2FA PROTECTED) -->
-                        <div id="settings-content-system-security" class="settings-subtab-content space-y-6 hidden animate-fade-in">
+                        <!-- SECTION 3: PREFERENCES & UI -->
+                        <div class="border-t border-slate-200 dark:border-slate-800 my-10"></div>
+                        <div id="settings-content-preferences" class="settings-subtab-content settings-section scroll-mt-28 space-y-6">
+                            <div class="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-sm font-bold shadow-2xs">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-extrabold text-buksu-navy dark:text-slate-100">Preferences &amp; UI</h2>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Personalize theme appearance, color palette rules, and navigation menu layout preferences.</p>
+                                </div>
+                            </div>
+                            <%- include('../components/preferences_section') %>
+                        </div>
+
+                        <!-- Sticky Bottom Action Footer for General Settings -->
+                        <div class="settings-save-bar pt-5 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3">
+                            <span class="text-xs text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-halved text-emerald-500"></i> Settings stored securely in MongoDB Atlas
+                            </span>
+                            <button type="submit" id="saveSettingsBtn" class="px-6 py-2.5 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
+                                <i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save All Settings
+                            </button>
+                        </div>
+
+                        <!-- SECTION 4: SECURITY & INFRA (PROTECTED ADMINISTRATIVE VAULT - AT VERY BOTTOM, POP-UP PIN MODAL) -->
+                        <div id="settings-security-vault-divider" class="hidden border-t-2 border-dashed border-amber-300 dark:border-amber-800/60 my-12 pt-4"></div>
+                        <div id="settings-content-system-security" class="settings-subtab-content settings-section scroll-mt-28 space-y-6 hidden">
+                            <div class="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                <div class="w-9 h-9 rounded-xl bg-buksu-navy text-buksu-gold flex items-center justify-center text-sm font-bold shadow-2xs">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-extrabold text-buksu-navy dark:text-slate-100">Security &amp; Infra</h2>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Security features, environment API credentials, diagnostic telemetry, and encrypted database exports.</p>
+                                </div>
+                            </div>
 
                             <!-- Banner & Status Header -->
                             <div class="p-5 rounded-2xl bg-gradient-to-r from-buksu-navy via-slate-900 to-buksu-navy text-white shadow-md border border-buksu-gold/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -346,7 +408,7 @@
                                         </span>
                                     </div>
                                     <h3 class="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                                        <i class="fa-solid fa-shield-halved text-buksu-gold"></i> System Security &amp; Infrastructure Hub
+                                        <i class="fa-solid fa-shield-halved text-buksu-gold"></i> Security &amp; Infra
                                     </h3>
                                     <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
                                         Consolidated administrative controls for security features, third-party credentials, diagnostic telemetry, and encrypted database exports. Toggling controls immediately persists to system configuration.
@@ -1029,21 +1091,6 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- SECTION 4: PREFERENCES & UI CUSTOMIZATION -->
-                        <div id="settings-content-preferences" class="settings-subtab-content space-y-6 hidden animate-fade-in">
-                            <%- include('../components/preferences_section') %>
-                        </div>
-
-                        <!-- Sticky Bottom Action Footer -->
-                        <div class="settings-save-bar pt-5 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3">
-                            <span class="text-xs text-slate-400 flex items-center gap-1.5">
-                                <i class="fa-solid fa-shield-halved text-emerald-500"></i> Settings stored securely in MongoDB Atlas
-                            </span>
-                            <button type="submit" id="saveSettingsBtn" class="px-6 py-2.5 rounded-xl bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 border border-buksu-gold/30">
-                                <i class="fa-solid fa-floppy-disk text-buksu-gold"></i> Save All Settings
-                            </button>
                         </div>
                     </form>
                 </div>

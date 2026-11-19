@@ -32,12 +32,12 @@
 
                 <!-- Breadcrumb / Section Header for Desktop Sidebar Mode -->
                 <div id="topbar-context-title" class="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 min-w-0">
-                    <div class="w-8 h-8 rounded-xl bg-buksu-navy/5 dark:bg-white/5 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-buksu-navy dark:text-buksu-gold shrink-0">
-                        <i class="fa-solid fa-compass text-xs"></i>
+                    <div id="topbar-breadcrumb-icon-container" class="w-8 h-8 rounded-xl bg-buksu-navy/5 dark:bg-white/5 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-buksu-navy dark:text-buksu-gold shrink-0">
+                        <i id="topbar-breadcrumb-icon" class="fa-solid fa-trophy text-xs"></i>
                     </div>
                     <div class="min-w-0">
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block truncate leading-tight">DigiTab Platform</span>
-                        <span class="font-extrabold text-buksu-navy dark:text-white text-xs sm:text-sm tracking-tight block truncate leading-tight"><%= (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : 'Dashboard' %></span>
+                        <span id="topbar-breadcrumb-category" class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block truncate leading-tight">DigiTab Platform</span>
+                        <span id="topbar-breadcrumb-title" class="font-extrabold text-buksu-navy dark:text-white text-xs sm:text-sm tracking-tight block truncate leading-tight"><%= (typeof pageTitle !== 'undefined' && pageTitle && pageTitle !== 'Admin Dashboard' && pageTitle !== 'Dashboard') ? pageTitle : (user.role === 'admin' ? 'Events & Competitions' : 'Assigned Competitions') %></span>
                     </div>
                 </div>
             </div>

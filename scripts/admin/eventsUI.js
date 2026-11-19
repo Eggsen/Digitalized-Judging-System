@@ -5,7 +5,7 @@ import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCr
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
 import { toggleJudgingPeriod } from "./judgingAPI.js";
-import { loadSystemSettings, checkIsSettingsDirty, triggerUnsavedChangesShake, resetSettingsDirtyState } from "./settingsUI.js";
+import { loadSystemSettings, checkIsSettingsDirty, triggerUnsavedChangesShake, resetSettingsDirtyState, activateSettingsSubtab } from "./settingsUI.js";
 
 const userRole = document.body.dataset.role;
 let cachedEventsList = [];
@@ -87,6 +87,60 @@ function handleQrDeepLinks() {
 let pendingMainTabDiscardTarget = null;
 let pendingMainTabDiscardTimer = null;
 
+export function updateTopbarBreadcrumb(tabId, subtabId = null) {
+    if (typeof window !== 'undefined') window.updateTopbarBreadcrumb = updateTopbarBreadcrumb;
+    try {
+        const titleEl = document.getElementById('topbar-breadcrumb-title');
+        const catEl = document.getElementById('topbar-breadcrumb-category');
+        if (!titleEl) return;
+
+        const navMeta = {
+            'events-tab': { title: 'Events & Competitions', icon: 'fa-trophy', cat: 'DigiTab Platform' },
+            'assignments-tab': { title: 'Judge & Tabulator Assignments', icon: 'fa-user-check', cat: 'DigiTab Platform' },
+            'users-tab': { title: 'User Invitations', icon: 'fa-users-gear', cat: 'DigiTab Platform' },
+            'logs-tab': { title: 'Audit Logs', icon: 'fa-clock-rotate-left', cat: 'DigiTab Platform' },
+            'notifications-tab': { title: 'Notifications Hub', icon: 'fa-bell', cat: 'DigiTab Platform' },
+            'settings-tab': { title: 'System Settings', icon: 'fa-sliders', cat: 'DigiTab Platform' },
+            'user-events-tab': { title: 'Assigned Competitions', icon: 'fa-clipboard-list', cat: 'DigiTab Platform' },
+            'user-logs-tab': { title: 'My Activity Logs', icon: 'fa-clock-rotate-left', cat: 'DigiTab Platform' },
+            'user-preferences-tab': { title: 'Preferences', icon: 'fa-sliders', cat: 'DigiTab Platform' }
+        };
+
+        const subMeta = {
+            'settings-content-branding': { title: 'Institution & Branding', icon: 'fa-building-columns' },
+            'settings-content-judging': { title: 'Judging Rules', icon: 'fa-scale-balanced' },
+            'settings-content-preferences': { title: 'Preferences & UI', icon: 'fa-sliders' },
+            'settings-content-system-security': { title: 'Security & Infra', icon: 'fa-shield-halved' }
+        };
+
+        let targetTitle = '';
+        let targetCat = 'DigiTab Platform';
+        let targetIcon = 'fa-trophy';
+
+        if (tabId === 'settings-tab' && subtabId && subMeta[subtabId]) {
+            targetTitle = subMeta[subtabId].title;
+            targetCat = 'System Settings';
+            targetIcon = subMeta[subtabId].icon;
+        } else if (navMeta[tabId]) {
+            targetTitle = navMeta[tabId].title;
+            targetCat = navMeta[tabId].cat;
+            targetIcon = navMeta[tabId].icon;
+        }
+
+        if (targetTitle) {
+            titleEl.textContent = targetTitle;
+            if (catEl) catEl.textContent = targetCat;
+
+            const iconContainer = document.getElementById('topbar-breadcrumb-icon-container') || document.getElementById('topbar-breadcrumb-icon')?.parentElement;
+            if (iconContainer) {
+                iconContainer.innerHTML = `<i id="topbar-breadcrumb-icon" class="fa-solid ${targetIcon} text-xs"></i>`;
+            }
+        }
+    } catch (err) {
+        console.warn('Breadcrumb update notice: ', err);
+    }
+}
+
 export function switchAdminTab(targetTab) {
     window.switchAdminTab = switchAdminTab;
 
@@ -94,6 +148,7 @@ export function switchAdminTab(targetTab) {
     const isAlreadyActive = currentVisibleTab && currentVisibleTab.id === targetTab;
     if (isAlreadyActive) {
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        updateTopbarBreadcrumb(targetTab);
         return;
     }
 
@@ -194,10 +249,17 @@ export function switchAdminTab(targetTab) {
         document.body.scrollTop = 0;
     });
 
+    updateTopbarBreadcrumb(targetTab);
+
     if (targetTab === 'events-tab') loadAdminEvents();
     if (targetTab === 'assignments-tab') loadJudgeAssignments();
     if (targetTab === 'logs-tab') loadAuditLogs();
-    if (targetTab === 'settings-tab') loadSystemSettings();
+    if (targetTab === 'settings-tab') {
+        loadSystemSettings();
+        if (typeof activateSettingsSubtab === 'function') {
+            activateSettingsSubtab('settings-content-branding', false);
+        }
+    }
     if (targetTab === 'notifications-tab' && typeof window.loadPageNotifications === 'function') {
         window.loadPageNotifications();
     }
@@ -224,8 +286,12 @@ function initAdminTabs() {
         }
     });
 
-    document.getElementById('event-status-filter')?.addEventListener('change', loadAdminEvents);
+    document.getElementById('event-status-filter')?.addEventListener('change', () => {
+        adminEventsPagination.page = 1;
+        loadAdminEvents();
+    });
     document.getElementById('refreshEventsBtn')?.addEventListener('click', loadAdminEvents);
+    document.getElementById('refreshAssignmentsBtn')?.addEventListener('click', loadJudgeAssignments);
     document.getElementById('refreshLogsBtn')?.addEventListener('click', () => loadAuditLogs('logs-tbody'));
 
     // Auto-switch to tab if specified in URL query (?tab=notifications-tab)
@@ -246,6 +312,7 @@ export function switchUserTab(targetTab) {
     const isAlreadyActive = currentVisibleTab && currentVisibleTab.id === targetTab;
     if (isAlreadyActive) {
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        updateTopbarBreadcrumb(targetTab);
         return;
     }
 
@@ -305,6 +372,8 @@ export function switchUserTab(targetTab) {
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
     });
+
+    updateTopbarBreadcrumb(targetTab);
 
     if (targetTab === 'user-events-tab') loadUserAssignedEvents();
     if (targetTab === 'user-logs-tab') loadAuditLogs('user-logs-tbody');
@@ -444,7 +513,7 @@ export async function loadAdminEvents() {
     const grid = document.getElementById('admin-events-grid');
     if (!grid) return;
 
-    const filterVal = document.getElementById('event-status-filter')?.value || 'ALL';
+    const filterVal = document.getElementById('event-status-filter')?.value || 'ACTIVE';
 
     grid.innerHTML = `
         <div class="col-span-full py-12 text-center text-slate-400">
@@ -461,7 +530,9 @@ export async function loadAdminEvents() {
 
     cachedEventsList = res.events;
     let events = res.events;
-    if (filterVal !== 'ALL') {
+    if (filterVal === 'ACTIVE' || !filterVal) {
+        events = events.filter(e => e.status === 'Ongoing' || e.status === 'Upcoming');
+    } else if (filterVal !== 'ALL') {
         events = events.filter(e => e.status === filterVal);
     }
 
@@ -705,51 +776,75 @@ export async function loadAdminEvents() {
 /* -------------------------------------------------------------
  * JUDGE & TABULATOR ASSIGNMENTS VIEW
  * ------------------------------------------------------------- */
-async function loadJudgeAssignments() {
+export async function loadJudgeAssignments() {
+    if (typeof window !== 'undefined') window.loadJudgeAssignments = loadJudgeAssignments;
     const container = document.getElementById('assignments-container');
     if (!container) return;
 
-    container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin me-1.5"></i> Loading assignments...</div>`;
+    container.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-buksu-navy"></i><p class="font-bold text-slate-600">Loading competition assignments...</p></div>`;
 
-    const res = await listEvents();
-    if (!res.success || !res.events) {
-        container.innerHTML = `<div class="py-6 text-center text-rose-500 text-xs">${res.message}</div>`;
-        return;
-    }
-
-    if (res.events.length === 0) {
-        container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">No competitions created yet.</div>`;
-        return;
-    }
-
-    const events = sortEventsByPriority(res.events);
-
-    container.innerHTML = events.map(e => `
-        <div class="p-4 rounded-2xl ${e.status === 'Ongoing' ? 'bg-emerald-50/40 border-2 border-emerald-300' : 'bg-slate-50 border border-slate-200'} flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    ${getStatusBadgeHtml(e.status)}
-                    <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(e.eventName)}</h4>
+    try {
+        const res = await listEvents();
+        if (!res.success || !res.events) {
+            container.innerHTML = `
+                <div class="py-8 text-center text-rose-500 text-xs font-semibold border-2 border-dashed border-rose-200 rounded-3xl p-6">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl mb-2 text-rose-400"></i>
+                    <p>${res.message || 'Failed to load assignments.'}</p>
+                    <button type="button" onclick="window.loadJudgeAssignments()" class="mt-3 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs cursor-pointer">Retry</button>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${formatDateTime(e.date)} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
-                <div class="flex items-center gap-4 mt-2 text-xs">
-                    <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                        <i class="fa-solid fa-gavel text-buksu-navy me-1"></i> ${e.assignedjudges ? e.assignedjudges.length : 0} Judges Assigned
-                    </span>
-                    <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        <i class="fa-solid fa-calculator text-buksu-navy me-1"></i> ${e.tabulators ? e.tabulators.length : 0} Tabulators Assigned
-                    </span>
+            `;
+            return;
+        }
+
+        if (res.events.length === 0) {
+            container.innerHTML = `
+                <div class="py-12 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
+                    <i class="fa-solid fa-trophy text-3xl text-slate-300 mb-2"></i>
+                    <p class="text-xs font-bold text-slate-600">No competitions found</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Create an event in Events &amp; Competitions to start assigning personnel.</p>
                 </div>
+            `;
+            return;
+        }
+
+        const events = sortEventsByPriority(res.events);
+
+        container.innerHTML = events.map(e => `
+            <div class="p-4 sm:p-5 rounded-2xl ${e.status === 'Ongoing' ? 'bg-emerald-50/40 border-2 border-emerald-300/80 shadow-xs' : 'bg-slate-50 border border-slate-200/90'} hover:border-slate-300 hover:bg-white transition-all flex items-center justify-between flex-wrap gap-4">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        ${getStatusBadgeHtml(e.status)}
+                        <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-sm truncate">${escapeHtml(e.eventName)}</h4>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${formatDateTime(e.date)} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
+                    <div class="flex items-center gap-2 sm:gap-3 mt-2 text-xs flex-wrap">
+                        <span class="text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-bold inline-flex items-center gap-1.5 text-[11px]">
+                            <i class="fa-solid fa-gavel text-buksu-navy"></i> ${e.assignedjudges ? e.assignedjudges.length : (e.judges_count || 0)} Judges Assigned
+                        </span>
+                        <span class="text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold inline-flex items-center gap-1.5 text-[11px]">
+                            <i class="fa-solid fa-calculator text-buksu-navy"></i> ${e.tabulators ? e.tabulators.length : (e.tabulators_count || 0)} Tabulators Assigned
+                        </span>
+                    </div>
+                </div>
+                <button type="button" class="open-assign-btn px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                    <i class="fa-solid fa-users-gear text-buksu-gold"></i> Manage Assignments
+                </button>
             </div>
-            <button class="open-assign-btn px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-bold rounded-xl text-xs cursor-pointer shadow transition-colors flex items-center gap-1.5" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                <i class="fa-solid fa-users-gear text-buksu-gold"></i> Manage Assignments
-            </button>
-        </div>
-    `).join('');
+        `).join('');
 
-    document.querySelectorAll('#assignments-container .open-assign-btn').forEach(btn => {
-        btn.addEventListener('click', () => openAssignModal(btn.dataset.id, btn.dataset.name));
-    });
+        document.querySelectorAll('#assignments-container .open-assign-btn').forEach(btn => {
+            btn.addEventListener('click', () => openAssignModal(btn.dataset.id, btn.dataset.name));
+        });
+    } catch (err) {
+        console.error('loadJudgeAssignments error:', err);
+        container.innerHTML = `
+            <div class="py-8 text-center text-rose-500 text-xs font-semibold border-2 border-dashed border-rose-200 rounded-3xl p-6">
+                <i class="fa-solid fa-triangle-exclamation text-2xl mb-2 text-rose-400"></i>
+                <p>An unexpected error occurred while loading assignments.</p>
+                <button type="button" onclick="window.loadJudgeAssignments()" class="mt-3 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs cursor-pointer">Retry</button>
+            </div>
+        `;
+    }
 }
 
 /* -------------------------------------------------------------
@@ -2171,7 +2266,19 @@ function sortEventsByPriority(events) {
         if (prioA !== prioB) {
             return prioA - prioB;
         }
-        return (b.id || 0) - (a.id || 0);
+        // Within each status group, sort chronologically by scheduled start date/time (earliest to latest)
+        const timeA = a.date ? new Date(a.date).getTime() : Infinity;
+        const timeB = b.date ? new Date(b.date).getTime() : Infinity;
+        const validA = !isNaN(timeA);
+        const validB = !isNaN(timeB);
+        if (validA && validB && timeA !== timeB) {
+            return timeA - timeB;
+        }
+        if (validA && !validB) return -1;
+        if (!validA && validB) return 1;
+        const idA = String(a.id || a._id || '');
+        const idB = String(b.id || b._id || '');
+        return idA.localeCompare(idB);
     });
 }
 
