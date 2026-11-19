@@ -1,6 +1,7 @@
 import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, deleteArchivedEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
-import { showToast, formatDateTime, toDateTimeLocalValue, formatActionTerm } from "../utils/uiUtils.js";
+import { showToast, formatDateTime, toDateTimeLocalValue, formatActionTerm, validateCompetitionDate } from "../utils/uiUtils.js";
+export { validateCompetitionDate };
 import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
 import { openTabulationBoardModal, initTabulatorUI } from "../tabulator/tabulatorUI.js";
@@ -421,17 +422,6 @@ export const userEventsPagination = {
     totalPages: 1,
     initialized: false
 };
-
-export function validateCompetitionDate(dateStr) {
-    if (!dateStr) return { valid: false, message: 'Event date and time is required.' };
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return { valid: false, message: 'Please provide a valid event date and time.' };
-    const year = d.getFullYear();
-    if (year < 2000 || year > 2100) {
-        return { valid: false, message: `Invalid year (${year}). Competition year must be between 2000 and 2100.` };
-    }
-    return { valid: true };
-}
 
 function renderEventsPagination(state, containerId, infoId, controlsId, onPageChange) {
     const container = document.getElementById(containerId);
@@ -1480,7 +1470,22 @@ function initAdminEventActions() {
 
     // Open Create Modal
     document.getElementById('open-create-event-modal-btn')?.addEventListener('click', () => {
-        document.getElementById('create-event-modal')?.classList.remove('hidden');
+        const modal = document.getElementById('create-event-modal');
+        const dateInput = document.getElementById('ev-date');
+        if (dateInput) {
+            const now = new Date();
+            const nowIso = toDateTimeLocalValue(now);
+            dateInput.min = nowIso;
+
+            // If empty, prefill with next upcoming hour so the input is pre-populated with a valid future time
+            if (!dateInput.value) {
+                const nextHour = new Date(now);
+                nextHour.setHours(nextHour.getHours() + 1);
+                nextHour.setMinutes(0, 0, 0);
+                dateInput.value = toDateTimeLocalValue(nextHour);
+            }
+        }
+        modal?.classList.remove('hidden');
     });
 
     // Submit Create Event
@@ -1513,7 +1518,7 @@ function initAdminEventActions() {
             return;
         }
 
-        const dateCheck = validateCompetitionDate(date);
+        const dateCheck = validateCompetitionDate(date, { allowPast: false });
         if (!dateCheck.valid) {
             showToast("Invalid Date", dateCheck.message, "warning");
             return;
@@ -1575,7 +1580,8 @@ function initAdminEventActions() {
         }
 
         if (date) {
-            const dateCheck = validateCompetitionDate(date);
+            const isUpcoming = (status === 'Upcoming');
+            const dateCheck = validateCompetitionDate(date, { allowPast: !isUpcoming });
             if (!dateCheck.valid) {
                 showToast("Invalid Date", dateCheck.message, "warning");
                 return;
@@ -1867,7 +1873,15 @@ function bindEventCardActions() {
             document.getElementById('edit-ev-type').value = btn.dataset.type;
             document.getElementById('edit-ev-venue').value = btn.dataset.venue;
             document.getElementById('edit-ev-status').value = btn.dataset.status;
-            document.getElementById('edit-ev-date').value = toDateTimeLocalValue(btn.dataset.rawdate);
+            const editDateEl = document.getElementById('edit-ev-date');
+            if (editDateEl) {
+                editDateEl.value = toDateTimeLocalValue(btn.dataset.rawdate);
+                if (btn.dataset.status === 'Upcoming') {
+                    editDateEl.min = toDateTimeLocalValue(new Date());
+                } else {
+                    editDateEl.min = '2000-01-01T00:00';
+                }
+            }
             document.getElementById('edit-ev-desc').value = btn.dataset.desc;
 
             const isLiveJudging = (btn.dataset.judging === 'In Progress' || btn.dataset.status === 'Ongoing');

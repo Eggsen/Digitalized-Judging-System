@@ -243,6 +243,33 @@ export function toDateTimeLocalValue(dateVal) {
 }
 
 /**
+ * Validates a competition scheduled date string.
+ * Ensures the date is valid, within 2000-2100, and (by default) not in the past.
+ * @param {string} dateStr 
+ * @param {object} [options]
+ * @param {boolean} [options.allowPast=false]
+ * @param {number} [options.bufferMinutes=5]
+ * @returns {{ valid: boolean, message?: string }}
+ */
+export function validateCompetitionDate(dateStr, options = {}) {
+    const { allowPast = false, bufferMinutes = 5 } = options;
+    if (!dateStr) return { valid: false, message: 'Event date and time is required.' };
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { valid: false, message: 'Please provide a valid event date and time.' };
+    const year = d.getFullYear();
+    if (year < 2000 || year > 2100) {
+        return { valid: false, message: 'Please provide a valid competition date and year.' };
+    }
+    if (!allowPast) {
+        const threshold = Date.now() - (bufferMinutes * 60 * 1000);
+        if (d.getTime() < threshold) {
+            return { valid: false, message: 'Cannot schedule a competition in the past. Please select an upcoming date and time.' };
+        }
+    }
+    return { valid: true };
+}
+
+/**
  * Human-readable mapping of audit action codes to clear, non-technical English phrases
  */
 export const ACTION_MAPPINGS = {

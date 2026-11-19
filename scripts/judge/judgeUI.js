@@ -317,7 +317,7 @@ function renderJudgeContestants() {
             }
         }
 
-        const isSelected = selectedContestantId === c.id;
+        const isSelected = String(selectedContestantId) === String(c.id);
 
         return `
             <div class="judge-contestant-item p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
@@ -374,6 +374,7 @@ function renderJudgeContestants() {
 }
 
 function selectContestant(contestantId) {
+    const isDifferentContestant = (String(selectedContestantId) !== String(contestantId));
     selectedContestantId = contestantId;
     const scoringBody = document.getElementById('judge-scoring-form-body');
     if (scoringBody) {
@@ -381,19 +382,31 @@ function selectContestant(contestantId) {
     }
     renderJudgeContestants();
 
-    const contestant = contestantsList.find(c => c.id === contestantId);
+    const contestant = contestantsList.find(c => String(c.id) === String(contestantId));
     if (!contestant) return;
 
-    if (!activeCriterionId && criteriaList.length > 0) {
-        activeCriterionId = criteriaList[0].id;
+    // When switching to a different contestant (or when no criterion is active),
+    // always refresh the active criterion back to Criterion #1 so the judge starts fresh.
+    if (isDifferentContestant || !activeCriterionId) {
+        if (criteriaList.length > 0) {
+            activeCriterionId = criteriaList[0].id;
+        }
     }
 
     renderScoringSheet();
+
+    // Reset scoring sheet scroll position to the top when switching contestants
+    if (isDifferentContestant) {
+        const modalContainer = document.querySelector('#judge-scoring-modal > div');
+        if (modalContainer) {
+            modalContainer.scrollTop = 0;
+        }
+    }
 }
 
 function renderScoringSheet() {
     const scoringBody = document.getElementById('judge-scoring-form-body');
-    const contestant = contestantsList.find(c => c.id === selectedContestantId);
+    const contestant = contestantsList.find(c => String(c.id) === String(selectedContestantId));
     if (!scoringBody || !contestant) return;
 
     const isPeriodActive = (currentEventData.judgingStatus === 'In Progress');

@@ -53,7 +53,7 @@ export function initContestantsCriteriaUI() {
             } else {
                 teamMembersGroup?.classList.add('hidden');
                 if (nameLabel) nameLabel.textContent = 'Full Name / Entry Title';
-                if (nameInput) nameInput.placeholder = 'e.g. John Doe';
+                if (nameInput) nameInput.placeholder = 'e.g. Juan Dela Cruz';
             }
         });
     });

@@ -376,7 +376,7 @@ async function createEvent(req, res, next) {
             return res.status(400).json({ success: false, message: 'Event description cannot exceed 500 characters.' });
         }
 
-        // Validate Date & Year limits (reject invalid years e.g. 0001)
+        // Validate Date & Year limits (reject invalid years e.g. 0001, and reject past dates)
         const eventDate = date || new Date().toISOString();
         const dObj = new Date(eventDate);
         if (isNaN(dObj.getTime())) {
@@ -387,6 +387,14 @@ async function createEvent(req, res, next) {
             return res.status(400).json({ 
                 success: false, 
                 message: `Invalid year (${eventYear}). Event date must have a valid year between 2000 and 2100.` 
+            });
+        }
+        // Enforce future date for new events (with a 10-minute buffer for form completion / network latency)
+        const pastThreshold = Date.now() - (10 * 60 * 1000);
+        if (dObj.getTime() < pastThreshold) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot schedule a competition in the past. Please select an upcoming date and time.'
             });
         }
 
@@ -608,6 +616,16 @@ async function updateEvent(req, res, next) {
                     success: false, 
                     message: `Invalid year (${eventYear}). Event date must have a valid year between 2000 and 2100.` 
                 });
+            }
+            // If the event is Upcoming and being rescheduled, cannot set date to the past
+            if (existing.status === 'Upcoming' && updateDoc.status !== 'Completed' && updateDoc.status !== 'Archived') {
+                const pastThreshold = Date.now() - (10 * 60 * 1000);
+                if (dObj.getTime() < pastThreshold) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Scheduled date for an upcoming competition cannot be set in the past. Please select an upcoming date and time.'
+                    });
+                }
             }
             updateDoc.date = date;
         }

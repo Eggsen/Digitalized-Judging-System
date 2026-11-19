@@ -1950,7 +1950,7 @@ function handleConfirmAddCustomKey() {
     if (!/^[A-Z][A-Z0-9_]{1,63}$/.test(rawKey)) {
         if (notice) {
             notice.className = 'p-2.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-600 block';
-            notice.textContent = 'Invalid name. Must start with a letter, uppercase alphanumeric and underscores only (2-64 chars).';
+            notice.textContent = 'Invalid name. Must start with a letter, uppercase alphanumeric and underscores only (2 to 64 characters).';
         }
         return;
     }
