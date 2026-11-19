@@ -320,31 +320,38 @@ function renderJudgeContestants() {
         const isSelected = selectedContestantId === c.id;
 
         return `
-            <div class="judge-contestant-item p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+            <div class="judge-contestant-item p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
                 isSelected 
                     ? 'active bg-amber-50/80 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-800 border-buksu-gold dark:border-buksu-gold shadow-sm ring-2 ring-buksu-gold/40 text-slate-900 dark:text-white' 
                     : 'bg-white hover:bg-slate-50 dark:bg-slate-850 dark:hover:bg-slate-800 border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-2xs'
             }" data-id="${c.id}" data-selected="${isSelected}">
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 ${
+                <!-- Top Row: Contestant Number, Name & Department -->
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 mt-0.5 ${
                         isSelected 
                             ? 'bg-buksu-navy text-buksu-gold font-black shadow-xs border border-buksu-gold/30 dark:bg-buksu-gold dark:text-buksu-navy' 
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-bold'
                     }">
                         #${c.contestant_number}
                     </div>
-                    <div class="overflow-hidden">
+                    <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-1.5 flex-wrap">
-                            <h5 class="font-extrabold text-xs truncate ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'}">${escapeHtml(c.name)}</h5>
+                            <h5 class="font-extrabold text-xs leading-snug break-words ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-800 dark:text-slate-200'}">${escapeHtml(c.name)}</h5>
                             ${c.entry_type === 'team' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Team</span>` : ''}
                             ${c.comments && c.comments.length > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800"><i class="fa-solid fa-award"></i> ${c.comments.length}</span>` : ''}
                         </div>
-                        <p class="text-[10px] truncate ${isSelected ? 'text-slate-600 dark:text-slate-300 font-semibold' : 'text-slate-500 dark:text-slate-400'}">${escapeHtml(c.department_or_org || 'General')}</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">${escapeHtml(c.department_or_org || 'General')}</p>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-1 shrink-0">
-                    ${statusBadge}
-                    ${scorePill}
+
+                <!-- Bottom Row: Status Badge & Score Pill (Cleanly placed below name) -->
+                <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-[10px]">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        ${statusBadge}
+                    </div>
+                    <div class="shrink-0">
+                        ${scorePill}
+                    </div>
                 </div>
             </div>
         `;
@@ -520,6 +527,15 @@ function renderScoringSheet() {
 
     const allCriteriaScored = areAllCriteriaComplete();
 
+    // Responsive grid column calculation for criteria deck (prevents lonely wrapped card on desktop)
+    const criteriaGridColsClass = criteriaList.length >= 4 
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+        : (criteriaList.length === 3 
+            ? 'grid-cols-1 sm:grid-cols-3' 
+            : (criteriaList.length === 2 
+                ? 'grid-cols-1 sm:grid-cols-2' 
+                : 'grid-cols-1'));
+
     // -------------------------------------------------------------
     // CRITERIA SELECTION CARDS DECK (Bright, High-Contrast Cards)
     // -------------------------------------------------------------
@@ -532,87 +548,44 @@ function renderScoringSheet() {
                 <span class="text-slate-500 font-bold text-[11px] hidden sm:inline">Click any criteria card to score</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="criteria-cards-deck">
-                ${criteriaList.map((cr) => {
+            <div class="grid ${criteriaGridColsClass} gap-3" id="criteria-cards-deck">
+                ${criteriaList.map((cr, idx) => {
                     const isActive = String(cr.id) === String(activeCriterionId);
                     const critState = contestantScores[cr.id] || { score: 0, category_id: '' };
-                    const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
-                    const weightedScore = (critState.score / cr.max_points) * cr.percentage;
-                    const isCategory = (cr.scoring_type === 'category');
-                    const isRubric = !isCategory;
-
-                    const categories = (Array.isArray(cr.scoring_categories) && cr.scoring_categories.length > 0)
-                        ? cr.scoring_categories
-                        : [];
-                    const scoredCatsCount = isCategory ? Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length : 0;
+                    const isComplete = isCriterionComplete(cr, critState);
 
                     return `
-                        <div class="criterion-deck-card p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between h-full ${
+                        <div class="criterion-deck-card p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between gap-2.5 min-h-[76px] sm:min-h-[82px] ${
                             isActive 
-                                ? 'bg-white dark:bg-amber-950/30 border-2 border-buksu-gold shadow-md ring-2 ring-buksu-gold/30 text-slate-800 dark:text-slate-100' 
+                                ? 'bg-white dark:bg-amber-950/30 border-2 border-buksu-gold shadow-md ring-2 ring-buksu-gold/30 text-slate-900 dark:text-slate-100' 
                                 : 'bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs hover:border-slate-300 dark:hover:border-slate-600'
-                        }" data-crit-id="${cr.id}">
-                            <div class="space-y-1.5">
-                                <div class="flex items-center justify-between gap-1.5 mb-1 flex-wrap">
-                                    <div class="flex items-center gap-1 flex-wrap">
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-black ${
-                                            isActive 
-                                                ? 'bg-buksu-navy text-buksu-gold font-black shadow-2xs' 
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                                        }">
-                                            ${cr.percentage}% Weight
-                                        </span>
-                                        ${isCategory ? `
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-0.5">
-                                                <i class="fa-solid fa-layer-group text-[8px] text-slate-500"></i> Category
-                                            </span>
-                                        ` : `
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-0.5">
-                                                <i class="fa-solid fa-list-check text-[8px] text-slate-500"></i> Criteria-Based
-                                            </span>
-                                        `}
-                                    </div>
-                                    <span class="deck-crit-status-badge px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 shrink-0 ${
-                                        isComplete 
-                                            ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
-                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                                    }">
-                                        ${isComplete ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed' : '<i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> Pending Score'}
-                                    </span>
-                                </div>
-                                <h4 class="font-extrabold text-sm truncate ${isActive ? 'text-buksu-navy dark:text-buksu-gold' : 'text-slate-800 dark:text-slate-100'}">
-                                    ${escapeHtml(cr.title)}
-                                </h4>
-                                ${isCategory ? `
-                                    <div class="deck-crit-category-pill ${scoredCatsCount > 0 ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-                                        <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-category-count-text">${scoredCatsCount}/${categories.length} Categories Scored</span>
-                                    </div>
-                                ` : `
-                                    <div class="deck-crit-rating-pill ${critState.rating_name ? '' : 'hidden'} inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-                                        <i class="fa-solid fa-award text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name || '')}</span>
-                                    </div>
-                                `}
-                                <p class="text-[11px] truncate ${isActive ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-400'}">
-                                    ${escapeHtml(cr.description || (isCategory ? `${categories.length} Categories (${scoredCatsCount}/${categories.length} scored)` : isRubric ? 'Predefined rubric rating' : `Range: ${cr.min_points || 0} - ${cr.max_points} pts`))}
-                                </p>
+                        }" data-crit-id="${cr.id}" title="${escapeHtml(cr.title)}">
+                            <!-- Top row: Criterion index and Clean Status Indicator -->
+                            <div class="flex items-center justify-between gap-1.5">
+                                <span class="text-[10px] font-black uppercase tracking-wider ${
+                                    isActive 
+                                        ? 'text-amber-700 dark:text-amber-400' 
+                                        : 'text-slate-400 dark:text-slate-500'
+                                }">
+                                    Criterion #${idx + 1}
+                                </span>
+                                <span class="deck-crit-status-badge text-[11px] font-bold flex items-center gap-1 shrink-0 ${
+                                    isComplete 
+                                        ? 'text-emerald-600 dark:text-emerald-400 font-extrabold' 
+                                        : 'text-slate-400 dark:text-slate-500'
+                                }">
+                                    ${isComplete 
+                                        ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed' 
+                                        : '<i class="fa-regular fa-circle text-[10px] text-slate-400"></i> Pending'}
+                                </span>
                             </div>
 
-                            <div class="mt-3 pt-2.5 border-t ${isActive ? 'border-amber-200/80 dark:border-amber-800/60' : 'border-slate-100 dark:border-slate-700'} flex items-center justify-between gap-2">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <span class="deck-crit-score text-sm font-black text-buksu-navy dark:text-buksu-gold leading-none">
-                                        ${critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0')}
-                                    </span>
-                                    <span class="text-[11px] font-bold text-slate-400 leading-none">/ ${cr.max_points} pts</span>
-                                    <span class="deck-weighted-pill text-[10px] font-extrabold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 leading-none">
-                                        (${formatScore(weightedScore)}%)
-                                    </span>
-                                </div>
-                                ${!isActive ? `
-                                    <span class="text-[10px] font-bold flex items-center gap-1 shrink-0 text-slate-400">
-                                        Click to score <i class="fa-solid fa-chevron-right text-[9px]"></i>
-                                    </span>
-                                ` : ''}
-                            </div>
+                            <!-- Full Criterion Title (wraps naturally, no truncate) -->
+                            <h4 class="font-extrabold text-xs sm:text-sm leading-snug break-words ${
+                                isActive ? 'text-buksu-navy dark:text-buksu-gold' : 'text-slate-800 dark:text-slate-100'
+                            }">
+                                ${escapeHtml(cr.title)}
+                            </h4>
                         </div>
                     `;
                 }).join('')}
@@ -781,17 +754,12 @@ function bindCategoryCardInputs(container, activeCriterion, isInputsDisabled) {
             critState.rating_name = '';
             critState.is_scored = true;
 
-            // Update DOM element for this category card
+            // Update DOM element for this category card if present
             const catCard = container.querySelector(`.category-scoring-card[data-cat-id="${catId}"]`);
             if (catCard) {
                 const input = catCard.querySelector('.category-score-input');
                 if (input && document.activeElement !== input) {
                     input.value = val;
-                }
-                const statusBadge = catCard.querySelector('.cat-card-status');
-                if (statusBadge) {
-                    statusBadge.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #16a34a; margin-right: 3px;"></i> ${val.toFixed(1)} pts`;
-                    statusBadge.style.color = '#031527';
                 }
             }
 
@@ -937,6 +905,14 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
             ? cr.scoring_categories
             : [];
 
+        const catGridColsClass = categories.length >= 4 
+            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+            : (categories.length === 3 
+                ? 'grid-cols-1 sm:grid-cols-3' 
+                : (categories.length === 2 
+                    ? 'grid-cols-1 sm:grid-cols-2' 
+                    : 'grid-cols-1'));
+
         cardHtml += `
             <div class="space-y-4">
                 <div class="flex items-center justify-between flex-wrap gap-2">
@@ -953,7 +929,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-${Math.min(categories.length, 3)} gap-4">
+                <div class="grid ${catGridColsClass} gap-4">
                     ${categories.map((cat, idx) => {
                         const catId = cat.id || ('cat-' + (idx + 1));
                         const catMax = parseFloat(cat.points ?? cat.max_score) || 10;
@@ -988,36 +964,26 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                     ` : ''}
                                 </div>
 
-                                <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
-                                    <!-- Direct Clean User Input for Category Score -->
-                                    <div style="margin-bottom: 8px;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                                            <span style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">
-                                                Enter Score
-                                            </span>
-                                            <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">
-                                                0 &ndash; ${catMax} pts
-                                            </span>
-                                        </div>
+                                <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
+                                    <div class="flex items-center justify-between mb-1.5 px-0.5">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Score</span>
+                                        <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500">Max ${catMax} pts</span>
+                                    </div>
+                                    <div class="relative flex items-center">
                                         <input type="number" 
                                             step="any" 
                                             min="0" 
                                             max="${catMax}" 
-                                            class="category-score-input"
-                                            style="display: block; width: 100%; height: 46px; padding: 0 16px; font-size: 18px; font-weight: 800; color: #0f172a; background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; outline: none; text-align: center; box-sizing: border-box; transition: all 0.2s ease;"
-                                            onfocus="this.style.borderColor='#031527'; this.style.boxShadow='0 0 0 3px rgba(3, 21, 39, 0.15)';"
-                                            onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';"
-                                            placeholder="0 - ${catMax}" 
+                                            class="category-score-input w-full h-11 pl-4 pr-16 text-left font-black text-base text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-850 focus:bg-white dark:focus:bg-slate-850 border-2 border-slate-200 dark:border-slate-700 focus:border-buksu-navy dark:focus:border-buksu-gold rounded-xl outline-none transition-all shadow-2xs font-mono"
+                                            placeholder="0" 
                                             value="${currentVal}" 
                                             data-cat-id="${catId}"
                                             ${isInputsDisabled ? 'disabled' : ''}>
-                                    </div>
-
-                                    <!-- Category Score Status -->
-                                    <div style="display: flex; align-items: center; justify-content: flex-end; padding-top: 2px;">
-                                        <span class="cat-card-status" style="font-size: 11px; font-weight: 800; color: ${hasSubScore ? '#031527' : '#94a3b8'};">
-                                            ${hasSubScore ? `<i class="fa-solid fa-circle-check" style="color: #16a34a; margin-right: 3px;"></i> ${subScore.toFixed(1)} pts` : '<i class="fa-regular fa-circle" style="color: #cbd5e1; margin-right: 3px;"></i> Pending'}
-                                        </span>
+                                        <div class="absolute right-3.5 pointer-events-none flex items-center gap-1 text-xs font-bold text-slate-400 dark:text-slate-500">
+                                            <span>/</span>
+                                            <span class="font-black text-slate-600 dark:text-slate-300">${catMax}</span>
+                                            <span class="text-[10px] font-semibold text-slate-400">pts</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1050,7 +1016,7 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(ratings.length, 4)} gap-3.5">
-                    ${ratings.map(r => {
+                    ${ratings.map((r, idx) => {
                         const rScore = parseFloat(r.score) || 0;
                         const isSelected = String(critState.rating_id) === String(r.id) || (!critState.rating_id && critState.score === rScore && rScore > 0);
 
@@ -1062,32 +1028,38 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                                     ? 'border-buksu-navy dark:border-buksu-gold bg-slate-50/90 dark:bg-slate-800/90 ring-2 ring-buksu-navy/20 dark:ring-buksu-gold/30 shadow-md transform -translate-y-0.5' 
                                     : 'border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800/90 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 shadow-2xs'
                             }" data-rating-id="${r.id}" data-rating-score="${rScore}" data-rating-name="${escapeHtml(r.name)}">
-                                <div class="space-y-2">
-                                    <div class="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/80">
-                                        <div class="flex items-center gap-2">
-                                            <i class="rubric-radio-icon fa-${isSelected ? 'solid fa-circle-check text-buksu-navy dark:text-buksu-gold' : 'regular fa-circle text-slate-300'} text-base"></i>
-                                            <h6 class="font-black text-sm text-slate-800 dark:text-slate-100 leading-tight">
-                                                ${escapeHtml(r.name)}
-                                            </h6>
+                                <div class="space-y-2.5">
+                                    <!-- Header Row: Radio Icon + Tier on Left, Points Badge on Right -->
+                                    <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/80">
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            <i class="rubric-radio-icon fa-${isSelected ? 'solid fa-circle-check text-buksu-navy dark:text-buksu-gold' : 'regular fa-circle text-slate-300'} text-sm shrink-0"></i>
+                                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Tier #${idx + 1}</span>
                                         </div>
-                                        <span class="rubric-score-badge px-2.5 py-1 rounded-xl text-xs font-black shrink-0 ${
+                                        <span class="rubric-score-badge px-2.5 py-0.5 rounded-lg text-xs font-black shrink-0 whitespace-nowrap ${
                                             isSelected ? 'bg-buksu-navy text-buksu-gold shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                                         }">
                                             ${rScore.toFixed(1)} pts
                                         </span>
                                     </div>
-                                    ${r.description ? `
-                                        <p class="text-xs text-slate-600 dark:text-slate-300 font-normal leading-relaxed">
-                                            ${escapeHtml(r.description)}
-                                        </p>
-                                    ` : ''}
+
+                                    <!-- Rating Title (Full Card Width, No Mid-Word Splitting) -->
+                                    <div>
+                                        <h6 class="font-bold text-sm text-slate-900 dark:text-slate-100 leading-snug break-normal">
+                                            ${escapeHtml(r.name)}
+                                        </h6>
+                                        ${r.description ? `
+                                            <p class="text-xs text-slate-600 dark:text-slate-300 font-normal leading-relaxed mt-1">
+                                                ${escapeHtml(r.description)}
+                                            </p>
+                                        ` : ''}
+                                    </div>
                                 </div>
 
-                                <div class="pt-2 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between text-xs">
-                                    <span class="rubric-card-status text-[11px] font-bold ${isSelected ? 'text-buksu-navy dark:text-buksu-gold' : 'text-slate-400'}">
+                                <div class="pt-2 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between text-xs gap-1.5 flex-wrap">
+                                    <span class="rubric-card-status text-[11px] font-bold truncate ${isSelected ? 'text-buksu-navy dark:text-buksu-gold font-extrabold' : 'text-slate-400'}">
                                         ${isSelected ? '<i class="fa-solid fa-check-double text-buksu-navy dark:text-buksu-gold me-1"></i> Selected Rating' : '<i class="fa-regular fa-hand-pointer text-slate-400 me-1"></i> Tap to select'}
                                     </span>
-                                    <span class="text-[10px] font-extrabold text-slate-400">
+                                    <span class="text-[10px] font-extrabold text-slate-400 shrink-0 whitespace-nowrap">
                                         Fixed: ${rScore} pts
                                     </span>
                                 </div>
@@ -1188,57 +1160,23 @@ function updateLiveDisplays() {
         }
     }
 
-    // 3. Update deck card preview for the active criterion
-    if (activeCriterionId) {
-        const deckCard = document.querySelector(`.criterion-deck-card[data-crit-id="${activeCriterionId}"]`);
+    // 3. Update deck card status badges for all criteria
+    criteriaList.forEach(cr => {
+        const deckCard = document.querySelector(`.criterion-deck-card[data-crit-id="${cr.id}"]`);
         if (deckCard) {
-            const activeCrit = criteriaList.find(c => String(c.id) === String(activeCriterionId));
-            const critState = contestantScores[activeCriterionId] || (activeCrit ? contestantScores[activeCrit.id] : null) || { score: 0, sub_scores: {} };
-            const weightedScore = (critState.score / activeCrit.max_points) * activeCrit.percentage;
-
-            const scoreDisplay = deckCard.querySelector('.deck-crit-score') || deckCard.querySelector('.text-sm.font-black');
-            if (scoreDisplay) scoreDisplay.textContent = critState.score > 0 ? critState.score.toFixed(1) : (critState.is_scored ? '0.0' : '0.0');
-
-            const weightedPill = deckCard.querySelector('.deck-weighted-pill') || deckCard.querySelector('.text-\\[10px\\].font-extrabold');
-            if (weightedPill) weightedPill.textContent = `(${formatScore(weightedScore)}%)`;
-
-            // Update rating pill if present
-            const ratingPill = deckCard.querySelector('.deck-crit-rating-pill');
-            if (ratingPill) {
-                if (critState.rating_name) {
-                    ratingPill.innerHTML = `<i class="fa-solid fa-award text-amber-500"></i> <span class="deck-rating-name-text">${escapeHtml(critState.rating_name)}</span>`;
-                    ratingPill.classList.remove('hidden');
-                } else {
-                    ratingPill.classList.add('hidden');
-                }
-            }
-
-            // Update category pill if present
-            const categoryPill = deckCard.querySelector('.deck-crit-category-pill');
-            if (categoryPill && activeCrit?.scoring_type === 'category') {
-                const categories = (Array.isArray(activeCrit.scoring_categories) && activeCrit.scoring_categories.length > 0)
-                    ? activeCrit.scoring_categories
-                    : [];
-                const scoredCats = Object.keys(critState.sub_scores || {}).filter(k => critState.sub_scores[k] !== undefined && critState.sub_scores[k] !== null && critState.sub_scores[k] !== '').length;
-                if (scoredCats > 0) {
-                    categoryPill.innerHTML = `<i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> <span class="deck-category-count-text">${scoredCats}/${categories.length} Categories Scored</span>`;
-                    categoryPill.classList.remove('hidden');
-                } else {
-                    categoryPill.classList.add('hidden');
-                }
-            }
-
-            // Update status badge
-            const isComplete = (critState.score > 0) || (critState.rating_id && critState.rating_id !== '') || Boolean(critState.is_scored);
+            const cs = contestantScores[cr.id] || { score: 0, sub_scores: {} };
+            const isComp = isCriterionComplete(cr, cs);
             const statusBadge = deckCard.querySelector('.deck-crit-status-badge');
             if (statusBadge) {
-                statusBadge.innerHTML = isComplete 
+                statusBadge.innerHTML = isComp 
                     ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Completed'
-                    : '<i class="fa-solid fa-circle-dot text-xs text-amber-500"></i> Pending Score';
-                statusBadge.className = `deck-crit-status-badge px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 shrink-0 ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
+                    : '<i class="fa-regular fa-circle text-[10px] text-slate-400"></i> Pending';
+                statusBadge.className = `deck-crit-status-badge text-[11px] font-bold flex items-center gap-1 shrink-0 ${
+                    isComp ? 'text-emerald-600 dark:text-emerald-400 font-extrabold' : 'text-slate-400 dark:text-slate-500'
+                }`;
             }
         }
-    }
+    });
 
     // 4. Update criteria scored count in contestant header banner
     let completedCriteriaCount = 0;
@@ -1253,6 +1191,9 @@ function updateLiveDisplays() {
         headerCountBadge.textContent = `${completedCriteriaCount} / ${criteriaList.length} Criteria Scored`;
         headerCountBadge.className = `px-2 py-0.5 rounded-full text-[10px] font-extrabold ${completedCriteriaCount === criteriaList.length ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`;
     }
+
+    // Synchronize action buttons & footer notice with current scoring state
+    toggleActionButtons();
 }
 
 function toggleActionButtons(canEdit) {
@@ -1261,12 +1202,17 @@ function toggleActionButtons(canEdit) {
     const lockNotice = document.getElementById('submitFinalScoreLockNotice');
     const footerViewBtn = document.getElementById('judgeFooterViewSummaryBtn');
 
-    if (draftBtn) draftBtn.disabled = !canEdit;
-
+    const isPeriodActive = (currentEventData?.judgingStatus === 'In Progress');
     const scoreEntry = selectedContestantId ? judgeScoresMap[selectedContestantId] : null;
     const isSubmitted = scoreEntry && scoreEntry.status === 'submitted';
     const scoringBody = document.getElementById('judge-scoring-form-body');
     const isUnlocked = scoringBody?.dataset.unlocked === "true";
+
+    if (canEdit === undefined) {
+        canEdit = isPeriodActive && (!isSubmitted || isUnlocked);
+    }
+
+    if (draftBtn) draftBtn.disabled = !canEdit;
 
     // Show/hide Footer View Submitted Score button
     if (footerViewBtn) {
@@ -1277,7 +1223,16 @@ function toggleActionButtons(canEdit) {
         }
     }
 
-    const allComplete = areAllCriteriaComplete();
+    const totalCriteria = criteriaList.length;
+    let completedCriteriaCount = 0;
+    if (selectedContestantId) {
+        const contestantScores = contestantScoresState[selectedContestantId] || {};
+        criteriaList.forEach(cr => {
+            if (isCriterionComplete(cr, contestantScores[cr.id])) completedCriteriaCount++;
+        });
+    }
+    const remainingCriteria = Math.max(0, totalCriteria - completedCriteriaCount);
+    const allComplete = (totalCriteria > 0 && remainingCriteria === 0);
 
     if (submitBtn) {
         if (!canEdit) {
@@ -1286,15 +1241,16 @@ function toggleActionButtons(canEdit) {
             submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Submit Final Score';
             submitBtn.setAttribute('title', isSubmitted ? 'Score is submitted and locked' : 'Judging is locked or not active');
         } else {
-            submitBtn.disabled = false;
             if (allComplete) {
+                submitBtn.disabled = false;
                 submitBtn.className = "px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5";
                 submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Final Score';
                 submitBtn.setAttribute('title', 'Click to review summary and confirm submission');
             } else {
-                submitBtn.className = "px-5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 font-extrabold text-xs rounded-xl shadow-none cursor-pointer transition-all flex items-center gap-1.5";
+                submitBtn.disabled = true;
+                submitBtn.className = "px-5 py-2 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 font-extrabold text-xs rounded-xl shadow-none cursor-not-allowed transition-all flex items-center gap-1.5";
                 submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-slate-400"></i> Submit Final Score';
-                submitBtn.setAttribute('title', 'Complete scoring all criteria to submit');
+                submitBtn.setAttribute('title', `Complete all ${totalCriteria} criteria to submit final score`);
             }
         }
     }
@@ -1304,15 +1260,10 @@ function toggleActionButtons(canEdit) {
             lockNotice.innerHTML = '';
             lockNotice.classList.add('hidden');
         } else if (!allComplete) {
-            let incompleteCount = 0;
-            const contestantScores = contestantScoresState[selectedContestantId] || {};
-            criteriaList.forEach(cr => {
-                if (!isCriterionComplete(cr, contestantScores[cr.id])) incompleteCount++;
-            });
-            lockNotice.innerHTML = `<i class="fa-solid fa-circle-info text-amber-500 text-xs"></i> <span class="text-slate-500 dark:text-slate-400">${incompleteCount} criteria remaining</span>`;
+            lockNotice.innerHTML = `<i class="fa-solid fa-circle-info text-amber-500 text-xs"></i> <span class="text-amber-700 dark:text-amber-400 font-bold text-xs">${remainingCriteria} criteria remaining</span>`;
             lockNotice.classList.remove('hidden');
         } else {
-            lockNotice.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span class="text-emerald-700 dark:text-emerald-400 font-bold">All Scored &bull; Ready to Submit</span>';
+            lockNotice.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span class="text-emerald-700 dark:text-emerald-400 font-bold text-xs">All criteria scored &mdash; ready to submit</span>';
             lockNotice.classList.remove('hidden');
         }
     }
@@ -1778,63 +1729,6 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
     const isTeam = contestant.entry_type === 'team';
     const members = Array.isArray(contestant.team_members) ? contestant.team_members : [];
 
-    let lockBannerHtml = '';
-    if (isInputsDisabled) {
-        if (!isPeriodActive) {
-            lockBannerHtml = `
-                <div class="p-3.5 rounded-2xl bg-amber-100/90 border border-amber-300 text-amber-900 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
-                    <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
-                        <i class="fa-solid fa-lock"></i>
-                    </div>
-                    <div>
-                        <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked</p>
-                        <p class="text-[11px] text-amber-800 mt-0.5">Judging period is currently <strong>${escapeHtml(currentEventData?.judgingStatus || 'Not Active')}</strong>. Awards and scoring cannot be modified until an administrator starts the session.</p>
-                    </div>
-                </div>
-            `;
-        } else if (isSubmitted && !isUnlocked) {
-            const rawPolicy = String(currentSettings?.judging?.unlockPolicy || '').trim().toLowerCase();
-            const isSelfUnlock = rawPolicy === 'judge_self_unlock' || rawPolicy === 'judge-self-unlock' || rawPolicy.includes('self_unlock');
-            if (rawPolicy === 'admin_approval') {
-                lockBannerHtml = `
-                    <div class="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-300 text-slate-800 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
-                        <div class="w-8 h-8 rounded-xl bg-slate-400 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked (Read-Only)</p>
-                            <p class="text-[11px] text-slate-600 mt-0.5">Evaluation is locked together with scoring. Under system policy, ask an Administrator or Tabulator to unlock this contestant's evaluation from the Tabulation Board to revise.</p>
-                        </div>
-                    </div>
-                `;
-            } else if (isSelfUnlock) {
-                lockBannerHtml = `
-                    <div class="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
-                        <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Locked</p>
-                            <p class="text-[11px] text-amber-800 mt-0.5">Evaluation has been submitted. Click the <strong>"Edit Evaluation"</strong> button at the top of the scoring sheet to revise both scores and citations.</p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                lockBannerHtml = `
-                    <div class="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-300 text-slate-800 text-xs flex items-center gap-2.5 shadow-2xs animate-fade-in">
-                        <div class="w-8 h-8 rounded-xl bg-slate-400 text-white flex items-center justify-center text-sm shrink-0 shadow-2xs font-bold">
-                            <i class="fa-solid fa-lock"></i>
-                        </div>
-                        <div>
-                            <p class="font-extrabold text-slate-900">Special Awards &amp; Citations Strictly Locked</p>
-                            <p class="text-[11px] text-slate-600 mt-0.5">This evaluation has been finalized and strictly locked. Edits to scores and citations are disabled.</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-    }
-
     container.innerHTML = `
         <div id="judge-awards-card" class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-800/90 border ${
             isInputsDisabled 
@@ -1851,7 +1745,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                             <h4 class="font-black text-slate-800 dark:text-slate-100 text-sm">Special Awards &amp; Member Citations</h4>
                             ${isInputsDisabled ? `
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 flex items-center gap-1">
-                                    <i class="fa-solid fa-lock text-[9px]"></i> Read-Only (Inactive)
+                                    <i class="fa-solid fa-lock text-[9px]"></i> ${!isPeriodActive ? 'Read-Only (Inactive)' : 'Locked'}
                                 </span>
                             ` : `
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
@@ -1872,8 +1766,6 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                     </span>
                 ` : ''}
             </div>
-
-            ${lockBannerHtml}
 
             <!-- Form to Assign New Award -->
             <form id="judgeAssignAwardForm" onsubmit="return false;" class="p-4 rounded-2xl border transition-all space-y-3 ${

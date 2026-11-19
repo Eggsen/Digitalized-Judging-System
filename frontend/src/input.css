@@ -354,6 +354,17 @@ html.dark .criterion-deck-card p.text-slate-400 {
   color: #94a3b8 !important;
 }
 
+html.dark .criterion-deck-card span.text-emerald-400,
+html.dark .criterion-deck-card span.text-emerald-500,
+html.dark .criterion-deck-card span.text-emerald-600,
+html.dark .criterion-deck-card .deck-crit-status-badge i.fa-circle-check {
+  color: #34d399 !important;
+}
+
+html.dark .criterion-deck-card span.text-amber-400 {
+  color: #fbbf24 !important;
+}
+
 /* Rubric Level Cards (Selected Score Card & Hover) */
 html.dark .gc-level-card {
   background-color: #111c2e !important;
