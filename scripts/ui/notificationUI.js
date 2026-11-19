@@ -11,54 +11,54 @@ export function initNotificationUI() {
     const notifDropdown = document.getElementById('notifDropdown');
     const markAllBtn = document.getElementById('markAllReadBtn');
 
-    if (!notifBtn || !notifDropdown) return;
-
-    // Toggle dropdown
-    notifBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        notifDropdown.classList.toggle('hidden');
-        if (!notifDropdown.classList.contains('hidden')) {
-            loadNotifications();
-        }
-    });
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-            notifDropdown.classList.add('hidden');
-        }
-    });
-
-    // Mark all as read
-    markAllBtn?.addEventListener('click', async () => {
-        const res = await markNotificationsRead();
-        if (res.success) {
-            await loadNotifications();
-        }
-    });
-
-    // Dropdown footer: switch to notifications-tab directly
-    const dropdownOpenNotifsBtn = document.getElementById('headerDropdownOpenNotifsBtn');
-    dropdownOpenNotifsBtn?.addEventListener('click', () => {
-        notifDropdown.classList.add('hidden');
-        const notifTab = document.getElementById('notifications-tab');
-        if (notifTab) {
-            const role = document.body?.dataset.role || 'judge';
-            if (role === 'admin' && typeof window.switchAdminTab === 'function') {
-                window.switchAdminTab('notifications-tab');
-            } else if (typeof window.switchUserTab === 'function') {
-                window.switchUserTab('notifications-tab');
-            } else {
-                const targetBtn = document.querySelector('[data-tab="notifications-tab"]');
-                targetBtn?.click();
+    if (notifBtn && notifDropdown) {
+        // Toggle dropdown
+        notifBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notifDropdown.classList.toggle('hidden');
+            if (!notifDropdown.classList.contains('hidden')) {
+                loadNotifications();
             }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-            window.location.href = '/dashboard?tab=notifications-tab';
-        }
-    });
+        });
 
-    // Initial load & poll every 15 seconds
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+                notifDropdown.classList.add('hidden');
+            }
+        });
+
+        // Mark all as read
+        markAllBtn?.addEventListener('click', async () => {
+            const res = await markNotificationsRead();
+            if (res.success) {
+                await loadNotifications();
+            }
+        });
+
+        // Dropdown footer: switch to notifications-tab directly
+        const dropdownOpenNotifsBtn = document.getElementById('headerDropdownOpenNotifsBtn');
+        dropdownOpenNotifsBtn?.addEventListener('click', () => {
+            notifDropdown.classList.add('hidden');
+            const notifTab = document.getElementById('notifications-tab');
+            if (notifTab) {
+                const role = document.body?.dataset.role || 'judge';
+                if (role === 'admin' && typeof window.switchAdminTab === 'function') {
+                    window.switchAdminTab('notifications-tab');
+                } else if (typeof window.switchUserTab === 'function') {
+                    window.switchUserTab('notifications-tab');
+                } else {
+                    const targetBtn = document.querySelector('[data-tab="notifications-tab"]');
+                    targetBtn?.click();
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.location.href = '/dashboard?tab=notifications-tab';
+            }
+        });
+    }
+
+    // Initial load & poll every 15 seconds to update sidebar badges
     loadNotifications();
     setInterval(loadNotifications, 15000);
 }
@@ -66,11 +66,10 @@ export function initNotificationUI() {
 export async function loadNotifications() {
     const badge = document.getElementById('notifBadge');
     const list = document.getElementById('notifList');
-    if (!list) return;
 
     const res = await fetchNotifications();
     if (!res.success || !res.notifications) {
-        list.innerHTML = '<div class="p-4 text-center text-rose-500 text-xs">Failed to load notifications.</div>';
+        if (list) list.innerHTML = '<div class="p-4 text-center text-rose-500 text-xs">Failed to load notifications.</div>';
         return;
     }
 
@@ -92,6 +91,8 @@ export async function loadNotifications() {
             sBadge.classList.add('hidden');
         }
     });
+
+    if (!list) return;
 
     if (res.notifications.length === 0) {
         list.innerHTML = `

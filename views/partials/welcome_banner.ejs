@@ -1,20 +1,20 @@
                 <!-- Welcome Hero Card (Shown only on primary Events & Competitions tab) -->
-                <div id="welcome-hero-card" class="rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 transition-all duration-300">
-                    <!-- Top Section: BukSU Dark Blue Header -->
-                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy p-5 sm:p-8 text-white relative">
+                <div id="welcome-hero-card" class="rounded-3xl shadow-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 transition-all duration-300">
+                    <!-- Top Section: BukSU Dark Blue Header (Compacted height for better above-the-fold visibility) -->
+                    <div class="bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy px-5 py-4 sm:px-8 sm:py-5 text-white relative">
                         <!-- Decorative ambient background glow & watermark -->
-                        <div class="absolute top-0 right-0 w-80 h-80 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
-                        <div class="absolute -bottom-4 right-10 opacity-10 text-white pointer-events-none hidden sm:block">
-                            <i class="fa-solid fa-scale-balanced text-9xl"></i>
+                        <div class="absolute top-0 right-0 w-72 h-72 bg-buksu-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -bottom-6 right-8 opacity-10 text-white pointer-events-none hidden sm:block">
+                            <i class="fa-solid fa-scale-balanced text-8xl"></i>
                         </div>
 
-                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4 min-w-0 max-w-full">
+                        <div class="relative z-10 flex items-center justify-between flex-wrap gap-3 sm:gap-4 min-w-0 max-w-full">
                             <div class="min-w-0 max-w-full">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-3 backdrop-blur-xs">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-buksu-gold/20 text-buksu-gold border border-buksu-gold/30 mb-1.5 sm:mb-2 backdrop-blur-xs">
                                     <i class="fa-solid <%= badgeInfo.icon %>"></i> <%= user.role.toUpperCase() %> PORTAL
                                 </span>
-                                <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight break-words">Welcome back, <%= user.full_name || user.username %>!</h1>
-                                <p class="text-xs sm:text-sm text-slate-300 mt-1.5 font-normal flex items-center gap-2 min-w-0">
+                                <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight break-words">Welcome back, <%= user.full_name || user.username %>!</h1>
+                                <p class="text-xs sm:text-sm text-slate-300 mt-1 font-normal flex items-center gap-2 min-w-0">
                                     <i class="fa-solid fa-circle-check text-emerald-400 text-[10px] shrink-0"></i>
                                     <span class="truncate"><%= user.email ? user.email : 'Authenticated user session active.' %></span>
                                 </p>
@@ -22,8 +22,8 @@
 
                             <% if (user.role === 'admin') { %>
                                 <button id="open-create-event-modal-btn"
-                                    class="px-4 sm:px-5 py-2.5 sm:py-3 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/20 hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer border border-yellow-300 shrink-0">
-                                    <i class="fa-solid fa-plus text-buksu-navy"></i> Create Competition
+                                    class="px-4 sm:px-5 py-2.5 bg-buksu-gold hover:bg-amber-400 text-buksu-navy font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-buksu-gold/25 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer border border-yellow-300 shrink-0">
+                                    <i class="fa-solid fa-plus text-buksu-navy font-black"></i> Create Competition
                                 </button>
                             <% } %>
                         </div>

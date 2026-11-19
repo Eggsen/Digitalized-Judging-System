@@ -504,6 +504,8 @@ export async function loadAdminEvents() {
     grid.innerHTML = paginatedEvents.map(e => {
         const isOngoing = (e.status === 'Ongoing' || e.judgingStatus === 'In Progress');
         const isStopped = (e.judgingStatus === 'Finished' || e.status === 'Completed');
+        const isCompleted = (e.status === 'Completed' || e.judgingStatus === 'Finished');
+        const isArchived = (e.status === 'Archived');
         const canArchive = (!isOngoing || isStopped);
         const canEdit = (!isOngoing || isStopped);
 
@@ -529,9 +531,44 @@ export async function loadAdminEvents() {
 
         const canStartEvent = missingSetupList.length === 0;
 
+        // Determine primary status action button (Start / Stop / Completed / Archived)
+        let statusButtonHtml = '';
+        if (e.judgingStatus === 'In Progress') {
+            statusButtonHtml = `
+                <button type="button" class="toggle-judging-btn px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 shrink-0" data-id="${e.id}" data-action="stop" data-name="${escapeHtml(e.eventName)}">
+                    <i class="fa-solid fa-stop"></i> Stop
+                </button>
+            `;
+        } else if (isCompleted) {
+            // Completed state: disable/hide green start button so completed events cannot be accidentally restarted
+            statusButtonHtml = `
+                <button type="button" disabled class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold rounded-xl text-[11px] cursor-not-allowed flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-none shrink-0 select-none" title="Judging finished. Competition completed.">
+                    <i class="fa-solid fa-circle-check text-slate-400 dark:text-slate-500"></i> Completed
+                </button>
+            `;
+        } else if (isArchived) {
+            statusButtonHtml = `
+                <button type="button" disabled class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold rounded-xl text-[11px] cursor-not-allowed flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-none shrink-0 select-none" title="Competition is archived.">
+                    <i class="fa-solid fa-box-archive text-slate-400 dark:text-slate-500"></i> Archived
+                </button>
+            `;
+        } else if (canStartEvent) {
+            statusButtonHtml = `
+                <button type="button" class="toggle-judging-btn px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 shrink-0" data-id="${e.id}" data-action="start" data-can-start="true" data-name="${escapeHtml(e.eventName)}">
+                    <i class="fa-solid fa-play"></i> Start
+                </button>
+            `;
+        } else {
+            statusButtonHtml = `
+                <button type="button" class="toggle-judging-btn px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-500 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 border border-slate-300 shrink-0" data-id="${e.id}" data-action="start" data-can-start="false" data-missing="${escapeHtml(missingSetupList.join(', '))}" data-name="${escapeHtml(e.eventName)}" title="Cannot start: setup incomplete (missing ${escapeHtml(missingSetupList.join(', '))})">
+                    <i class="fa-solid fa-lock text-slate-400"></i> Start
+                </button>
+            `;
+        }
+
         return `
-        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden" data-id="${e.id}">
-            ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
+        <div class="event-card ${e.status === 'Ongoing' ? 'bg-emerald-50/30 hover:bg-white border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs' : 'bg-slate-50 hover:bg-white border border-slate-200/80 hover:border-slate-400'} rounded-2xl p-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer group relative" data-id="${e.id}">
+            ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-tr-2xl rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -571,78 +608,90 @@ export async function loadAdminEvents() {
                 </div>
             </div>
 
-            <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-1.5 flex-wrap">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                    <button class="open-setup-btn px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+            <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                <!-- Primary Action Buttons: Setup, Start/Stop/Completed, Board -->
+                <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <button type="button" class="open-setup-btn px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
                         <i class="fa-solid fa-sliders text-buksu-gold"></i> Setup
                     </button>
-                    ${e.judgingStatus === 'In Progress' ? `
-                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="stop" data-name="${escapeHtml(e.eventName)}">
-                            <i class="fa-solid fa-stop"></i> Stop
-                        </button>
-                    ` : (canStartEvent ? `
-                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1" data-id="${e.id}" data-action="start" data-can-start="true" data-name="${escapeHtml(e.eventName)}">
-                            <i class="fa-solid fa-play"></i> Start
-                        </button>
-                    ` : `
-                        <button class="toggle-judging-btn px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-500 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 border border-slate-300" data-id="${e.id}" data-action="start" data-can-start="false" data-missing="${escapeHtml(missingSetupList.join(', '))}" data-name="${escapeHtml(e.eventName)}" title="Cannot start: setup incomplete (missing ${escapeHtml(missingSetupList.join(', '))})">
-                            <i class="fa-solid fa-lock text-slate-400"></i> Start
-                        </button>
-                    `)}
-                    <button class="open-tab-board-btn px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors border border-amber-200 flex items-center gap-1" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                    ${statusButtonHtml}
+                    <button type="button" class="open-tab-board-btn px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors border border-amber-200 flex items-center gap-1 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
                         <i class="fa-solid fa-calculator"></i> Board
                     </button>
                 </div>
-                <div class="flex items-center gap-1">
-                    <button class="open-executive-report-btn p-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Executive Event Summary Report (PDF)">
-                        <i class="fa-solid fa-file-invoice"></i>
+
+                <!-- Secondary Actions: Single "..." More Actions Dropdown -->
+                <div class="relative dropdown-container shrink-0">
+                    <button type="button" class="event-more-actions-btn w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-buksu-navy dark:hover:text-white transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs" aria-label="More actions for ${escapeHtml(e.eventName)}" title="More Actions" data-id="${e.id}">
+                        <i class="fa-solid fa-ellipsis text-sm"></i>
                     </button>
-                    <button class="open-qr-modal-btn p-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs cursor-pointer transition-colors shadow-2xs" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Generate &amp; Share QR Code">
-                        <i class="fa-solid fa-qrcode"></i>
-                    </button>
-                    <button class="open-assign-btn p-1.5 bg-slate-100 hover:bg-slate-200 text-buksu-navy font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Assign Personnel">
-                        <i class="fa-solid fa-users-gear"></i>
-                    </button>
-                    ${canEdit ? `
-                        <button class="open-edit-btn p-1.5 bg-slate-200/60 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" 
-                            data-id="${e.id}" 
-                            data-name="${escapeHtml(e.eventName)}" 
-                            data-type="${escapeHtml(e.type)}" 
-                            data-desc="${escapeHtml(e.description)}" 
-                            data-venue="${escapeHtml(e.venue)}" 
-                            data-rawdate="${e.date || ''}" 
-                            data-status="${e.status}" 
-                            data-judging="${e.judgingStatus}"
-                            data-can-edit="true"
-                            title="Edit Competition">
-                            <i class="fa-solid fa-pen text-buksu-navy"></i>
-                        </button>
-                    ` : `
-                        <button class="open-edit-btn p-1.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-xs cursor-not-allowed transition-colors opacity-60" 
-                            data-id="${e.id}" 
-                            data-name="${escapeHtml(e.eventName)}" 
-                            data-status="${e.status}" 
-                            data-judging="${e.judgingStatus}"
-                            data-can-edit="false"
-                            title="Cannot edit: Competition is ongoing. Stop judging first.">
-                            <i class="fa-solid fa-pen text-slate-400"></i>
-                        </button>
-                    `}
-                    ${e.status !== 'Archived' ? (
-                        canArchive ? `
-                            <button class="archive-btn p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="true" title="Archive Competition">
-                                <i class="fa-solid fa-box-archive"></i>
+
+                    <div class="event-more-actions-menu absolute right-0 bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1.5 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5 z-40 hidden text-xs font-semibold text-slate-700 dark:text-slate-200 animate-fade-in divide-y divide-slate-100 dark:divide-slate-700/60">
+                        <div class="py-1">
+                            <button type="button" class="menu-item-action open-setup-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                                <i class="fa-solid fa-users w-4 text-center text-buksu-navy dark:text-buksu-gold"></i>
+                                <span>Manage Contestants</span>
                             </button>
-                        ` : `
-                            <button class="archive-btn p-1.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-xs cursor-not-allowed transition-colors opacity-60" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="false" data-judging="${e.judgingStatus}" data-status="${e.status}" title="Cannot archive: Competition is ongoing. Stop judging first.">
-                                <i class="fa-solid fa-box-archive"></i>
+                            <button type="button" class="menu-item-action open-assign-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                                <i class="fa-solid fa-users-gear w-4 text-center text-buksu-navy dark:text-buksu-gold"></i>
+                                <span>Assign Personnel</span>
                             </button>
-                        `
-                    ) : `
-                        <button class="delete-archived-btn p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs cursor-pointer transition-colors" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" title="Permanently Delete Archived Competition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    `}
+                            <button type="button" class="menu-item-action open-qr-modal-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                                <i class="fa-solid fa-qrcode w-4 text-center text-purple-600 dark:text-purple-400"></i>
+                                <span>View QR Codes</span>
+                            </button>
+                            <button type="button" class="menu-item-action open-executive-report-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                                <i class="fa-solid fa-file-invoice w-4 text-center text-sky-600 dark:text-sky-400"></i>
+                                <span>Executive Summary (PDF)</span>
+                            </button>
+                            ${canEdit ? `
+                                <button type="button" class="menu-item-action open-edit-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                                    data-id="${e.id}" 
+                                    data-name="${escapeHtml(e.eventName)}" 
+                                    data-type="${escapeHtml(e.type)}" 
+                                    data-desc="${escapeHtml(e.description)}" 
+                                    data-venue="${escapeHtml(e.venue)}" 
+                                    data-rawdate="${e.date || ''}" 
+                                    data-status="${e.status}" 
+                                    data-judging="${e.judgingStatus}"
+                                    data-can-edit="true">
+                                    <i class="fa-solid fa-pen-to-square w-4 text-center text-slate-600 dark:text-slate-300"></i>
+                                    <span>Edit Details</span>
+                                </button>
+                            ` : `
+                                <button type="button" class="menu-item-action open-edit-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 opacity-50 cursor-not-allowed text-slate-400"
+                                    data-id="${e.id}" 
+                                    data-name="${escapeHtml(e.eventName)}" 
+                                    data-status="${e.status}" 
+                                    data-judging="${e.judgingStatus}"
+                                    data-can-edit="false"
+                                    title="Cannot edit: judging is active.">
+                                    <i class="fa-solid fa-pen-to-square w-4 text-center text-slate-400"></i>
+                                    <span>Edit Details</span>
+                                </button>
+                            `}
+                        </div>
+
+                        <div class="py-1">
+                            ${e.status !== 'Archived' ? (
+                                canArchive ? `
+                                    <button type="button" class="menu-item-action archive-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-400 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="true">
+                                        <i class="fa-solid fa-box-archive w-4 text-center text-amber-600"></i>
+                                        <span>Archive Event</span>
+                                    </button>
+                                ` : `
+                                    <button type="button" class="menu-item-action archive-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 opacity-50 cursor-not-allowed text-slate-400" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-can-archive="false" data-judging="${e.judgingStatus}" data-status="${e.status}" title="Cannot archive: judging is active.">
+                                        <i class="fa-solid fa-box-archive w-4 text-center text-slate-400"></i>
+                                        <span>Archive Event</span>
+                                    </button>
+                                `
+                            ) : ''}
+                            <button type="button" class="menu-item-action delete-event-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-status="${e.status}">
+                                <i class="fa-solid fa-trash-can w-4 text-center text-rose-500"></i>
+                                <span>Delete Event</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1544,16 +1593,61 @@ function initCommonModalEvents() {
     });
 }
 
+function closeAllEventActionDropdowns() {
+    document.querySelectorAll('.event-more-actions-menu').forEach(menu => {
+        menu.classList.add('hidden');
+    });
+    document.querySelectorAll('#admin-events-grid .event-card').forEach(card => {
+        card.classList.remove('z-30');
+        card.style.zIndex = '';
+    });
+}
+
 function bindEventCardActions() {
-    // Card Click -> View Details Modal
+    // Card Click -> View Details Modal (only when not clicking an interactive action or dropdown)
     document.querySelectorAll('#admin-events-grid .event-card').forEach(card => {
         card.addEventListener('click', () => openViewEventModal(card.dataset.id));
+    });
+
+    // Toggle More Actions Dropdown Menu
+    document.querySelectorAll('.event-more-actions-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = btn.closest('.event-card');
+            const menu = btn.parentElement.querySelector('.event-more-actions-menu');
+            const isCurrentlyOpen = menu && !menu.classList.contains('hidden');
+
+            closeAllEventActionDropdowns();
+
+            if (!isCurrentlyOpen && menu) {
+                menu.classList.remove('hidden');
+                if (card) {
+                    card.classList.add('z-30');
+                    card.style.zIndex = '30';
+                }
+            }
+        });
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown-container')) {
+            closeAllEventActionDropdowns();
+        }
+    });
+
+    // Close dropdowns on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeAllEventActionDropdowns();
+        }
     });
 
     // Setup Contestants & Criteria Modal
     document.querySelectorAll('.open-setup-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             openManageSetupModal(btn.dataset.id, btn.dataset.name);
         });
     });
@@ -1569,11 +1663,18 @@ function bindEventCardActions() {
     document.querySelectorAll('.toggle-judging-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             const action = btn.dataset.action;
             const eventName = btn.dataset.name;
             const id = btn.dataset.id;
             const canStart = btn.dataset.canStart !== 'false';
             const missing = btn.dataset.missing;
+
+            // Prevent starting completed competition
+            if (action === 'start' && (btn.dataset.status === 'Completed' || btn.dataset.judging === 'Finished')) {
+                showToast("Competition Completed", "This competition has already finished judging and cannot be restarted.", "info");
+                return;
+            }
 
             // Prevent starting if setup is incomplete (no contestants, criteria, judges, or tabulator)
             if (action === 'start' && !canStart) {
@@ -1607,6 +1708,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-tab-board-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             openTabulationBoardModal(btn.dataset.id, btn.dataset.name);
         });
     });
@@ -1615,6 +1717,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-assign-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             openAssignModal(btn.dataset.id, btn.dataset.name);
         });
     });
@@ -1623,6 +1726,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-executive-report-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             const eventId = btn.dataset.id;
             const eventName = btn.dataset.name || 'Competition';
             showToast("Generating Executive Summary", `Creating certified PDF memo for "${eventName}"...`, "info");
@@ -1655,6 +1759,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-qr-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             openEventQrModal(btn.dataset.id, btn.dataset.name);
         });
     });
@@ -1663,6 +1768,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.open-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
 
             if (btn.dataset.canEdit === 'false') {
                 showToast("Event is Ongoing", "This competition is currently active and ongoing. Edits are locked until the judging period is stopped.", "warning");
@@ -1720,6 +1826,7 @@ function bindEventCardActions() {
     document.querySelectorAll('.archive-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             const eventName = btn.dataset.name;
             const canArchive = btn.dataset.canArchive === 'true';
 
@@ -1744,24 +1851,35 @@ function bindEventCardActions() {
         });
     });
 
-    // Delete Archived Event from Card
-    document.querySelectorAll('.delete-archived-btn').forEach(btn => {
+    // Delete Event (from Dropdown or Card)
+    document.querySelectorAll('.delete-event-btn, .delete-archived-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            closeAllEventActionDropdowns();
             const eventName = btn.dataset.name;
             const eventId = btn.dataset.id;
-            if (confirm(`Are you completely sure you want to permanently delete the archived competition "${eventName}"?\n\nThis will permanently delete all associated contestants, criteria, and scores. This action cannot be undone.`)) {
+            const status = btn.dataset.status;
+
+            const isOngoing = status === 'Ongoing';
+            const extraWarning = isOngoing 
+                ? '\n\nWARNING: This competition is currently ongoing! Deleting it will permanently remove all associated contestants, criteria, and scores.' 
+                : '';
+
+            if (confirm(`Are you completely sure you want to permanently delete the competition "${eventName}"?${extraWarning}\n\nThis will permanently delete all associated contestants, criteria, and scores. This action cannot be undone.`)) {
+                btn.disabled = true;
                 const res = await deleteArchivedEvent({ id: eventId });
+                btn.disabled = false;
                 if (res.success) {
-                    showToast("Competition Deleted!", `Archived competition "${eventName}" was permanently removed.`, "archive");
+                    showToast("Competition Deleted!", `Competition "${eventName}" was permanently removed.`, "archive");
                     await loadAdminEvents();
                 } else {
-                    showToast("Deletion Failed", res.message || "Failed to delete archived competition.", "error");
+                    showToast("Deletion Failed", res.message || "Failed to delete competition.", "error");
                 }
             }
         });
     });
 }
+
 
 function bindUserEventCardActions() {
     document.querySelectorAll('#user-assigned-events-grid .event-card').forEach(card => {
