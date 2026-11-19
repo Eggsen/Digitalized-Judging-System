@@ -480,19 +480,19 @@ function renderScoringSheet() {
         if (isSelfUnlock) {
             lockActionHtml = `
                 <button type="button" id="unlockScoreEditBtn" class="px-3.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors">
-                    <i class="fa-solid fa-pen-to-square"></i> Edit Evaluation
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Score
                 </button>
             `;
         } else if (rawPolicy === 'admin_approval') {
             lockActionHtml = `
-                <div class="px-3 py-1.5 bg-slate-100/90 border border-slate-300/80 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5">
-                    <i class="fa-solid fa-lock text-slate-500"></i> Locked by Policy (Ask Tabulator/Admin to unlock)
+                <div class="px-3 py-1.5 bg-slate-100/90 border border-slate-300/80 text-slate-600 font-bold rounded-xl text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-slate-400"></i> Locked (Contact Tabulator to unlock)
                 </div>
             `;
         } else {
             lockActionHtml = `
-                <div class="px-3 py-1.5 bg-slate-100/90 border border-slate-300/80 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5">
-                    <i class="fa-solid fa-lock text-slate-500"></i> Final & Strictly Locked
+                <div class="px-3 py-1.5 bg-slate-100/90 border border-slate-300/80 text-slate-600 font-bold rounded-xl text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-slate-400"></i> Locked
                 </div>
             `;
         }
@@ -501,7 +501,7 @@ function renderScoringSheet() {
             <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between gap-3 flex-wrap shadow-2xs">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-circle-check text-base text-emerald-600 shrink-0"></i>
-                    <span>Evaluation (Scores &amp; Special Awards) for this contestant has been <strong>Submitted</strong> to the Tabulation Board.</span>
+                    <span>Evaluation for this contestant has been <strong>Submitted</strong> to the Tabulation Board.</span>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <button type="button" id="judgeViewSubmittedScoreSummaryBtn" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors">
@@ -516,11 +516,8 @@ function renderScoringSheet() {
             <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center justify-between gap-3 flex-wrap animate-fade-in shadow-2xs">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-pen-to-square text-amber-600 text-base shrink-0"></i>
-                    <span><strong>Editing Mode Active:</strong> You are modifying both criteria scores and special awards/citations as a whole. Click <strong>"Submit Final Score"</strong> when done to re-submit and lock.</span>
+                    <span>You are editing this evaluation. Click <strong>"Submit Final Score"</strong> when done to save and lock.</span>
                 </div>
-                <span class="px-2.5 py-1 rounded-lg bg-amber-200/90 text-amber-950 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    <i class="fa-solid fa-circle-dot text-amber-600 animate-pulse"></i> Editing Whole Evaluation
-                </span>
             </div>
         `;
     }
@@ -880,15 +877,6 @@ function renderActiveRubricCard(cr, isInputsDisabled) {
                         <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                             ${cr.percentage}% Weight
                         </span>
-                        ${isCategory ? `
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                                <i class="fa-solid fa-layer-group text-buksu-navy dark:text-buksu-gold"></i> Category-Based Scoring (${maxPts} pts total)
-                            </span>
-                        ` : `
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                                <i class="fa-solid fa-list-check text-buksu-navy dark:text-buksu-gold"></i> Criteria-Based Scoring
-                            </span>
-                        `}
                         <span id="gc-active-eval-status-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'}">
                             ${isComplete ? '<i class="fa-solid fa-circle-check text-xs text-emerald-600 dark:text-emerald-400"></i> Evaluated' : 'Pending Evaluation'}
                         </span>
@@ -1754,18 +1742,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                         <i class="fa-solid ${isInputsDisabled ? 'fa-lock' : 'fa-award'}"></i>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h4 class="font-black text-slate-800 dark:text-slate-100 text-sm">Special Awards &amp; Member Citations</h4>
-                            ${isInputsDisabled ? `
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 flex items-center gap-1">
-                                    <i class="fa-solid fa-lock text-[9px]"></i> ${!isPeriodActive ? 'Read-Only (Inactive)' : 'Locked'}
-                                </span>
-                            ` : `
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                                    <i class="fa-solid fa-pen text-[9px]"></i> Editing Active
-                                </span>
-                            `}
-                        </div>
+                        <h4 class="font-black text-slate-800 dark:text-slate-100 text-sm">Special Awards &amp; Member Citations</h4>
                         <p class="text-[11px] text-slate-600 dark:text-slate-300">
                             ${isTeam 
                                 ? 'Recognize standout individual performers within this team (e.g. "Best Keyboardist", "Best Lead Vocalist")' 
@@ -1803,7 +1780,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                                 ${members.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')}
                             </select>
                         ` : `
-                            <input type="text" id="judge-award-member-input" ${isInputsDisabled ? 'disabled' : ''} placeholder="${isInputsDisabled ? 'Editing locked' : 'e.g. Keyboardist or Member Name'}" class="w-full px-3 py-2 ${
+                            <input type="text" id="judge-award-member-input" ${isInputsDisabled ? 'disabled' : ''} placeholder="e.g. Keyboardist or Member Name" class="w-full px-3 py-2 ${
                                 isInputsDisabled 
                                     ? 'bg-slate-200/70 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-400 cursor-not-allowed placeholder-slate-400' 
                                     : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500'
@@ -1814,11 +1791,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
 
                     <div class="${isTeam ? 'sm:col-span-5' : 'sm:col-span-8'}">
                         <label class="block font-bold ${isInputsDisabled ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200'} mb-1">Award / Citation Title</label>
-                        <input type="text" id="judge-award-title-input" ${isInputsDisabled ? 'disabled' : 'required'} placeholder="${
-                            isInputsDisabled 
-                                ? 'Editing locked — click \'Edit Score\' above to assign awards' 
-                                : 'e.g. Best Keyboardist, Best Soloist, Exceptional Execution'
-                        }" class="w-full px-3 py-2 ${
+                        <input type="text" id="judge-award-title-input" ${isInputsDisabled ? 'disabled' : 'required'} placeholder="e.g. Best Keyboardist, Best Soloist, Exceptional Execution" class="w-full px-3 py-2 ${
                             isInputsDisabled 
                                 ? 'bg-slate-200/70 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-400 cursor-not-allowed placeholder-slate-400' 
                                 : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500'
@@ -1831,7 +1804,7 @@ function renderJudgeAwardsSection(contestant, isInputsDisabled) {
                                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 border border-slate-300/80 dark:border-slate-700 cursor-not-allowed shadow-none' 
                                 : 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-xs transition-colors'
                         } font-black text-xs rounded-xl flex items-center justify-center gap-1.5">
-                            <i class="fa-solid ${isInputsDisabled ? 'fa-lock' : 'fa-award'}"></i> ${isInputsDisabled ? 'Locked' : 'Assign'}
+                            <i class="fa-solid fa-award"></i> Assign
                         </button>
                     </div>
                 </div>
@@ -1960,19 +1933,13 @@ function renderJudgeAssignedAwards(contestant, isInputsDisabled) {
                         <span class="text-[10px] text-slate-400 dark:text-slate-500 block">${c.created_at ? escapeHtml(formatDateTime(c.created_at)) : ''}</span>
                     </div>
                 </div>
-                ${isMine ? (
-                    isInputsDisabled ? `
-                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 text-[10px] font-extrabold border border-slate-200 dark:border-slate-600 flex items-center gap-1 cursor-not-allowed shrink-0 select-none" title="Unlock score above to remove this award">
-                            <i class="fa-solid fa-lock text-[9px]"></i> Locked
-                        </span>
-                    ` : `
-                        <button type="button" class="delete-judge-award-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer shrink-0 text-xs" 
-                            data-id="${c.id}" 
-                            title="Remove this award">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    `
-                ) : ''}
+                ${isMine && !isInputsDisabled ? `
+                    <button type="button" class="delete-judge-award-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer shrink-0 text-xs" 
+                        data-id="${c.id}" 
+                        title="Remove this award">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                ` : ''}
             </div>
         `;
     }).join('');
