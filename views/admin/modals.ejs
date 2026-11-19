@@ -79,24 +79,14 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Event Status</label>
-                        <select id="edit-ev-status" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none">
-                            <option value="Upcoming">Upcoming</option>
-                            <option value="Ongoing">Ongoing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Archived">Archived</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Judging Status</label>
-                        <select id="edit-ev-judging-status" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none">
-                            <option value="Not Yet Started">Not Yet Started</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Finished">Finished</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Event Status</label>
+                    <select id="edit-ev-status" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none font-medium text-slate-800">
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Ongoing">Ongoing (Live Judging)</option>
+                        <option value="Completed">Completed (Judging Finished)</option>
+                        <option value="Archived">Archived</option>
+                    </select>
                 </div>
 
                 <div>
@@ -179,6 +169,15 @@
                 <button type="button" class="close-modal-btn text-slate-400 hover:text-slate-600 text-2xl cursor-pointer p-1 transition-colors leading-none">&times;</button>
             </div>
 
+            <!-- Completed / Locked Notice Banner -->
+            <div id="setup-modal-locked-banner" class="hidden p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center gap-2.5">
+                <i class="fa-solid fa-lock text-amber-600 dark:text-amber-400 text-sm shrink-0"></i>
+                <div class="flex-1">
+                    <span>Competition Completed &bull; Setup is Locked</span>
+                    <p class="text-[11px] font-normal text-amber-800 dark:text-amber-300 mt-0.5">Contestants and judging criteria cannot be added, modified, or removed because this competition has concluded.</p>
+                </div>
+            </div>
+
             <!-- Tab Switcher -->
             <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <button type="button" class="setup-tab-btn px-4 py-2 text-xs font-bold rounded-xl bg-buksu-navy text-white shadow-xs transition-all cursor-pointer" data-tab="setup-contestants-tab">
@@ -208,7 +207,7 @@
                     </div>
 
                     <!-- Create Contestant Form (2 cols) -->
-                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                    <div id="setup-contestant-form-container" class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-user-plus text-buksu-navy text-sm"></i>
                             <h4 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Register Contestant</h4>
@@ -255,6 +254,20 @@
                             </button>
                         </form>
                     </div>
+
+                    <!-- Locked Contestant State (2 cols, shown when event is completed) -->
+                    <div id="setup-contestant-locked-panel" class="hidden lg:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center text-center space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl shadow-2xs border border-amber-200 dark:border-amber-800">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h5 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Registration Closed</h5>
+                            <p class="text-xs text-slate-500 leading-relaxed">This competition is marked as <strong>Completed</strong>. Contestant additions and modifications are locked.</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-xl text-[10px] font-extrabold bg-slate-200/80 text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved text-slate-400"></i> Read-Only Mode
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -273,13 +286,16 @@
                             <div id="setup-criteria-weight-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div id="setup-criteria-actions" class="flex items-center gap-2">
                         <button type="button" id="openNewCriterionRubricBtn" class="px-3.5 py-2 bg-buksu-gold hover:bg-amber-500 text-buksu-navy font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-plus"></i> Add Judging Criterion
                         </button>
                         <button type="button" id="openConfigureWeightsBtn" class="px-3.5 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-sliders"></i> Adjust All Weights
                         </button>
+                    </div>
+                    <div id="setup-criteria-locked-badge" class="hidden items-center gap-1.5 px-3 py-1.5 bg-slate-200/80 text-slate-600 rounded-xl text-xs font-bold">
+                        <i class="fa-solid fa-lock text-slate-500"></i> Criteria Locked
                     </div>
                 </div>
 
@@ -297,7 +313,7 @@
                     </div>
 
                     <!-- Advanced Scoring Setup Panel (2 cols) -->
-                    <div class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
+                    <div id="setup-criteria-form-container" class="lg:col-span-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
                         <div class="space-y-3">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-sliders text-buksu-navy text-sm"></i>
@@ -321,6 +337,20 @@
                         <button type="button" id="openCustomRubricBuilderBtn" class="w-full py-3 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2">
                             <i class="fa-solid fa-sliders text-buksu-gold"></i> Open Advanced Scoring Setup
                         </button>
+                    </div>
+
+                    <!-- Locked Criteria State (2 cols, shown when event is completed) -->
+                    <div id="setup-criteria-locked-panel" class="hidden lg:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center text-center space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl shadow-2xs border border-amber-200 dark:border-amber-800">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h5 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Criteria Setup Locked</h5>
+                            <p class="text-xs text-slate-500 leading-relaxed">This competition is marked as <strong>Completed</strong>. Adding, editing, or adjusting weights of criteria is locked.</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-xl text-[10px] font-extrabold bg-slate-200/80 text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved text-slate-400"></i> Read-Only Mode
+                        </span>
                     </div>
                 </div>
             </div>

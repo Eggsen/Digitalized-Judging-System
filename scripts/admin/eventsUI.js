@@ -573,21 +573,11 @@ export async function loadAdminEvents() {
     const paginatedEvents = events.slice(startIndex, startIndex + adminEventsPagination.limit);
 
     grid.innerHTML = paginatedEvents.map(e => {
-        const isOngoing = (e.status === 'Ongoing' || e.judgingStatus === 'In Progress');
-        const isStopped = (e.judgingStatus === 'Finished' || e.status === 'Completed');
+        const isLiveJudging = (e.judgingStatus === 'In Progress');
         const isCompleted = (e.status === 'Completed' || e.judgingStatus === 'Finished');
         const isArchived = (e.status === 'Archived');
-        const canArchive = (!isOngoing || isStopped);
-        const canEdit = (!isOngoing || isStopped);
-
-        let judgingBadge = '';
-        if (e.judgingStatus === 'In Progress') {
-            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 animate-pulse"><i class="fa-solid fa-play text-[8px]"></i> Judging Active</span>';
-        } else if (e.judgingStatus === 'Finished') {
-            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 text-slate-800 border border-slate-300">Judging Finished</span>';
-        } else {
-            judgingBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Judging Inactive</span>';
-        }
+        const canArchive = (!isLiveJudging);
+        const canEdit = (!isLiveJudging);
 
         const contestantsCount = Number(e.contestants_count || 0);
         const criteriaCount = Number(e.criteria_count || 0);
@@ -643,8 +633,7 @@ export async function loadAdminEvents() {
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        ${getStatusBadgeHtml(e.status)}
-                        ${judgingBadge}
+                        ${getStatusBadgeHtml(e.status, e.judgingStatus)}
                     </div>
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
@@ -682,8 +671,8 @@ export async function loadAdminEvents() {
             <div class="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-2">
                 <!-- Primary Action Buttons: Setup, Start/Stop/Completed, Board -->
                 <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                    <button type="button" class="open-setup-btn px-2.5 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors shadow-xs flex items-center gap-1 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                        <i class="fa-solid fa-sliders text-buksu-gold"></i> Setup
+                    <button type="button" class="open-setup-btn px-2.5 py-1.5 ${isCompleted || isArchived ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700' : 'bg-buksu-navy hover:bg-buksu-navy-light text-white shadow-xs'} font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors flex items-center gap-1 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-locked="${isCompleted || isArchived}" title="${isCompleted || isArchived ? 'Competition completed. Setup is locked in read-only mode.' : 'Manage Contestants & Criteria'}">
+                        <i class="fa-solid ${isCompleted || isArchived ? 'fa-lock text-slate-400' : 'fa-sliders text-buksu-gold'}"></i> Setup
                     </button>
                     ${statusButtonHtml}
                     <button type="button" class="open-tab-board-btn px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold rounded-xl text-[11px] cursor-pointer transition-colors border border-amber-200 flex items-center gap-1 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
@@ -699,14 +688,21 @@ export async function loadAdminEvents() {
 
                     <div class="event-more-actions-menu absolute right-0 bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1.5 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5 z-40 hidden text-xs font-semibold text-slate-700 dark:text-slate-200 animate-fade-in divide-y divide-slate-100 dark:divide-slate-700/60">
                         <div class="py-1">
-                            <button type="button" class="menu-item-action open-setup-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                                <i class="fa-solid fa-users w-4 text-center text-buksu-navy dark:text-buksu-gold"></i>
-                                <span>Manage Contestants</span>
+                            <button type="button" class="menu-item-action open-setup-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer ${isCompleted || isArchived ? 'text-slate-500' : ''}" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}" data-locked="${isCompleted || isArchived}">
+                                <i class="fa-solid ${isCompleted || isArchived ? 'fa-lock text-slate-400' : 'fa-users text-buksu-navy dark:text-buksu-gold'} w-4 text-center"></i>
+                                <span>${isCompleted || isArchived ? 'View Contestants (Locked)' : 'Manage Contestants'}</span>
                             </button>
-                            <button type="button" class="menu-item-action open-assign-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
-                                <i class="fa-solid fa-users-gear w-4 text-center text-buksu-navy dark:text-buksu-gold"></i>
-                                <span>Assign Personnel</span>
-                            </button>
+                            ${!isCompleted && !isArchived ? `
+                                <button type="button" class="menu-item-action open-assign-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                                    <i class="fa-solid fa-users-gear w-4 text-center text-buksu-navy dark:text-buksu-gold"></i>
+                                    <span>Assign Personnel</span>
+                                </button>
+                            ` : `
+                                <button type="button" disabled class="w-full px-3.5 py-2 text-left flex items-center gap-2.5 opacity-50 cursor-not-allowed text-slate-400 select-none" title="Cannot assign personnel to a completed competition.">
+                                    <i class="fa-solid fa-lock w-4 text-center"></i>
+                                    <span>Assign Personnel (Locked)</span>
+                                </button>
+                            `}
                             <button type="button" class="menu-item-action open-qr-modal-btn w-full px-3.5 py-2 text-left flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
                                 <i class="fa-solid fa-qrcode w-4 text-center text-purple-600 dark:text-purple-400"></i>
                                 <span>View QR Codes</span>
@@ -1437,7 +1433,7 @@ export async function loadUserAssignedEvents() {
             ${e.status === 'Ongoing' ? '<div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
             <div>
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    ${getStatusBadgeHtml(e.status)}
+                    ${getStatusBadgeHtml(e.status, e.judgingStatus)}
                     <span class="px-2.5 py-1 text-[10px] font-bold bg-slate-200/70 text-slate-700 rounded-lg">${e.type}</span>
                 </div>
                 <h3 class="font-extrabold text-buksu-navy text-sm mb-1 group-hover:text-slate-900 transition-colors">${escapeHtml(e.eventName)}</h3>
@@ -1451,10 +1447,6 @@ export async function loadUserAssignedEvents() {
                     <div class="flex items-center gap-2 text-[11px]">
                         <i class="fa-solid fa-location-dot text-buksu-navy w-4"></i>
                         <span>${escapeHtml(e.venue || 'TBA')}</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-[11px]">
-                        <i class="fa-solid fa-tasks text-buksu-navy w-4"></i>
-                        <span>Judging State: <strong class="text-slate-800">${escapeHtml(e.judgingStatus || 'Not Yet Started')}</strong></span>
                     </div>
                 </div>
             </div>
@@ -1550,21 +1542,18 @@ function initAdminEventActions() {
         const type = document.getElementById('edit-ev-type').value.trim();
         const venue = document.getElementById('edit-ev-venue').value.trim();
         const status = document.getElementById('edit-ev-status').value;
-        const judgingStatus = document.getElementById('edit-ev-judging-status').value;
         const date = document.getElementById('edit-ev-date').value;
         const description = document.getElementById('edit-ev-desc').value.trim();
 
-        const isOngoing = (status === 'Ongoing' || judgingStatus === 'In Progress');
-        const isStopped = (judgingStatus === 'Finished' || status === 'Completed');
+        // Inferred judging status from unified event status lifecycle
+        let judgingStatus = 'Not Yet Started';
+        if (status === 'Ongoing') judgingStatus = 'In Progress';
+        else if (status === 'Completed' || status === 'Archived') judgingStatus = 'Finished';
 
-        // Ongoing events cannot be edited once started unless stopped
-        if (isOngoing && !isStopped) {
-            showToast("Cannot Update", "Ongoing competitions cannot be edited while started. Please stop the judging period before making changes.", "warning");
-            return;
-        }
+        const isLiveJudging = (status === 'Ongoing');
 
-        if (status === 'Archived' && isOngoing && !isStopped) {
-            showToast("Cannot Archive", "Cannot archive an ongoing competition. Please stop the judging period before archiving.", "warning");
+        if (status === 'Archived' && isLiveJudging) {
+            showToast("Cannot Archive", "Cannot archive an ongoing competition with live judging. Please stop the judging period before archiving.", "warning");
             return;
         }
 
@@ -1743,7 +1732,10 @@ function bindEventCardActions() {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             closeAllEventActionDropdowns();
-            openManageSetupModal(btn.dataset.id, btn.dataset.name);
+            const eventId = btn.dataset.id;
+            const event = cachedEventsList.find(ev => String(ev.id) === String(eventId));
+            const isCompleted = event ? (event.status === 'Completed' || event.status === 'Archived' || event.judgingStatus === 'Finished') : (btn.dataset.locked === 'true');
+            openManageSetupModal(btn.dataset.id, btn.dataset.name, isCompleted);
         });
     });
 
@@ -1875,17 +1867,15 @@ function bindEventCardActions() {
             document.getElementById('edit-ev-type').value = btn.dataset.type;
             document.getElementById('edit-ev-venue').value = btn.dataset.venue;
             document.getElementById('edit-ev-status').value = btn.dataset.status;
-            document.getElementById('edit-ev-judging-status').value = btn.dataset.judging;
             document.getElementById('edit-ev-date').value = toDateTimeLocalValue(btn.dataset.rawdate);
             document.getElementById('edit-ev-desc').value = btn.dataset.desc;
 
-            const isOngoing = (btn.dataset.status === 'Ongoing' || btn.dataset.judging === 'In Progress');
-            const isStopped = (btn.dataset.judging === 'Finished' || btn.dataset.status === 'Completed');
-            const canArchive = (!isOngoing || isStopped);
+            const isLiveJudging = (btn.dataset.judging === 'In Progress' || btn.dataset.status === 'Ongoing');
+            const canArchive = !isLiveJudging;
 
             const ongoingWarning = document.getElementById('edit-event-ongoing-warning');
             const saveBtn = document.getElementById('saveEditEventBtn');
-            if (isOngoing && !isStopped) {
+            if (isLiveJudging) {
                 ongoingWarning?.classList.remove('hidden');
                 if (saveBtn) saveBtn.disabled = true;
             } else {
@@ -2017,13 +2007,19 @@ export async function openViewEventModal(eventId) {
     document.getElementById('view-ev-type-badge').textContent = event.type || 'General';
     
     const statusBadge = document.getElementById('view-ev-status-badge');
-    statusBadge.textContent = event.status || 'Upcoming';
-    statusBadge.className = `px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(event.status)}`;
+    if (statusBadge) {
+        const isLive = (event.status === 'Ongoing' || event.judgingStatus === 'In Progress');
+        statusBadge.textContent = isLive ? 'Live Ongoing' : (event.status || 'Upcoming');
+        statusBadge.className = `px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide ${getStatusStyle(event.status)}`;
+    }
 
     // Set Details
     document.getElementById('view-ev-date').textContent = formatDateTime(event.date);
     document.getElementById('view-ev-venue').textContent = event.venue || 'TBA';
-    document.getElementById('view-ev-judging-status').textContent = event.judgingStatus || 'Not Yet Started';
+    const judgingStatusEl = document.getElementById('view-ev-judging-status');
+    if (judgingStatusEl) {
+        judgingStatusEl.textContent = event.judgingStatus || 'Not Yet Started';
+    }
     document.getElementById('view-ev-desc').textContent = event.description && event.description.trim() ? event.description : 'No description provided.';
 
     // Populate Judges List
@@ -2086,9 +2082,10 @@ export async function openViewEventModal(eventId) {
     const actionsBox = document.getElementById('view-modal-action-buttons');
     if (actionsBox) {
         if (userRole === 'admin') {
+            const isEventLocked = (event.status === 'Completed' || event.status === 'Archived' || event.judgingStatus === 'Finished');
             actionsBox.innerHTML = `
-                <button type="button" class="view-modal-setup-btn px-3 py-1.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
-                    <i class="fa-solid fa-sliders text-buksu-gold"></i> Setup
+                <button type="button" class="view-modal-setup-btn px-3 py-1.5 ${isEventLocked ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700' : 'bg-buksu-navy hover:bg-buksu-navy-light text-white shadow-xs'} font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5" title="${isEventLocked ? 'Competition completed. Setup is locked in read-only mode.' : 'Manage Contestants & Criteria'}">
+                    <i class="fa-solid ${isEventLocked ? 'fa-lock text-slate-400' : 'fa-sliders text-buksu-gold'}"></i> ${isEventLocked ? 'Setup (Locked)' : 'Setup'}
                 </button>
                 <button type="button" class="view-modal-board-btn px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs">
                     <i class="fa-solid fa-calculator"></i> Live Board
@@ -2101,7 +2098,7 @@ export async function openViewEventModal(eventId) {
             `;
             actionsBox.querySelector('.view-modal-setup-btn')?.addEventListener('click', () => {
                 modal.classList.add('hidden');
-                openManageSetupModal(event.id, event.eventName);
+                openManageSetupModal(event.id, event.eventName, isEventLocked);
             });
             actionsBox.querySelector('.view-modal-board-btn')?.addEventListener('click', () => {
                 modal.classList.add('hidden');
@@ -2228,27 +2225,27 @@ async function openAssignModal(eventId, eventName) {
 }
 
 function getStatusStyle(status) {
-    if (status === 'Upcoming') return 'bg-amber-100 text-amber-800';
-    if (status === 'Ongoing') return 'bg-emerald-100 text-emerald-800';
-    if (status === 'Completed') return 'bg-slate-100 text-slate-800 border border-slate-300';
-    if (status === 'Archived') return 'bg-slate-200 text-slate-700';
+    if (status === 'Ongoing') return 'bg-emerald-600 text-white shadow-xs';
+    if (status === 'Upcoming') return 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60';
+    if (status === 'Completed') return 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700';
+    if (status === 'Archived') return 'bg-slate-200 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
     return 'bg-slate-100 text-slate-700';
 }
 
-function getStatusBadgeHtml(status) {
-    if (status === 'Ongoing') {
-        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-emerald-600 text-white inline-flex items-center gap-1.5 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Ongoing</span>`;
+function getStatusBadgeHtml(status, judgingStatus) {
+    if (status === 'Ongoing' || judgingStatus === 'In Progress') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-emerald-600 text-white inline-flex items-center gap-1.5 shadow-xs"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Live Ongoing</span>`;
     }
-    if (status === 'Upcoming') {
-        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-amber-100 text-amber-800">Upcoming</span>`;
-    }
-    if (status === 'Completed') {
-        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 text-slate-800 border border-slate-300">Completed</span>`;
+    if (status === 'Completed' || judgingStatus === 'Finished') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 inline-flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-slate-500 text-[10px]"></i> Completed</span>`;
     }
     if (status === 'Archived') {
-        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-200 text-slate-700">Archived</span>`;
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-200 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 inline-flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-slate-500 text-[10px]"></i> Archived</span>`;
     }
-    return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 text-slate-700">${status}</span>`;
+    if (status === 'Upcoming' || judgingStatus === 'Not Yet Started') {
+        return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center gap-1.5"><i class="fa-regular fa-clock text-amber-700 dark:text-amber-400 text-[10px]"></i> Upcoming</span>`;
+    }
+    return `<span class="px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wide bg-slate-100 text-slate-700">${escapeHtml(status || 'Upcoming')}</span>`;
 }
 
 function sortEventsByPriority(events) {

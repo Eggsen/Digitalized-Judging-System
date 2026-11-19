@@ -16,6 +16,7 @@ import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
 
 let currentEventId = null;
 let currentEventName = '';
+let currentEventIsLocked = false;
 let cachedCriteria = [];
 let cachedContestants = [];
 
@@ -270,6 +271,11 @@ export function updateWeightsModalState(triggerWarningToast = false) {
 }
 
 export function openAdjustWeightsModal() {
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Criteria weights cannot be adjusted for completed competitions.', 'warning');
+        return;
+    }
+
     const weightsModal = document.getElementById('adjust-weights-modal');
     const container = document.getElementById('weights-adjust-container');
     if (!weightsModal || !container) return;
@@ -305,15 +311,19 @@ export function openAdjustWeightsModal() {
     weightsModal.classList.remove('hidden');
 }
 
-export async function openManageSetupModal(eventId, eventName) {
+export async function openManageSetupModal(eventId, eventName, isLocked = false) {
     const modal = document.getElementById('manage-event-setup-modal');
     if (!modal) return;
 
     currentEventId = parseInt(eventId);
     currentEventName = eventName || `Competition #${eventId}`;
+    currentEventIsLocked = Boolean(isLocked);
 
     document.getElementById('setup-modal-event-title').textContent = currentEventName;
     document.getElementById('setup-modal-event-id-badge').textContent = `Event #${currentEventId}`;
+
+    // Apply locked or active UI states across modal
+    applySetupLockedUI(currentEventIsLocked);
 
     modal.classList.remove('hidden');
 
@@ -325,6 +335,30 @@ export async function openManageSetupModal(eventId, eventName) {
         loadContestantsList(),
         loadCriteriaList()
     ]);
+}
+
+function applySetupLockedUI(isLocked) {
+    const banner = document.getElementById('setup-modal-locked-banner');
+    const contestantForm = document.getElementById('setup-contestant-form-container');
+    const contestantLocked = document.getElementById('setup-contestant-locked-panel');
+    const criteriaActions = document.getElementById('setup-criteria-actions');
+    const criteriaLockedBadge = document.getElementById('setup-criteria-locked-badge');
+    const criteriaForm = document.getElementById('setup-criteria-form-container');
+    const criteriaLocked = document.getElementById('setup-criteria-locked-panel');
+
+    if (banner) banner.classList.toggle('hidden', !isLocked);
+
+    if (contestantForm) contestantForm.classList.toggle('hidden', isLocked);
+    if (contestantLocked) contestantLocked.classList.toggle('hidden', !isLocked);
+
+    if (criteriaActions) criteriaActions.classList.toggle('hidden', isLocked);
+    if (criteriaLockedBadge) {
+        criteriaLockedBadge.classList.toggle('hidden', !isLocked);
+        if (isLocked) criteriaLockedBadge.classList.add('inline-flex');
+        else criteriaLockedBadge.classList.remove('inline-flex');
+    }
+    if (criteriaForm) criteriaForm.classList.toggle('hidden', isLocked);
+    if (criteriaLocked) criteriaLocked.classList.toggle('hidden', !isLocked);
 }
 
 function switchSetupTab(tabId) {
@@ -430,23 +464,29 @@ async function loadContestantsList() {
                     title="Citations & Member Comments">
                     <i class="fa-solid fa-award"></i>
                 </button>
-                <button class="edit-contestant-btn p-2 rounded-xl text-slate-500 hover:text-buksu-navy hover:bg-slate-100 transition-colors cursor-pointer text-xs" 
-                    data-id="${c.id}" 
-                    data-num="${c.contestant_number}" 
-                    data-name="${escapeHtml(c.name)}" 
-                    data-dept="${escapeHtml(c.department_or_org)}" 
-                    data-desc="${escapeHtml(c.description)}"
-                    data-type="${c.entry_type || 'individual'}"
-                    title="Edit Contestant">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="delete-contestant-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
-                    data-id="${c.id}" 
-                    data-num="${c.contestant_number}" 
-                    data-name="${escapeHtml(c.name)}"
-                    title="Remove Contestant">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
+                ${!currentEventIsLocked ? `
+                    <button class="edit-contestant-btn p-2 rounded-xl text-slate-500 hover:text-buksu-navy hover:bg-slate-100 transition-colors cursor-pointer text-xs" 
+                        data-id="${c.id}" 
+                        data-num="${c.contestant_number}" 
+                        data-name="${escapeHtml(c.name)}" 
+                        data-dept="${escapeHtml(c.department_or_org)}" 
+                        data-desc="${escapeHtml(c.description)}"
+                        data-type="${c.entry_type || 'individual'}"
+                        title="Edit Contestant">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="delete-contestant-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
+                        data-id="${c.id}" 
+                        data-num="${c.contestant_number}" 
+                        data-name="${escapeHtml(c.name)}"
+                        title="Remove Contestant">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                ` : `
+                    <span class="p-2 text-slate-400 text-xs flex items-center justify-center select-none" title="Contestant record locked (completed competition)">
+                        <i class="fa-solid fa-lock text-slate-400"></i>
+                    </span>
+                `}
             </div>
         </div>
         `;
@@ -475,6 +515,11 @@ function bindContestantRowActions() {
     // Delete contestant
     document.querySelectorAll('.delete-contestant-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
+            if (currentEventIsLocked) {
+                showToast('Competition Completed', 'Contestants cannot be removed for completed competitions.', 'warning');
+                return;
+            }
+
             const id = btn.dataset.id;
             const num = btn.dataset.num;
             const name = btn.dataset.name;
@@ -494,6 +539,11 @@ function bindContestantRowActions() {
 }
 
 function openEditContestantModal(contestantId) {
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Contestant records cannot be edited for completed competitions.', 'warning');
+        return;
+    }
+
     const modal = document.getElementById('edit-contestant-modal');
     if (!modal) return;
 
@@ -532,6 +582,11 @@ function openEditContestantModal(contestantId) {
 
 async function handleEditContestantSubmit(e) {
     if (e) e.preventDefault();
+
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Contestant records cannot be edited for completed competitions.', 'warning');
+        return;
+    }
 
     const id = document.getElementById('edit-contestant-id')?.value;
     const numInput = document.getElementById('edit-contestant-num');
@@ -595,6 +650,11 @@ async function handleEditContestantSubmit(e) {
 async function handleAddContestant(e) {
     e.preventDefault();
     if (!currentEventId) return;
+
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Contestant registration is locked for completed competitions.', 'warning');
+        return;
+    }
 
     const numInput = document.getElementById('new-contestant-num');
     const nameInput = document.getElementById('new-contestant-name');
@@ -661,14 +721,21 @@ function openContestantCommentsModal(contestantId) {
 
     const teamSection = document.getElementById('contestant-modal-team-section');
     const membersInput = document.getElementById('contestant-modal-members-input');
+    const saveMembersBtn = document.getElementById('saveContestantMembersBtn');
+    const addCitationForm = document.getElementById('new-citation-text')?.closest('form');
+
     if (contestant.entry_type === 'team') {
         teamSection?.classList.remove('hidden');
         if (membersInput) {
             membersInput.value = (contestant.team_members || []).join('\n');
+            membersInput.disabled = currentEventIsLocked;
         }
     } else {
         teamSection?.classList.add('hidden');
     }
+
+    if (saveMembersBtn) saveMembersBtn.classList.toggle('hidden', currentEventIsLocked);
+    if (addCitationForm) addCitationForm.classList.toggle('hidden', currentEventIsLocked);
 
     renderModalCommentsList(contestant);
     modal.classList.remove('hidden');
@@ -700,17 +767,23 @@ function renderModalCommentsList(contestant) {
                     <span class="text-[10px] text-slate-400 font-medium">Added by ${escapeHtml(c.author || 'Admin')} ${c.created_at ? '• ' + escapeHtml(formatDateTime(c.created_at)) : ''}</span>
                 </div>
             </div>
-            <button type="button" class="delete-citation-btn p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors cursor-pointer shrink-0 text-xs" 
-                data-contestant-id="${contestant.id}" 
-                data-comment-id="${c.id}" 
-                title="Remove Citation">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
+            ${!currentEventIsLocked ? `
+                <button type="button" class="delete-citation-btn p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors cursor-pointer shrink-0 text-xs" 
+                    data-contestant-id="${contestant.id}" 
+                    data-comment-id="${c.id}" 
+                    title="Remove Citation">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            ` : ''}
         </div>
     `).join('');
 
     container.querySelectorAll('.delete-citation-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
+            if (currentEventIsLocked) {
+                showToast('Competition Completed', 'Citations cannot be removed for completed competitions.', 'warning');
+                return;
+            }
             const cId = btn.dataset.contestantId;
             const commentId = btn.dataset.commentId;
             const res = await deleteContestantComment(cId, commentId);
@@ -728,6 +801,10 @@ function renderModalCommentsList(contestant) {
 
 async function handleAddCitation(e) {
     e.preventDefault();
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Citations cannot be added for completed competitions.', 'warning');
+        return;
+    }
     const contestantId = document.getElementById('contestant-comments-modal-id')?.value;
     const textInput = document.getElementById('new-citation-text');
     const text = textInput?.value.trim();
@@ -755,6 +832,11 @@ async function handleAddCitation(e) {
 }
 
 async function handleSaveTeamMembers() {
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Team members cannot be modified for completed competitions.', 'warning');
+        return;
+    }
+
     const contestantId = document.getElementById('contestant-comments-modal-id')?.value;
     const membersInput = document.getElementById('contestant-modal-members-input');
     const members = membersInput?.value || '';
@@ -866,17 +948,23 @@ async function loadCriteriaList() {
                     <button type="button" class="toggle-rubric-view-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-bold text-[11px] cursor-pointer transition-colors flex items-center gap-1" data-id="${cr.id}">
                         <i class="fa-solid fa-eye text-xs"></i> <span>View Details</span>
                     </button>
-                    <button class="edit-criterion-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-buksu-navy hover:text-buksu-gold text-slate-700 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1" 
-                        data-id="${cr.id}" 
-                        title="Edit Criterion & Scoring Setup">
-                        <i class="fa-solid fa-pen text-xs"></i> <span>Edit</span>
-                    </button>
-                    <button class="delete-criterion-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
-                        data-id="${cr.id}" 
-                        data-title="${escapeHtml(cr.title)}"
-                        title="Delete Criterion">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    ${!currentEventIsLocked ? `
+                        <button class="edit-criterion-btn px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-buksu-navy hover:text-buksu-gold text-slate-700 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1" 
+                            data-id="${cr.id}" 
+                            title="Edit Criterion & Scoring Setup">
+                            <i class="fa-solid fa-pen text-xs"></i> <span>Edit</span>
+                        </button>
+                        <button class="delete-criterion-btn p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer text-xs" 
+                            data-id="${cr.id}" 
+                            data-title="${escapeHtml(cr.title)}"
+                            title="Delete Criterion">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    ` : `
+                        <span class="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-[11px] flex items-center gap-1 border border-slate-200 select-none" title="Criterion locked (completed competition)">
+                            <i class="fa-solid fa-lock text-xs text-slate-400"></i> <span>Locked</span>
+                        </span>
+                    `}
                 </div>
             </div>
 
@@ -951,6 +1039,11 @@ function bindCriteriaRowActions() {
     // Delete criterion
     document.querySelectorAll('.delete-criterion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
+            if (currentEventIsLocked) {
+                showToast('Competition Completed', 'Judging criteria cannot be deleted for completed competitions.', 'warning');
+                return;
+            }
+
             const id = btn.dataset.id;
             const title = btn.dataset.title;
 
@@ -1275,6 +1368,11 @@ export function addRatingRow(rating = null, index = null) {
 }
 
 export function openCriterionRubricModal(criterionId) {
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Judging criteria cannot be added or modified for completed competitions.', 'warning');
+        return;
+    }
+
     const modal = document.getElementById('criterion-rubric-modal');
     if (!modal) return;
 
@@ -1369,6 +1467,11 @@ export function openCriterionRubricModal(criterionId) {
 async function handleSaveRubricCriterion(e) {
     e.preventDefault();
     if (!currentEventId) return;
+
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Judging criteria cannot be modified for completed competitions.', 'warning');
+        return;
+    }
 
     const critId = document.getElementById('rubric-modal-crit-id')?.value;
     const title = document.getElementById('rubric-modal-title-input')?.value.trim();
@@ -1524,6 +1627,11 @@ async function handleSaveRubricCriterion(e) {
 
 async function handleSaveWeights() {
     if (!currentEventId || cachedCriteria.length === 0) return;
+
+    if (currentEventIsLocked) {
+        showToast('Competition Completed', 'Criteria weights cannot be modified for completed competitions.', 'warning');
+        return;
+    }
 
     const weightInputs = document.querySelectorAll('.weight-adjust-input');
     const weights = [];

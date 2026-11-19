@@ -3,6 +3,16 @@ const { logSystemAction } = require('../utils/logger');
 const { getIdFilter, getEventIdQuery } = require('../utils/dbHelpers');
 
 /**
+ * Check if an event is completed or locked
+ */
+function isEventCompletedOrLocked(event) {
+    if (!event) return false;
+    const st = String(event.status || '').trim().toLowerCase();
+    const jSt = String(event.judgingStatus || event.judging_status || '').trim().toLowerCase();
+    return st === 'completed' || st === 'archived' || jSt === 'finished';
+}
+
+/**
  * List Criteria for an Event
  */
 async function listCriteria(req, res, next) {
@@ -87,6 +97,19 @@ async function createCriterion(req, res, next) {
         const criterionName = (title || name || '').trim();
         if (!event_id || !criterionName) {
             return res.status(400).json({ success: false, message: 'Event ID and criterion name are required.' });
+        }
+
+        // Enforce: Cannot add criteria to completed or locked events
+        const evQuery = getIdFilter(event_id);
+        const parentEvent = await collections.events.findOne(evQuery);
+        if (!parentEvent) {
+            return res.status(404).json({ success: false, message: 'Event not found.' });
+        }
+        if (isEventCompletedOrLocked(parentEvent)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot add judging criteria: this competition is already completed and locked.'
+            });
         }
         if (criterionName.length > 100) {
             return res.status(400).json({ success: false, message: 'Criterion title cannot exceed 100 characters.' });
@@ -205,6 +228,22 @@ async function updateCriterion(req, res, next) {
         } = req.body;
 
         const query = getIdFilter(id);
+        const existingCriterion = await collections.criteria.findOne(query);
+        if (!existingCriterion) {
+            return res.status(404).json({ success: false, message: 'Criterion not found.' });
+        }
+
+        // Enforce: Cannot edit criterion if event is completed or locked
+        if (existingCriterion.event_id) {
+            const evQuery = getIdFilter(existingCriterion.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot edit criterion: this competition is already completed and locked.'
+                });
+            }
+        }
 
         const updateDoc = { updated_at: new Date().toISOString() };
         if (title !== undefined || name !== undefined) {
@@ -304,6 +343,23 @@ async function deleteCriterion(req, res, next) {
         const { id } = req.params;
         const query = getIdFilter(id);
 
+        const existingCriterion = await collections.criteria.findOne(query);
+        if (!existingCriterion) {
+            return res.status(404).json({ success: false, message: 'Criterion not found.' });
+        }
+
+        // Enforce: Cannot delete criterion if event is completed or locked
+        if (existingCriterion.event_id) {
+            const evQuery = getIdFilter(existingCriterion.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot delete criterion: this competition is already completed and locked.'
+                });
+            }
+        }
+
         await collections.criteria.deleteOne(query);
 
         res.json({ success: true, message: 'Criterion removed successfully.' });
@@ -320,6 +376,33 @@ async function batchUpdateWeights(req, res, next) {
         const items = Array.isArray(req.body) ? req.body : (req.body.weights || req.body.criteria || []);
         if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ success: false, message: 'No criteria weights provided.' });
+        }
+
+        // Enforce: Cannot adjust weights if event is completed or locked
+        const eventId = req.body.event_id || (items[0] && items[0].event_id);
+        if (eventId) {
+            const evQuery = getIdFilter(eventId);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot adjust criteria weights: this competition is already completed and locked.'
+                });
+            }
+        } else if (items[0]) {
+            const firstId = items[0].id || items[0]._id || items[0].criterion_id;
+            if (firstId) {
+                const sampleCrit = await collections.criteria.findOne(getIdFilter(firstId));
+                if (sampleCrit && sampleCrit.event_id) {
+                    const parentEvent = await collections.events.findOne(getIdFilter(sampleCrit.event_id));
+                    if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Cannot adjust criteria weights: this competition is already completed and locked.'
+                        });
+                    }
+                }
+            }
         }
 
         let updatedCount = 0;

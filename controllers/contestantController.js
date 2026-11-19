@@ -5,6 +5,16 @@ const { uploadToCloudinary } = require('../utils/cloudinary');
 const { getIdFilter, getEventIdQuery } = require('../utils/dbHelpers');
 
 /**
+ * Check if an event is completed or locked
+ */
+function isEventCompletedOrLocked(event) {
+    if (!event) return false;
+    const st = String(event.status || '').trim().toLowerCase();
+    const jSt = String(event.judgingStatus || event.judging_status || '').trim().toLowerCase();
+    return st === 'completed' || st === 'archived' || jSt === 'finished';
+}
+
+/**
  * List Contestants for an Event
  */
 async function listContestants(req, res, next) {
@@ -43,6 +53,19 @@ async function createContestant(req, res, next) {
 
         if (!event_id || !name) {
             return res.status(400).json({ success: false, message: 'Event ID and contestant name are required.' });
+        }
+
+        // Enforce: Cannot add contestants to completed or locked events
+        const evQuery = getIdFilter(event_id);
+        const parentEvent = await collections.events.findOne(evQuery);
+        if (!parentEvent) {
+            return res.status(404).json({ success: false, message: 'Event not found.' });
+        }
+        if (isEventCompletedOrLocked(parentEvent)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot add contestants: this competition is already completed and locked.'
+            });
         }
 
         const trimmedName = name.trim();
@@ -129,6 +152,22 @@ async function updateContestant(req, res, next) {
         }
 
         const query = getIdFilter(id);
+        const existingContestant = await collections.contestants.findOne(query);
+        if (!existingContestant) {
+            return res.status(404).json({ success: false, message: 'Contestant not found.' });
+        }
+
+        // Enforce: Cannot edit contestant if event is completed or locked
+        if (existingContestant.event_id) {
+            const evQuery = getIdFilter(existingContestant.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot edit contestant: this competition is already completed and locked.'
+                });
+            }
+        }
 
         const updateDoc = { updated_at: new Date().toISOString() };
         if (name !== undefined) {
@@ -194,6 +233,15 @@ async function addComment(req, res, next) {
         const contestant = await collections.contestants.findOne(query);
         if (!contestant) {
             return res.status(404).json({ success: false, message: 'Contestant not found.' });
+        }
+
+        // Ensure competition event is not completed or locked
+        if (contestant.event_id) {
+            const evQuery = getIdFilter(contestant.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({ success: false, message: 'Cannot add citations: this competition is already completed and locked.' });
+            }
         }
 
         // If judge, ensure competition event is active
@@ -264,6 +312,15 @@ async function deleteComment(req, res, next) {
             return res.status(404).json({ success: false, message: 'Contestant not found.' });
         }
 
+        // Ensure competition event is not completed or locked
+        if (contestant.event_id) {
+            const evQuery = getIdFilter(contestant.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({ success: false, message: 'Cannot remove citations: this competition is already completed and locked.' });
+            }
+        }
+
         const comments = Array.isArray(contestant.comments) ? contestant.comments : [];
         const target = comments.find(c => String(c.id) === String(targetCommentId));
 
@@ -312,6 +369,23 @@ async function deleteContestant(req, res, next) {
         const { id } = req.params;
         const query = getIdFilter(id);
 
+        const existingContestant = await collections.contestants.findOne(query);
+        if (!existingContestant) {
+            return res.status(404).json({ success: false, message: 'Contestant not found.' });
+        }
+
+        // Enforce: Cannot delete contestant if event is completed or locked
+        if (existingContestant.event_id) {
+            const evQuery = getIdFilter(existingContestant.event_id);
+            const parentEvent = await collections.events.findOne(evQuery);
+            if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot remove contestant: this competition is already completed and locked.'
+                });
+            }
+        }
+
         await collections.contestants.deleteOne(query);
 
         // Also delete scores for this contestant
@@ -335,6 +409,24 @@ async function deleteContestant(req, res, next) {
 async function reorderContestants(req, res, next) {
     try {
         const { order = [] } = req.body; // array of { id, number }
+
+        if (!Array.isArray(order) || order.length === 0) {
+            return res.status(400).json({ success: false, message: 'No reordering order provided.' });
+        }
+
+        // Enforce: Cannot reorder if event is completed or locked
+        if (order[0] && order[0].id) {
+            const sample = await collections.contestants.findOne(getIdFilter(order[0].id));
+            if (sample && sample.event_id) {
+                const parentEvent = await collections.events.findOne(getIdFilter(sample.event_id));
+                if (parentEvent && isEventCompletedOrLocked(parentEvent)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Cannot reorder contestants: this competition is already completed and locked.'
+                    });
+                }
+            }
+        }
 
         for (const item of order) {
             if (item.id) {

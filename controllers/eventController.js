@@ -563,12 +563,12 @@ async function updateEvent(req, res, next) {
             return res.status(404).json({ success: false, message: 'Event not found.' });
         }
 
-        // Enforce: Ongoing events should not be editable once the event is started, unless it is stopped
-        const isOngoing = (existing.status === 'Ongoing' || existing.judgingStatus === 'In Progress' || existing.judging_status === 'In Progress');
-        if (isOngoing) {
+        // Enforce: Competitions with live judging in progress cannot have details edited until stopped
+        const isLiveJudging = (existing.judgingStatus === 'In Progress' || existing.judging_status === 'In Progress');
+        if (isLiveJudging) {
             return res.status(400).json({
                 success: false,
-                message: 'This competition is currently ongoing and active. It cannot be edited while started. Please stop the judging period before modifying details.'
+                message: 'This competition is currently active and ongoing. Edits are locked until the judging period is stopped.'
             });
         }
 
@@ -612,11 +612,27 @@ async function updateEvent(req, res, next) {
             updateDoc.date = date;
         }
         if (start_time !== undefined) updateDoc.start_time = start_time;
-        if (status !== undefined) updateDoc.status = status;
+        if (status !== undefined) {
+            updateDoc.status = status;
+            // Synchronize judgingStatus in lockstep with unified event status
+            if (judgingStatus === undefined && judging_status === undefined) {
+                let inferredJudging = 'Not Yet Started';
+                if (status === 'Ongoing') inferredJudging = 'In Progress';
+                else if (status === 'Completed' || status === 'Archived') inferredJudging = 'Finished';
+                updateDoc.judgingStatus = inferredJudging;
+                updateDoc.judging_status = inferredJudging;
+            }
+        }
         if (judgingStatus !== undefined || judging_status !== undefined) {
             const jStatus = judgingStatus || judging_status;
             updateDoc.judgingStatus = jStatus;
             updateDoc.judging_status = jStatus;
+            if (status === undefined) {
+                if (jStatus === 'In Progress') updateDoc.status = 'Ongoing';
+                else if (jStatus === 'Finished') {
+                    if (existing.status !== 'Archived') updateDoc.status = 'Completed';
+                } else if (jStatus === 'Not Yet Started') updateDoc.status = 'Upcoming';
+            }
         }
         if (description !== undefined) {
             const finalDesc = description.trim();
@@ -643,6 +659,18 @@ async function updateEvent(req, res, next) {
         }
 
         await collections.events.updateOne(query, { $set: updateDoc });
+
+        // Trigger real-time broadcast via Pusher if status or judging period was updated
+        if (updateDoc.status !== undefined || updateDoc.judgingStatus !== undefined) {
+            await triggerPusherEvent(`event-${id}`, 'judging-status-changed', {
+                event_id: id,
+                judgingStatus: updateDoc.judgingStatus || existing.judgingStatus || 'Not Yet Started',
+                judging_status: updateDoc.judging_status || existing.judging_status || 'Not Yet Started',
+                status: updateDoc.status || existing.status || 'Upcoming',
+                updated_by: req.user ? req.user.username : 'admin',
+                timestamp: new Date().toISOString()
+            });
+        }
 
         await logSystemAction(
             req.user.id,
@@ -711,9 +739,17 @@ async function archiveEvent(req, res, next) {
 
         const query = getIdFilter(id);
         const newStatus = status ? status : (archive ? 'Archived' : 'Upcoming');
+        const updateFields = { status: newStatus, updated_at: new Date().toISOString() };
+        if (newStatus === 'Archived') {
+            updateFields.judgingStatus = 'Finished';
+            updateFields.judging_status = 'Finished';
+        } else if (newStatus === 'Upcoming') {
+            updateFields.judgingStatus = 'Not Yet Started';
+            updateFields.judging_status = 'Not Yet Started';
+        }
 
         await collections.events.updateOne(query, {
-            $set: { status: newStatus, updated_at: new Date().toISOString() }
+            $set: updateFields
         });
 
         if (req.user) {
@@ -748,6 +784,14 @@ async function assignJudges(req, res, next) {
         const existing = await collections.events.findOne(query);
         if (!existing) {
             return res.status(404).json({ success: false, message: 'Event not found.' });
+        }
+
+        const isCompleted = (existing.status === 'Completed' || existing.status === 'Archived' || existing.judgingStatus === 'Finished' || existing.judging_status === 'Finished');
+        if (isCompleted) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot assign personnel: this competition is already completed and locked.'
+            });
         }
 
         const judgeList = assignedjudges || judges || [];
@@ -824,6 +868,14 @@ async function updateJudgingPeriod(req, res, next) {
         // Setup Readiness Enforcement:
         // Admin cannot start an event without contestants, criteria, judges, and tabulator
         if (actionInput === 'start' || actionInput === 'open' || actionInput === 'in progress') {
+            const isCompleted = (existing.status === 'Completed' || existing.status === 'Archived' || existing.judgingStatus === 'Finished' || existing.judging_status === 'Finished');
+            if (isCompleted) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot start judging: this competition is already completed and finished.'
+                });
+            }
+
             const readiness = await validateEventSetupReadiness(existing);
             if (!readiness.canStart) {
                 return res.status(400).json({
