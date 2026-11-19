@@ -796,14 +796,14 @@ export async function loadJudgeAssignments() {
         const events = sortEventsByPriority(res.events);
 
         container.innerHTML = events.map(e => `
-            <div class="p-4 sm:p-5 rounded-2xl ${e.status === 'Ongoing' ? 'bg-emerald-50/40 border-2 border-emerald-300/80 shadow-xs' : 'bg-slate-50 border border-slate-200/90'} hover:border-slate-300 hover:bg-white transition-all flex items-center justify-between flex-wrap gap-4">
-                <div class="min-w-0 flex-1">
+            <div class="p-4 sm:p-5 rounded-2xl ${e.status === 'Ongoing' ? 'bg-emerald-50/40 border-2 border-emerald-300/80 shadow-xs' : 'bg-slate-50 border border-slate-200/90'} hover:border-slate-300 hover:bg-white transition-all flex flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
+                <div class="w-full md:flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1 flex-wrap">
                         ${getStatusBadgeHtml(e.status)}
-                        <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-sm truncate">${escapeHtml(e.eventName)}</h4>
+                        <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-sm break-words">${escapeHtml(e.eventName)}</h4>
                     </div>
-                    <p class="text-xs text-slate-500 mt-0.5">${e.type} &bull; ${formatDateTime(e.date)} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
-                    <div class="flex items-center gap-2 sm:gap-3 mt-2 text-xs flex-wrap">
+                    <p class="text-xs text-slate-500 mt-0.5 break-words">${e.type} &bull; ${formatDateTime(e.date)} &bull; ${escapeHtml(e.venue || 'TBA')}</p>
+                    <div class="flex items-center flex-wrap gap-2 sm:gap-3 mt-2.5 text-xs">
                         <span class="text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-bold inline-flex items-center gap-1.5 text-[11px]">
                             <i class="fa-solid fa-gavel text-buksu-navy"></i> ${e.assignedjudges ? e.assignedjudges.length : (e.judges_count || 0)} Judges Assigned
                         </span>
@@ -812,7 +812,7 @@ export async function loadJudgeAssignments() {
                         </span>
                     </div>
                 </div>
-                <button type="button" class="open-assign-btn px-4 py-2 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-xs transition-colors flex items-center gap-1.5 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
+                <button type="button" class="open-assign-btn w-full md:w-auto px-4 py-2.5 bg-buksu-navy hover:bg-buksu-navy-light text-white font-extrabold rounded-xl text-xs cursor-pointer shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0" data-id="${e.id}" data-name="${escapeHtml(e.eventName)}">
                     <i class="fa-solid fa-users-gear text-buksu-gold"></i> Manage Assignments
                 </button>
             </div>

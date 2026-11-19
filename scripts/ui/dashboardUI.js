@@ -17,7 +17,10 @@ window.fetch = async function(...args) {
     return response;
 };
 
-document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+const handleLogoutAction = async () => {
     await logoutUser();
     window.location.href = '/auth/login';
-});
+};
+
+document.getElementById('logoutBtn')?.addEventListener('click', handleLogoutAction);
+document.getElementById('sidebarLogoutBtn')?.addEventListener('click', handleLogoutAction);

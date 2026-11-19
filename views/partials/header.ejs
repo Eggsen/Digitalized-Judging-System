@@ -1,9 +1,9 @@
 <%
-    let safeHeaderTitle = 'DigiTab';
+    let safeHeaderTitle = 'BukSU DigiTab';
     if (typeof branding !== 'undefined' && branding && branding.systemTitle) {
         const titleStr = String(branding.systemTitle).trim();
         if (titleStr && !titleStr.toLowerCase().includes('judgetab')) {
-            safeHeaderTitle = titleStr;
+            safeHeaderTitle = titleStr.toLowerCase() === 'digitab' ? 'BukSU DigiTab' : titleStr;
         }
     }
 %>
@@ -21,7 +21,7 @@
                 <a href="<%= (typeof dashboardUrl !== 'undefined' && dashboardUrl) ? dashboardUrl : (user.role === 'admin' ? '/admin/dashboard' : (user.role === 'tabulator' ? '/tabulator/dashboard' : '/judge/dashboard')) %>" id="topbar-brand-link" class="flex lg:hidden items-center gap-2 sm:gap-3 shrink-0 min-w-0 hover:opacity-90 transition-opacity">
                     <img id="top-nav-institution-logo" 
                          src="/assets/logo/DJS Logo.png" 
-                         alt="DigiTab Logo" 
+                         alt="BukSU DigiTab Logo" 
                          class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-white dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700 shadow-xs shrink-0">
                     <div class="min-w-0">
                         <span id="top-nav-system-title" class="font-extrabold text-buksu-navy dark:text-white text-base sm:text-lg tracking-tight truncate block">
@@ -42,7 +42,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <div class="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
                 <!-- Topbar Notifications -->
                 <div class="relative shrink-0" id="notification-wrapper">
                     <button id="notifBtn" aria-label="Notifications" title="Notifications" class="relative p-2 text-slate-600 hover:text-buksu-navy hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex items-center justify-center">
@@ -51,7 +51,7 @@
                     </button>
 
                     <!-- Notifications Dropdown Drawer -->
-                    <div id="notifDropdown" class="absolute right-0 mt-3 w-[calc(100vw-1.5rem)] sm:w-80 md:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-750 z-50 hidden overflow-hidden animate-fade-in">
+                    <div id="notifDropdown" class="fixed inset-x-3 top-16 w-auto max-w-md mx-auto sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:left-auto sm:mt-2.5 sm:w-96 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-750 z-50 hidden overflow-hidden animate-fade-in">
                         <div class="p-4 bg-gradient-to-r from-buksu-navy via-buksu-navy-light to-buksu-navy text-white flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-bell text-buksu-gold"></i>
@@ -77,7 +77,7 @@
                 </div>
 
                 <button id="logoutBtn" title="Sign Out"
-                    class="px-3 sm:px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 dark:text-rose-300 rounded-xl transition-colors cursor-pointer flex items-center gap-2 border border-rose-200 dark:border-rose-900/60 shrink-0">
+                    class="hidden md:inline-flex px-3 sm:px-4 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 dark:text-rose-300 rounded-xl transition-colors cursor-pointer items-center gap-2 border border-rose-200 dark:border-rose-900/60 shrink-0">
                     <i class="fa-solid fa-right-from-bracket text-xs"></i>
                     <span>Sign Out</span>
                 </button>
