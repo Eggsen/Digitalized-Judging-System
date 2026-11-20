@@ -1,6 +1,6 @@
 import { listEvents, createEvent, editEvent, assignJudges, archiveEvent, deleteArchivedEvent, listLogs } from "./eventsAPI.js";
 import { listAccounts } from "./adminAPI.js";
-import { showToast, formatDateTime, toDateTimeLocalValue, formatActionTerm, validateCompetitionDate } from "../utils/uiUtils.js";
+import { showToast, formatDateTime, toDateTimeLocalValue, formatActionTerm, validateCompetitionDate, replaceIconElement } from "../utils/uiUtils.js";
 export { validateCompetitionDate };
 import { openManageSetupModal, initContestantsCriteriaUI } from "./contestantsCriteriaUI.js";
 import { openJudgeScoringModal, initJudgeUI } from "../judge/judgeUI.js";
@@ -1042,14 +1042,10 @@ function initAuditLogsControls(tbodyId = 'logs-tbody') {
         if (dateSort && dateSort.value !== newSort) {
             dateSort.value = newSort;
         }
-        const icon = document.getElementById(sortIconId);
-        if (icon) {
-            if (newSort === 'asc') {
-                icon.className = 'fa-solid fa-arrow-up-short-wide ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold';
-            } else {
-                icon.className = 'fa-solid fa-arrow-down-wide-short ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold';
-            }
-        }
+        const iconClass = newSort === 'asc'
+            ? 'fa-solid fa-arrow-up-short-wide ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold'
+            : 'fa-solid fa-arrow-down-wide-short ms-1 text-[11px] text-buksu-navy dark:text-buksu-gold font-bold';
+        replaceIconElement(sortIconId, iconClass);
     }
 
     if (dateSort) {

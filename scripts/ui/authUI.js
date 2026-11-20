@@ -1,4 +1,4 @@
-import { clearLoginForm, togglePasswordVisibility, showNotice, renderRecaptchaWidget } from "../utils/index.js";
+import { clearLoginForm, togglePasswordVisibility, showNotice, renderRecaptchaWidget, replaceIconElement } from "../utils/index.js";
 import { verifyInviteToken, acceptInvitation, resetPassword } from "../auth/authAPI.js";
 
 // Module scripts are deferred — DOM is ready by the time this runs
@@ -215,13 +215,13 @@ async function checkInviteToken(token) {
 function updateRequirementBadge(elementId, isValid) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    const icon = el.querySelector('i');
+    const icon = el.querySelector('i, svg');
     if (isValid) {
         el.className = 'flex items-center gap-1.5 transition-colors text-emerald-600 font-bold';
-        if (icon) icon.className = 'fa-solid fa-circle-check text-[10px] text-emerald-500';
+        if (icon) replaceIconElement(icon, 'fa-solid fa-circle-check text-[10px] text-emerald-500');
     } else {
         el.className = 'flex items-center gap-1.5 transition-colors text-slate-500 font-medium';
-        if (icon) icon.className = 'fa-regular fa-circle text-[10px] text-slate-400';
+        if (icon) replaceIconElement(icon, 'fa-regular fa-circle text-[10px] text-slate-400');
     }
 }
 

@@ -404,3 +404,27 @@ export function formatActionTerm(action) {
 
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).replace(/_/g, ' ');
 }
+
+/**
+ * Safely updates or replaces a FontAwesome icon element with a fresh <i> tag.
+ * Solves the issue where FontAwesome converts <i> into an <svg> element,
+ * causing "Cannot set property className of #<SVGElement> which has only a getter"
+ * when trying to modify element.className directly.
+ * @param {HTMLElement|SVGElement|string} target - The icon element or its element ID
+ * @param {string} newClassName - The new FontAwesome class string
+ * @returns {HTMLElement|null} The newly inserted <i> element
+ */
+export function replaceIconElement(target, newClassName) {
+    const el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el) return null;
+    const fresh = document.createElement('i');
+    if (el.id) fresh.id = el.id;
+    fresh.className = newClassName;
+    if (typeof el.replaceWith === 'function') {
+        el.replaceWith(fresh);
+    } else if (el.parentNode) {
+        el.parentNode.replaceChild(fresh, el);
+    }
+    return fresh;
+}
+

@@ -13,7 +13,7 @@ import {
     validateApiToken,
     validateAllApiKeys
 } from "/scripts/admin/settingsAPI.js";
-import { showToast, formatDateTime } from "/scripts/utils/uiUtils.js";
+import { showToast, formatDateTime, replaceIconElement } from "/scripts/utils/uiUtils.js";
 
 let cachedSettings = null;
 let isSecurityUnlocked = false;
@@ -1786,9 +1786,9 @@ function lockApiKeysInputs(latestMasked = null, latestCustomMasked = null) {
     document.querySelectorAll('[data-toggle-password]').forEach(btn => {
         btn.disabled = false;
         btn.classList.remove('opacity-40', 'cursor-not-allowed');
-        const icon = btn.querySelector('i');
+        const icon = btn.querySelector('i, svg');
         if (icon) {
-            icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+            replaceIconElement(icon, 'fa-solid fa-eye-slash text-xs text-slate-400');
         }
     });
 
@@ -2049,7 +2049,7 @@ function initApiKeysSettings() {
         e.preventDefault();
         const targetId = btn.dataset.togglePassword;
         const targetInput = document.getElementById(targetId);
-        const icon = btn.querySelector('i');
+        const icon = btn.querySelector('i, svg');
         if (!targetInput) return;
 
         // If credentials are locked, prompt Admin PIN modal to unlock and reveal this secret
@@ -2061,10 +2061,10 @@ function initApiKeysSettings() {
 
         if (targetInput.type === 'password') {
             targetInput.type = 'text';
-            if (icon) icon.className = 'fa-solid fa-eye text-xs text-amber-500';
+            if (icon) replaceIconElement(icon, 'fa-solid fa-eye text-xs text-amber-500');
         } else {
             targetInput.type = 'password';
-            if (icon) icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+            if (icon) replaceIconElement(icon, 'fa-solid fa-eye-slash text-xs text-slate-400');
         }
     });
 
@@ -2084,14 +2084,14 @@ function initApiKeysSettings() {
     });
     document.getElementById('toggleModalCustomKeyValBtn')?.addEventListener('click', () => {
         const input = document.getElementById('modal-custom-key-value');
-        const icon = document.querySelector('#toggleModalCustomKeyValBtn i');
+        const icon = document.querySelector('#toggleModalCustomKeyValBtn i, #toggleModalCustomKeyValBtn svg');
         if (!input || !icon) return;
         if (input.type === 'password') {
             input.type = 'text';
-            icon.className = 'fa-solid fa-eye text-xs text-amber-500';
+            replaceIconElement(icon, 'fa-solid fa-eye text-xs text-amber-500');
         } else {
             input.type = 'password';
-            icon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+            replaceIconElement(icon, 'fa-solid fa-eye-slash text-xs text-slate-400');
         }
     });
 
@@ -2537,8 +2537,8 @@ function initApiKeysSettings() {
                     if (SECRET_ENV_KEYS.includes(k)) {
                         input.type = 'password';
                         const toggleBtn = document.querySelector(`[data-toggle-password="setting-env-${k}"]`);
-                        const toggleIcon = toggleBtn?.querySelector('i');
-                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-eye-slash text-xs text-slate-400';
+                        const toggleIcon = toggleBtn?.querySelector('i, svg');
+                        if (toggleIcon) replaceIconElement(toggleIcon, 'fa-solid fa-eye-slash text-xs text-slate-400');
                     }
                 }
             }
