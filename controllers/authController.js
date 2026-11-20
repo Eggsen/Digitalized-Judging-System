@@ -70,13 +70,14 @@ async function login(req, res, next) {
             return res.status(403).json({ success: false, message: 'Your invitation has not yet been accepted. Please check your email to activate your account.' });
         }
 
-        // Lockout check for admin accounts
-        if (user.role === 'admin' && user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
+        // Account lockout check (enforces 15-minute lockout after 5 consecutive failed login attempts)
+        if (user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
             const remainingMinutes = Math.ceil((new Date(user.pin_locked_until) - new Date()) / 60000);
+            const roleDesc = user.role ? `${user.role} ` : '';
             return res.status(429).json({
                 success: false,
                 is_locked: true,
-                message: `Too many failed attempts. This admin account is locked for ${remainingMinutes} more minute(s).`
+                message: `Too many failed attempts. This ${roleDesc}account is locked for ${remainingMinutes} more minute(s).`
             });
         }
 
@@ -95,30 +96,28 @@ async function login(req, res, next) {
         }
 
         if (!isMatch) {
-            if (user.role === 'admin') {
-                const failed = (user.pin_failed_attempts || 0) + 1;
-                const update = { pin_failed_attempts: failed };
-                if (failed >= 5) {
-                    update.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-                    update.pin_failed_attempts = 0;
-                }
-                await collections.users.updateOne({ _id: user._id }, { $set: update });
+            const failed = (user.pin_failed_attempts || 0) + 1;
+            const update = { pin_failed_attempts: failed };
+            if (failed >= 5) {
+                update.pin_locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                update.pin_failed_attempts = 0;
+            }
+            await collections.users.updateOne({ _id: user._id }, { $set: update });
 
-                if (failed >= 5) {
-                    return res.status(429).json({
-                        success: false,
-                        is_locked: true,
-                        message: 'Too many failed login attempts. This admin account has been locked for 15 minutes.'
-                    });
-                }
-                const remaining = 5 - failed;
-                return res.status(401).json({
+            const roleDesc = user.role ? `${user.role} ` : '';
+            if (failed >= 5) {
+                await logSystemAction(user._id, user.username, user.role, 'ACCOUNT_LOCKOUT', `Account locked for 15 minutes due to 5 consecutive failed login attempts.`, req);
+                return res.status(429).json({
                     success: false,
-                    message: `Invalid email or password. ${remaining} attempt(s) remaining.`
+                    is_locked: true,
+                    message: `Too many failed login attempts. This ${roleDesc}account has been locked for 15 minutes.`
                 });
             }
-
-            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+            const remaining = 5 - failed;
+            return res.status(401).json({
+                success: false,
+                message: `Invalid email or password. ${remaining} attempt(s) remaining.`
+            });
         }
 
         // Admin PIN verification for admin role
@@ -551,10 +550,17 @@ async function googleCallback(req, res) {
             return res.redirect('/auth/login?error=account_disabled');
         }
 
-        // Update user record with google_id, last_login, avatar
+        // Account lockout check before Google OAuth sign-in
+        if (user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
+            return res.redirect('/auth/login?error=account_locked');
+        }
+
+        // Update user record with google_id, last_login, avatar, and reset failed attempts
         const updateFields = {
             google_id: profile.sub,
             last_login: new Date().toISOString(),
+            pin_failed_attempts: 0,
+            pin_locked_until: null,
             status: 'active'
         };
         if (profile.picture && !user.avatar_url && !user.avatar) {
@@ -567,10 +573,6 @@ async function googleCallback(req, res) {
 
         // If user is administrator, require Admin PIN verification challenge
         if (user.role === 'admin') {
-            if (user.pin_locked_until && new Date() < new Date(user.pin_locked_until)) {
-                return res.redirect('/auth/login?error=account_locked');
-            }
-
             const challengeToken = jwt.sign(
                 {
                     userId: String(user._id),
@@ -840,6 +842,8 @@ async function resetPassword(req, res, next) {
                     password: hashedPassword,
                     status: 'active',
                     is_active: true,
+                    pin_failed_attempts: 0,
+                    pin_locked_until: null,
                     updated_at: new Date().toISOString()
                 },
                 $inc: { token_version: 1 },

@@ -275,6 +275,10 @@ async function updateRole(req, res, next) {
         if (is_active !== undefined) {
             updateDoc.is_active = Boolean(is_active);
             updateDoc.status = updateDoc.is_active ? 'active' : 'disabled';
+            if (updateDoc.is_active) {
+                updateDoc.pin_failed_attempts = 0;
+                updateDoc.pin_locked_until = null;
+            }
         }
 
         await collections.users.updateOne(query, {

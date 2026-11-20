@@ -73,7 +73,7 @@ function initLandingPage() {
                 errorMsg = 'Your account has been disabled. Please contact the administrator.';
                 break;
             case 'account_locked':
-                errorMsg = 'This admin account has been temporarily locked due to too many failed PIN attempts. Please wait 15 minutes before trying again.';
+                errorMsg = 'This account has been temporarily locked due to too many failed login attempts. Please wait 15 minutes before trying again.';
                 break;
             case 'session_expired':
                 errorMsg = 'Your session has expired after 7 days for security. Please sign in again.';
