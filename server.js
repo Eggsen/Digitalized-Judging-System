@@ -7,7 +7,15 @@ const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
 const { ObjectId } = require('mongodb');
 const helmet = require('helmet');
-const { rateLimit } = require('express-rate-limit');
+const {
+    hybridKeyGenerator,
+    burstActionLimiter,
+    authLimiter,
+    emailDispatchLimiter,
+    scoreSubmissionLimiter,
+    heavyOpsLimiter,
+    generalApiLimiter
+} = require('./middleware/rateLimiter');
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
@@ -32,6 +40,9 @@ const logRoutes = require('./routes/logRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Reverse Proxy & IP Header Trust (ensures accurate client IP behind Nginx/Cloudflare/Docker)
+app.set('trust proxy', 1);
 
 // HTTP Security Headers (Clickjacking, MIME sniffing, XSS, Referrer Policy)
 app.use(helmet({
@@ -64,37 +75,44 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Recaptcha-Token']
 }));
 
-// Rate Limiters: Brute-force and DDoS Defense
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 30, // 30 requests per 15 minutes per IP
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-        success: false,
-        message: 'Too many authentication attempts from this IP address. Please wait a few minutes before trying again.'
-    }
-});
-
-const generalApiLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 300, // 300 requests per minute per IP (ample headroom for 3s auto-sync live polling)
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-        success: false,
-        message: 'Too many requests. Please slow down.'
-    }
-});
-
-// Apply rate limiters
-app.use(['/api/auth/login', '/api/auth/verify-login-pin', '/api/auth/request-reset', '/api/auth/reset-password'], authLimiter);
-app.use('/api', generalApiLimiter);
-
-// Body parsing with base64 image support (up to 15mb)
+// Body parsing and cookies (needed before rate limiting for cookie token inspection)
+app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
-app.use(cookieParser());
+
+// -------------------------------------------------------------
+// Rate Limiting Protection (Tiered Multi-Level with Hybrid IP/User Identification)
+// -------------------------------------------------------------
+
+// 1. Rapid click / burst action protection on mutating requests (POST/PUT/PATCH/DELETE)
+app.use('/api', burstActionLimiter);
+
+// 2. Strict Auth Brute-Force Limiter (Login & PIN verification)
+app.use(['/api/auth/login', '/api/auth/verify-login-pin'], authLimiter);
+
+// 3. Email Dispatch Limiter (Password reset & invitations to safeguard SMTP quotas)
+app.use(['/api/auth/request-reset', '/api/auth/reset-password', '/api/auth/accept-invitation'], emailDispatchLimiter);
+
+// 4. Resource-Intensive Operations Limiter (PDF generation, media uploads, backup exports)
+app.use([
+    '/api/scores/export-pdf',
+    '/api/logs/export/pdf',
+    '/api/logs/export/csv',
+    '/api/settings/upload-logo',
+    '/api/settings/export-backup'
+], heavyOpsLimiter);
+app.use('/api/events/:id/executive-summary', heavyOpsLimiter);
+
+// 5. Score Submissions & Judging Lock/Verification Limiter (Mutating operations only)
+app.use('/api/scores', (req, res, next) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+        return scoreSubmissionLimiter(req, res, next);
+    }
+    next();
+});
+
+// 6. General API Rate Limiter (Catch-all headroom for live polling & queries)
+app.use('/api', generalApiLimiter);
 
 // Configure EJS view engine for dynamic server rendering
 app.set('view engine', 'ejs');

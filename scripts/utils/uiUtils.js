@@ -428,3 +428,91 @@ export function replaceIconElement(target, newClassName) {
     return fresh;
 }
 
+/**
+ * Global Rapid-Click & Submission Guard
+ * Intercepts rapid repeated clicks or duplicate submits on action elements within 1 second
+ * and alerts the user: "Too many actions, please try again later."
+ */
+export function initRapidClickProtection() {
+    if (typeof window === 'undefined' || window.__djs_click_protection_initialized) return;
+    window.__djs_click_protection_initialized = true;
+
+    let lastClickTarget = null;
+    let lastClickTime = 0;
+    let globalRecentClicks = [];
+    let lastFormSubmitTime = 0;
+    const SAME_TARGET_WINDOW_MS = 1000; // 1-second threshold for same button/action
+    const GLOBAL_SPAM_WINDOW_MS = 1000;
+    const GLOBAL_SPAM_MAX = 4; // Max 4 action clicks across buttons in 1s
+
+    // Click handler (Capture phase so it intercepts before button listeners)
+    document.addEventListener('click', (event) => {
+        const now = Date.now();
+        const actionEl = event.target?.closest?.('button, input[type="submit"], input[type="button"], [role="button"], a.btn, .btn');
+        if (!actionEl) return;
+
+        // Skip non-action navigation toggles: tabs, accordion triggers, mobile sidebar toggles, and dropdown triggers
+        const isTab = actionEl.getAttribute('role') === 'tab' || actionEl.hasAttribute('data-tab') || actionEl.classList.contains('tab-btn');
+        if (isTab) return;
+
+        // Clean up global click window
+        globalRecentClicks = globalRecentClicks.filter(t => (now - t) < GLOBAL_SPAM_WINDOW_MS);
+
+        // Check 1: Same action element clicked multiple times within 1 second
+        const isSameElement = (actionEl === lastClickTarget);
+        const isWithinWindow = (now - lastClickTime) < SAME_TARGET_WINDOW_MS;
+
+        // Check 2: Rapid global spam clicking across action elements
+        const isGlobalSpam = globalRecentClicks.length >= GLOBAL_SPAM_MAX;
+
+        if ((isSameElement && isWithinWindow) || isGlobalSpam) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            const message = "Too many actions, please try again later.";
+            // If notice banner exists (e.g. login/reset cards)
+            const noticeText = document.getElementById('notice-text');
+            if (noticeText && !noticeText.closest('.hidden')) {
+                showNotice(noticeText, message, 'warning');
+            } else if (typeof showToast === 'function') {
+                showToast('Slow Down', message, 'warning', 2500);
+            }
+            return false;
+        }
+
+        lastClickTarget = actionEl;
+        lastClickTime = now;
+        globalRecentClicks.push(now);
+    }, true);
+
+    // Form submit handler (Capture phase for rapid Enter presses)
+    document.addEventListener('submit', (event) => {
+        const now = Date.now();
+        if (now - lastFormSubmitTime < SAME_TARGET_WINDOW_MS) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            const message = "Too many actions, please try again later.";
+            const noticeText = document.getElementById('notice-text');
+            if (noticeText && !noticeText.closest('.hidden')) {
+                showNotice(noticeText, message, 'warning');
+            } else if (typeof showToast === 'function') {
+                showToast('Slow Down', message, 'warning', 2500);
+            }
+            return false;
+        }
+        lastFormSubmitTime = now;
+    }, true);
+}
+
+// Auto-initialize when running in browser
+if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRapidClickProtection);
+    } else {
+        initRapidClickProtection();
+    }
+}
+
