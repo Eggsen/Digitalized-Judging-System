@@ -7,8 +7,9 @@ const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getIdFilter } = require('../utils/dbHelpers');
 const { canUserCreateAdmin, isEmailAuthorizedAdminCreator, getRoleDashboardUrl } = require('../utils/authHelpers');
+const { buildPasswordResetUrl, getTrustedBaseUrl } = require('../utils/urlHelpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+const { JWT_SECRET } = require('../config/jwt');
 const JWT_EXPIRES_IN = '7d';
 
 function generateToken(user) {
@@ -445,12 +446,15 @@ async function googleRedirect(req, res, next) {
             return res.status(500).send('Google OAuth Client ID is not configured on this server.');
         }
 
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const redirectUri = `${protocol}://${host}/backend/auth/google_callback.php`;
+        const redirectUri = `${getTrustedBaseUrl(req)}/backend/auth/google_callback.php`;
 
         const state = crypto.randomBytes(16).toString('hex');
-        res.cookie('oauth_state', state, { httpOnly: true, maxAge: 10 * 60 * 1000 });
+        res.cookie('oauth_state', state, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 10 * 60 * 1000
+        });
 
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
             `client_id=${encodeURIComponent(clientId)}&` +
@@ -471,10 +475,20 @@ async function googleRedirect(req, res, next) {
  */
 async function googleCallback(req, res) {
     try {
-        const { code, error } = req.query;
+        const { code, state, error } = req.query;
+        const cookieState = req.cookies?.oauth_state;
+
+        // Clear state cookie immediately after receipt (single-use validation)
+        res.clearCookie('oauth_state');
 
         if (error) {
             return res.redirect('/auth/login?error=oauth_denied');
+        }
+
+        // Validate OAuth State to mitigate Login CSRF
+        if (!state || !cookieState || state !== cookieState) {
+            console.warn('[GoogleOAuth] State validation failed. Possible CSRF attack detected.');
+            return res.redirect('/auth/login?error=invalid_oauth_state');
         }
 
         if (!code) {
@@ -483,9 +497,7 @@ async function googleCallback(req, res) {
 
         const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
         const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const redirectUri = `${protocol}://${host}/backend/auth/google_callback.php`;
+        const redirectUri = `${getTrustedBaseUrl(req)}/backend/auth/google_callback.php`;
 
         const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
             code,
@@ -652,29 +664,52 @@ async function requestPasswordReset(req, res, next) {
         const recaptchaToken = req.body.recaptcha_response || req.body['g-recaptcha-response'] || req.body.recaptcha_token;
         const recaptchaEnabled = settings?.security?.recaptchaEnabled !== false;
         const secretKey = (process.env.RECAPTCHA_SECRET_KEY || settings?.api_keys?.RECAPTCHA_SECRET_KEY || '').trim();
+        const isProduction = process.env.NODE_ENV === 'production';
 
-        if (recaptchaEnabled && secretKey && !(process.env.NODE_ENV !== 'production' && recaptchaToken === 'test_bypass')) {
-            if (!recaptchaToken) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Please complete the reCAPTCHA verification to proceed.'
-                });
-            }
-
-            try {
-                const verifyRes = await axios.post(
-                    `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(recaptchaToken)}`,
-                    null,
-                    { timeout: 5000 }
-                );
-                if (verifyRes.data && !verifyRes.data.success) {
-                    return res.status(400).json({
+        if (recaptchaEnabled) {
+            // Check for test bypass: strictly disallowed in production
+            if (!isProduction && recaptchaToken === 'test_bypass') {
+                // Permitted only in local development / testing
+            } else if (!secretKey) {
+                if (isProduction) {
+                    console.error('[Recaptcha] FATAL: RECAPTCHA_SECRET_KEY is missing in production with reCAPTCHA enabled.');
+                    return res.status(503).json({
                         success: false,
-                        message: 'reCAPTCHA verification failed. Please try again.'
+                        message: 'Bot verification service is temporarily unavailable. Please contact the administrator.'
                     });
                 }
-            } catch (recaptchaErr) {
-                console.warn('[Recaptcha] Verification service warning:', recaptchaErr.message);
+                // In non-production without secret key, log a warning and permit local testing
+                console.warn('[Recaptcha] Warning: RECAPTCHA_SECRET_KEY missing in non-production. Bypassing check.');
+            } else {
+                if (!recaptchaToken) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Please complete the reCAPTCHA verification to proceed.'
+                    });
+                }
+
+                try {
+                    const verifyRes = await axios.post(
+                        `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(recaptchaToken)}`,
+                        null,
+                        { timeout: 5000 }
+                    );
+                    if (!verifyRes.data || !verifyRes.data.success) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'reCAPTCHA verification failed. Please try again.'
+                        });
+                    }
+                } catch (recaptchaErr) {
+                    console.error('[Recaptcha] Verification service error:', recaptchaErr.message);
+                    if (isProduction) {
+                        return res.status(503).json({
+                            success: false,
+                            message: 'Bot verification service temporarily unreachable. Please try again shortly.'
+                        });
+                    }
+                    console.warn('[Recaptcha] Non-production: Verification service unreachable, allowing request.');
+                }
             }
         }
 
@@ -715,9 +750,7 @@ async function requestPasswordReset(req, res, next) {
             }
         );
 
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const resetLink = `${protocol}://${host}/auth/reset-password?token=${rawResetToken}`;
+        const resetLink = buildPasswordResetUrl(rawResetToken, req);
 
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">

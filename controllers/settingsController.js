@@ -11,7 +11,7 @@ const { validateSingleIntegration, validateAllIntegrationTokens } = require('../
 const { getIdFilter, maskEmail } = require('../utils/dbHelpers');
 const { canUserCreateAdmin, getAuthorizedAdminEmails } = require('../utils/authHelpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+const { JWT_SECRET } = require('../config/jwt');
 
 const SECRET_ENV_KEYS = [
     'GOOGLE_CLIENT_SECRET',

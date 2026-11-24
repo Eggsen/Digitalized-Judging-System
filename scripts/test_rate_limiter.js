@@ -16,7 +16,8 @@ const {
     generalApiLimiter
 } = require('../middleware/rateLimiter');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'explicit_test_jwt_secret_with_sufficient_entropy_for_unit_tests!';
+const { JWT_SECRET } = require('../config/jwt');
 
 async function runTests() {
     console.log('====================================================');

@@ -3,7 +3,7 @@ const { collections } = require('../config/db');
 const { getIdFilter } = require('../utils/dbHelpers');
 const { isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+const { JWT_SECRET } = require('../config/jwt');
 
 /**
  * Extract token from Authorization Bearer header or HTTP-only cookies
@@ -33,8 +33,8 @@ function generateToken(user) {
     const role = (user.role || 'judge').toLowerCase();
     const email = (user.email || '').toLowerCase().trim();
     const canCreateAdmin = role === 'admin' && Boolean(
-        user.can_create_admin === true || 
-        user.is_super_admin === true || 
+        user.can_create_admin === true ||
+        user.is_super_admin === true ||
         isEmailAuthorizedAdminCreator(email)
     );
 
@@ -67,63 +67,80 @@ function authenticateToken(req, res, next) {
     }
 
     jwt.verify(token, JWT_SECRET, async (err, decoded) => {
-        if (err) {
+        if (err || !decoded || !decoded.id) {
             return res.status(401).json({
                 success: false,
                 message: 'Session expired or invalid. Please sign in again.'
             });
         }
 
+        if (!collections.users) {
+            return res.status(503).json({
+                success: false,
+                code: 'AUTH_SERVICE_UNAVAILABLE',
+                message: 'Authentication service temporarily unavailable. Please try again shortly.'
+            });
+        }
+
         // Active account, role, and MVCC token_version verification
         try {
-            if (collections.users && decoded.id) {
-                const u = await collections.users.findOne(
-                    getIdFilter(decoded.id),
-                    { projection: { is_active: 1, status: 1, role: 1, token_version: 1 } }
-                );
-                if (u && (u.is_active === false || u.status === 'disabled')) {
-                    return res.status(403).json({
-                        success: false,
-                        code: 'ACCOUNT_DISABLED',
-                        message: 'Your account has been deactivated. Please contact an administrator.'
-                    });
-                }
+            const u = await collections.users.findOne(
+                getIdFilter(decoded.id),
+                { projection: { is_active: 1, status: 1, role: 1, token_version: 1, email: 1, can_create_admin: 1, is_super_admin: 1 } }
+            );
 
-                // MVCC: Concurrency Session Version Check
-                // If a newer login or admin action bumped token_version in the DB, this older session is superseded
-                const currentDbVersion = Number(u?.token_version || 1);
-                const tokenVersion = Number(decoded.token_version || 1);
-                if (u && tokenVersion < currentDbVersion) {
-                    return res.status(401).json({
-                        success: false,
-                        code: 'SESSION_SUPERSEDED',
-                        session_expired: true,
-                        message: 'Your session has ended because this account signed in from another device or was refreshed.'
-                    });
-                }
-
-                if (u && u.role) {
-                    decoded.role = u.role.toLowerCase();
-                }
-                const email = (u?.email || decoded.email || '').toLowerCase().trim();
-                decoded.can_create_admin = decoded.role === 'admin' && Boolean(
-                    u?.can_create_admin === true || 
-                    u?.is_super_admin === true || 
-                    decoded.can_create_admin === true || 
-                    isEmailAuthorizedAdminCreator(email)
-                );
+            // Fail-closed: Reject if user account no longer exists in database
+            if (!u) {
+                return res.status(401).json({
+                    success: false,
+                    code: 'USER_NOT_FOUND',
+                    message: 'User account no longer exists or session is invalid.'
+                });
             }
+
+            // Fail-closed: Reject deactivated or disabled accounts
+            if (u.is_active === false || u.status === 'disabled') {
+                return res.status(403).json({
+                    success: false,
+                    code: 'ACCOUNT_DISABLED',
+                    message: 'Your account has been deactivated. Please contact an administrator.'
+                });
+            }
+
+            // MVCC: Concurrency Session Version Check
+            // If a newer login or admin action bumped token_version in the DB, this older session is superseded
+            const currentDbVersion = Number(u.token_version || 1);
+            const tokenVersion = Number(decoded.token_version || 1);
+            if (tokenVersion < currentDbVersion) {
+                return res.status(401).json({
+                    success: false,
+                    code: 'SESSION_SUPERSEDED',
+                    session_expired: true,
+                    message: 'Your session has ended because this account signed in from another device or was refreshed.'
+                });
+            }
+
+            if (u.role) {
+                decoded.role = u.role.toLowerCase();
+            }
+            const email = (u.email || decoded.email || '').toLowerCase().trim();
+            decoded.can_create_admin = decoded.role === 'admin' && Boolean(
+                u.can_create_admin === true ||
+                u.is_super_admin === true ||
+                decoded.can_create_admin === true ||
+                isEmailAuthorizedAdminCreator(email)
+            );
+
+            req.user = decoded;
+            next();
         } catch (dbErr) {
-            // Fail open on database connection hiccup
+            console.error('[AuthMiddleware] Database user validation error:', dbErr.message);
+            return res.status(503).json({
+                success: false,
+                code: 'AUTH_SERVICE_UNAVAILABLE',
+                message: 'Authentication service temporarily unavailable. Please try again shortly.'
+            });
         }
-
-        if (decoded.can_create_admin === undefined) {
-            const email = (decoded.email || '').toLowerCase().trim();
-            decoded.can_create_admin = (decoded.role || '').toLowerCase() === 'admin' && isEmailAuthorizedAdminCreator(email);
-        }
-
-        req.user = decoded;
-        next();
     });
 }
 

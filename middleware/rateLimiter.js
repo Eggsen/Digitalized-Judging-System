@@ -1,7 +1,6 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
 
 /**
  * Fast token extractor from Authorization header, HTTP-only cookies, or query parameter.

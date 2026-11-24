@@ -31,14 +31,31 @@ async function connectDB() {
     if (db) return { db, collections };
 
     try {
-        client = new MongoClient(uri, {
+        const clientOptions = {
             serverApi: {
                 version: ServerApiVersion.v1,
                 strict: false,
                 deprecationErrors: true
-            },
-            tlsAllowInvalidCertificates: true
-        });
+            }
+        };
+
+        // Enforce strict TLS certificate verification in production
+        const isProduction = process.env.NODE_ENV === 'production';
+        if (isProduction && process.env.MONGODB_TLS_ALLOW_INVALID_CERTS === 'true') {
+            console.error('[FATAL SECURITY CONFIGURATION] MONGODB_TLS_ALLOW_INVALID_CERTS is strictly prohibited in production.');
+            throw new Error('FATAL SECURITY CONFIGURATION: Invalid TLS certificates cannot be permitted in production.');
+        }
+
+        const allowInvalidCerts = !isProduction && process.env.MONGODB_TLS_ALLOW_INVALID_CERTS === 'true';
+        if (allowInvalidCerts) {
+            console.warn('[Database Security Warning] Non-production environment: tlsAllowInvalidCertificates is enabled via MONGODB_TLS_ALLOW_INVALID_CERTS.');
+            clientOptions.tlsAllowInvalidCertificates = true;
+        } else {
+            // Strict certificate validation: never accept invalid TLS certificates in production or default development
+            clientOptions.tlsAllowInvalidCertificates = false;
+        }
+
+        client = new MongoClient(uri, clientOptions);
 
         await client.connect();
         db = client.db(dbName);

@@ -24,7 +24,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { getIdFilter } = require('./utils/dbHelpers');
 const { canUserCreateAdmin, getRoleDashboardUrl } = require('./utils/authHelpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'buksu-djs-super-secret-jwt-key-2026';
+const { JWT_SECRET } = require('./config/jwt');
 
 // Route modules
 const authRoutes = require('./routes/authRoutes');
@@ -44,9 +44,60 @@ const PORT = process.env.PORT || 5000;
 // Reverse Proxy & IP Header Trust (ensures accurate client IP behind Nginx/Cloudflare/Docker)
 app.set('trust proxy', 1);
 
-// HTTP Security Headers (Clickjacking, MIME sniffing, XSS, Referrer Policy)
+// HTTP Security Headers (Clickjacking, MIME sniffing, XSS, Referrer Policy, CSP)
 app.use(helmet({
-    contentSecurityPolicy: false, // Compatibility with inline EJS templates, Pusher, and CDNs
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'", // Required for dynamic EJS inline scripts, modal handlers, and client initialization
+                "'unsafe-eval'",   // Required for pdfmake and browser client expressions
+                "https://kit.fontawesome.com",
+                "https://ka-f.fontawesome.com",
+                "https://js.pusher.com",
+                "https://www.google.com/recaptcha/",
+                "https://www.gstatic.com/recaptcha/"
+            ],
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'", // Required for dynamic Tailwind utility classes, custom institution theme colors, and FontAwesome injected styles
+                "https://fonts.googleapis.com",
+                "https://ka-f.fontawesome.com"
+            ],
+            fontSrc: [
+                "'self'",
+                "data:",
+                "https://fonts.gstatic.com",
+                "https://ka-f.fontawesome.com"
+            ],
+            imgSrc: [
+                "'self'",
+                "data:",
+                "blob:",
+                "https://res.cloudinary.com",
+                "https://*.googleusercontent.com",
+                "https://www.google.com/recaptcha/",
+                "https://*.gstatic.com",
+                "https://quickchart.io"
+            ],
+            connectSrc: [
+                "'self'",
+                "https://ka-f.fontawesome.com",
+                "https://www.google.com/recaptcha/",
+                "https://*.pusher.com",
+                "wss://*.pusher.com",
+                "https://api.cloudinary.com"
+            ],
+            frameSrc: [
+                "'self'",
+                "https://www.google.com/recaptcha/",
+                "https://recaptcha.google.com/"
+            ],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"]
+        }
+    },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },

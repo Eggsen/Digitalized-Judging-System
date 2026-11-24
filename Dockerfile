@@ -14,6 +14,12 @@ COPY . .
 # Build production Tailwind CSS
 RUN npm run build:css || true
 
+# Create required runtime directories and set non-root ownership
+RUN mkdir -p /app/uploads && chown -R node:node /app
+
+# Non-root user execution to mitigate privilege escalation and container breakout
+USER node
+
 # Default environment configuration
 ENV NODE_ENV=production
 ENV PORT=5000

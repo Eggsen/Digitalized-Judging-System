@@ -5,6 +5,7 @@ const { logSystemAction } = require('../utils/logger');
 const { sendSystemEmail } = require('../utils/mailer');
 const { getIdFilter } = require('../utils/dbHelpers');
 const { canUserCreateAdmin, isEmailAuthorizedAdminCreator } = require('../utils/authHelpers');
+const { buildInvitationUrl } = require('../utils/urlHelpers');
 
 /**
  * List System Users / Accounts
@@ -42,7 +43,7 @@ async function listUsers(req, res, next) {
             const fullName = (u.full_name || u.name || '').trim();
             const firstName = u.first_name || (fullName ? fullName.split(' ')[0] : (u.username || ''));
             const lastName = u.last_name || (fullName ? fullName.split(' ').slice(1).join(' ') : '');
-            const inviteLink = u.invite_token ? `${protocol}://${host}/auth/accept-invitation?token=${u.invite_token}` : null;
+            const inviteLink = u.invite_token ? buildInvitationUrl(u.invite_token, req) : null;
             const isActive = u.is_active !== false && u.status !== 'disabled';
             const userEmail = (u.email || '').toLowerCase().trim();
             const isUserAdminCreator = (u.role === 'admin') && Boolean(
@@ -181,9 +182,7 @@ async function createUser(req, res, next) {
         const result = await collections.users.insertOne(newUser);
 
         if (inviteToken) {
-            const protocol = req.protocol;
-            const host = req.get('host');
-            const inviteLink = `${protocol}://${host}/auth/accept-invitation?token=${inviteToken}`;
+            const inviteLink = buildInvitationUrl(inviteToken, req);
 
             const html = `
                 <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
@@ -217,7 +216,7 @@ async function createUser(req, res, next) {
         res.status(201).json({
             success: true,
             message: inviteToken ? 'Invitation email dispatched successfully.' : 'User account created successfully.',
-            invite_link: inviteToken ? `${req.protocol}://${req.get('host')}/auth/accept-invitation?token=${inviteToken}` : null,
+            invite_link: inviteToken ? buildInvitationUrl(inviteToken, req) : null,
             user: {
                 ...newUser,
                 _id: result.insertedId,
