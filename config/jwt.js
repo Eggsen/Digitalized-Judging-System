@@ -5,7 +5,6 @@ const dotenv = require('dotenv');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const INSECURE_DEFAULTS = new Set([
-    'buksu-djs-super-secret-jwt-key-2026',
     'your_secure_random_jwt_secret_key_here',
     'secret',
     'jwt_secret',

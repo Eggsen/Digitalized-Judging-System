@@ -39,8 +39,8 @@ const missing3 = validateJwtSecret('   ');
 assert(missing3.valid === false && missing3.error.includes('missing'), 'Rejects whitespace-only JWT_SECRET');
 
 // Case 2: Insecure default fallback secret
-const defSecret = validateJwtSecret('buksu-djs-super-secret-jwt-key-2026');
-assert(defSecret.valid === false && defSecret.error.includes('insecure placeholder'), 'Rejects hardcoded default "buksu-djs-super-secret-jwt-key-2026"');
+const defSecret = validateJwtSecret('changeme');
+assert(defSecret.valid === false && defSecret.error.includes('insecure placeholder'), 'Rejects known insecure default "changeme"');
 
 const placeholder = validateJwtSecret('your_secure_random_jwt_secret_key_here');
 assert(placeholder.valid === false && placeholder.error.includes('insecure placeholder'), 'Rejects placeholder "your_secure_random_jwt_secret_key_here"');
